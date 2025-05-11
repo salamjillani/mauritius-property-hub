@@ -1,39 +1,109 @@
-
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
-const categories = [
+interface Category {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  count: number;
+}
+
+// Default categories if API fails or during development
+const defaultCategories: Category[] = [
   {
     id: "for-sale",
     title: "Properties For Sale",
     description: "Find your dream property to own in Mauritius",
     image: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-    count: 245
+    count: 0
   },
   {
     id: "for-rent",
     title: "Properties For Rent",
     description: "Discover rental properties across the island",
     image: "https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-    count: 189
+    count: 0
   },
   {
     id: "offices",
     title: "Office Spaces",
     description: "Professional spaces for your business needs",
     image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-    count: 82
+    count: 0
   },
   {
     id: "land",
     title: "Land For Sale",
     description: "Build your future on prime Mauritius land",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-    count: 67
+    count: 0
   }
 ];
 
 const PropertyCategories = () => {
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchPropertyCounts = async () => {
+      try {
+        setLoading(true);
+        
+        // Create promises for all category count fetches
+        const countPromises = defaultCategories.map(async (category) => {
+          try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/properties/category/${category.id}`);
+            
+            if (!response.ok) {
+              return { ...category };
+            }
+            
+            const data = await response.json();
+            return {
+              ...category,
+              count: data.count || 0
+            };
+          } catch (error) {
+            // If individual category fetch fails, return category with default count
+            return { ...category };
+          }
+        });
+        
+        // Wait for all promises to resolve
+        const updatedCategories = await Promise.all(countPromises);
+        setCategories(updatedCategories);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch category counts');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load property categories. Showing default categories instead.",
+        });
+        // Keep using default categories if API fails
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPropertyCounts();
+  }, [toast]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+        <p className="text-gray-600">Loading property categories...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-10 text-center">

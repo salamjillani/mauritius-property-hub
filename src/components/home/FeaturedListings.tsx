@@ -1,157 +1,97 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Heart, MapPin, Share2, ArrowLeft, ArrowRight, Bed, Bath, Home } from "lucide-react";
+import { Heart, MapPin, Share2, ArrowLeft, ArrowRight, Bed, Bath, Home, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Sample data for featured listings
-const sampleListings = [
-  {
-    id: "1",
-    title: "Luxury Beach Villa",
-    location: "Grand Baie",
-    description: "Spectacular beachfront villa with private pool and ocean views",
-    price: 15000000,
-    type: "Villa",
-    category: "for-sale",
-    isPremium: true,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 350,
-    images: [
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a1",
-      name: "Marie Laurent",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    id: "2",
-    title: "Modern City Apartment",
-    location: "Port Louis",
-    description: "Contemporary apartment in downtown with great city views",
-    price: 5500000,
-    type: "Apartment",
-    category: "for-sale",
-    isPremium: false,
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 120,
-    images: [
-      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a2",
-      name: "Jean Dupont",
-      image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    id: "3",
-    title: "Executive Office Space",
-    location: "Ebene",
-    description: "Premium office space in the Cybercity area",
-    price: 65000,
-    rentalPeriod: "month",
-    type: "Office",
-    category: "office-rent",
-    isPremium: true,
-    area: 200,
-    images: [
-      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1565538810643-b5bdb714032a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a3",
-      name: "Sarah Johnson",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    id: "4",
-    title: "Beachfront Land",
-    location: "Flic en Flac",
-    description: "Prime beachfront land suitable for hotel or villa development",
-    price: 28000000,
-    type: "Land",
-    category: "land",
-    isPremium: false,
-    area: 1500,
-    images: [
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1499677575031-38fdaa78a3b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a4",
-      name: "Michael Wong",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    id: "5",
-    title: "Vacation Rental Villa",
-    location: "Trou aux Biches",
-    description: "Stunning villa available for short-term vacation rentals",
-    price: 15000,
-    rentalPeriod: "week",
-    type: "Villa",
-    category: "for-rent",
-    isPremium: true,
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 220,
-    images: [
-      "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1510798831971-661eb04b3739?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a5",
-      name: "Robert Smith",
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    id: "6",
-    title: "Mountain View Estate",
-    location: "Vacoas",
-    description: "Spacious family home with beautiful mountain views",
-    price: 8800000,
-    type: "House",
-    category: "for-sale",
-    isPremium: false,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 280,
-    images: [
-      "https://images.unsplash.com/photo-1600607687644-a48forb3f59d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ],
-    agent: {
-      id: "a6",
-      name: "Anna Lee",
-      image: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
-    }
-  }
-];
+import { useToast } from "@/components/ui/use-toast";
 
 interface FeaturedListingsProps {
   currency: "USD" | "EUR" | "MUR";
 }
 
+interface PropertyImage {
+  url: string;
+  caption: string;
+  isMain: boolean;
+}
+
+interface Agent {
+  _id: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    avatarUrl: string;
+  };
+  title: string;
+}
+
+interface Agency {
+  _id: string;
+  name: string;
+  logoUrl: string;
+}
+
+interface Property {
+  _id: string;
+  title: string;
+  address: {
+    city: string;
+  };
+  description: string;
+  price: number;
+  rentalPeriod?: string;
+  type: string;
+  category: string;
+  isPremium: boolean;
+  bedrooms?: number;
+  bathrooms?: number;
+  size: number;
+  images: PropertyImage[];
+  agent?: Agent;
+  agency?: Agency;
+}
+
 const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
+  const [properties, setProperties] = useState<Property[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
-  
-  // Sort listings to display premium listings first
-  const sortedListings = [...sampleListings].sort((a, b) => {
-    if (a.isPremium === b.isPremium) return 0;
-    return a.isPremium ? -1 : 1;
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchFeaturedListings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/properties/featured`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch featured properties');
+        }
+        
+        const data = await response.json();
+        setProperties(data.data);
+        
+        // Initialize current slide for each listing
+        const initialSlides: Record<string, number> = {};
+        data.data.forEach((property: Property) => {
+          initialSlides[property._id] = 0;
+        });
+        setCurrentSlide(initialSlides);
+      } catch (err: any) {
+        setError(err.message || 'An error occurred while fetching properties');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: err.message || 'Failed to load featured properties',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedListings();
+  }, [toast]);
 
   const formatPrice = (price: number) => {
     let convertedPrice = price;
@@ -178,10 +118,10 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
   };
 
   const nextSlide = (id: string) => {
-    const listing = sampleListings.find(l => l.id === id);
-    if (!listing) return;
+    const property = properties.find(p => p._id === id);
+    if (!property) return;
     
-    const totalSlides = listing.images.length;
+    const totalSlides = property.images.length;
     setCurrentSlide(prev => ({
       ...prev,
       [id]: (prev[id] + 1) % totalSlides || 1
@@ -189,24 +129,60 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
   };
 
   const prevSlide = (id: string) => {
-    const listing = sampleListings.find(l => l.id === id);
-    if (!listing) return;
+    const property = properties.find(p => p._id === id);
+    if (!property) return;
     
-    const totalSlides = listing.images.length;
+    const totalSlides = property.images.length;
     setCurrentSlide(prev => ({
       ...prev,
       [id]: prev[id] === 0 ? totalSlides - 1 : prev[id] - 1
     }));
   };
+  
+  const getImageUrl = (image: PropertyImage) => {
+    // Check if the image URL includes http or https
+    if (image.url.startsWith('http')) {
+      return image.url;
+    }
+    
+    // Otherwise, construct URL from backend uploads folder
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${image.url}`;
+  };
 
-  // Initialize current slide for each listing
-  useEffect(() => {
-    const initialSlides: Record<string, number> = {};
-    sampleListings.forEach(listing => {
-      initialSlides[listing.id] = 0;
-    });
-    setCurrentSlide(initialSlides);
-  }, []);
+  const getAgentName = (agent?: Agent) => {
+    if (!agent || !agent.user) return "Unknown Agent";
+    return `${agent.user.firstName} ${agent.user.lastName}`;
+  };
+
+  const getAgentImage = (agent?: Agent) => {
+    if (!agent || !agent.user || !agent.user.avatarUrl) {
+      return "https://via.placeholder.com/100";
+    }
+    
+    if (agent.user.avatarUrl.startsWith('http')) {
+      return agent.user.avatarUrl;
+    }
+    
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${agent.user.avatarUrl}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+        <p className="text-gray-600">Loading featured properties...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 mb-4">Error: {error}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -217,164 +193,185 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sortedListings.map((listing) => (
-          <Card 
-            key={listing.id} 
-            className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${
-              listing.isPremium 
-                ? "border-2 border-amber-400 shadow-md transform hover:-translate-y-1" 
-                : ""
-            }`}
-          >
-            {/* Image carousel */}
-            <div className="relative h-52 overflow-hidden">
-              {listing.images.map((image, index) => (
-                <div 
-                  key={index}
-                  className={`absolute inset-0 transition-opacity duration-300 ${
-                    currentSlide[listing.id] === index ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  <img 
-                    src={image} 
-                    alt={listing.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-              
-              {/* Image navigation buttons */}
-              {listing.images.length > 1 && (
-                <>
+      {properties.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No featured properties available at the moment.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {properties.map((property) => (
+            <Card 
+              key={property._id} 
+              className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${
+                property.isPremium 
+                  ? "border-2 border-amber-400 shadow-md transform hover:-translate-y-1" 
+                  : ""
+              }`}
+            >
+              {/* Image carousel */}
+              <div className="relative h-52 overflow-hidden">
+                {property.images && property.images.length > 0 ? (
+                  property.images.map((image, index) => (
+                    <div 
+                      key={index}
+                      className={`absolute inset-0 transition-opacity duration-300 ${
+                        currentSlide[property._id] === index ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      <img 
+                        src={getImageUrl(image)} 
+                        alt={image.caption || property.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                    <Home className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+                
+                {/* Image navigation buttons */}
+                {property.images && property.images.length > 1 && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        prevSlide(property._id);
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        nextSlide(property._id);
+                      }}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                
+                {/* Premium badge */}
+                {property.isPremium && (
+                  <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                    Premium
+                  </div>
+                )}
+                
+                {/* Favorite and share buttons */}
+                <div className="absolute top-2 right-2 flex space-x-1">
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
+                    className={`rounded-full p-1 ${
+                      favorites.includes(property._id) 
+                        ? "bg-red-500 text-white hover:bg-red-600" 
+                        : "bg-white/80 hover:bg-white text-gray-700"
+                    }`}
                     onClick={(e) => {
                       e.preventDefault();
-                      prevSlide(listing.id);
+                      toggleFavorite(property._id);
                     }}
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <Heart className="h-4 w-4" fill={favorites.includes(property._id) ? "currentColor" : "none"} />
                   </Button>
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      nextSlide(listing.id);
-                    }}
+                    className="rounded-full bg-white/80 hover:bg-white p-1"
                   >
-                    <ArrowRight className="h-4 w-4" />
+                    <Share2 className="h-4 w-4" />
                   </Button>
-                </>
-              )}
-              
-              {/* Premium badge */}
-              {listing.isPremium && (
-                <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-semibold">
-                  Premium
-                </div>
-              )}
-              
-              {/* Favorite and share buttons */}
-              <div className="absolute top-2 right-2 flex space-x-1">
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className={`rounded-full p-1 ${
-                    favorites.includes(listing.id) 
-                      ? "bg-red-500 text-white hover:bg-red-600" 
-                      : "bg-white/80 hover:bg-white text-gray-700"
-                  }`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleFavorite(listing.id);
-                  }}
-                >
-                  <Heart className="h-4 w-4" fill={favorites.includes(listing.id) ? "currentColor" : "none"} />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="rounded-full bg-white/80 hover:bg-white p-1"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <CardContent className="p-4">
-              <div className="flex items-center text-sm text-gray-500 mb-2">
-                <MapPin className="h-3.5 w-3.5 mr-1" />
-                <span>{listing.location}</span>
-              </div>
-              
-              <Link to={`/properties/${listing.category}/${listing.id}`}>
-                <h3 className="text-lg font-semibold text-gray-900 hover:text-teal-700 transition mb-1">
-                  {listing.title}
-                </h3>
-              </Link>
-              
-              <p className="text-sm text-gray-600 line-clamp-2">{listing.description}</p>
-              
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-lg font-bold text-blue-900">
-                    {formatPrice(listing.price)}
-                  </span>
-                  {listing.rentalPeriod && (
-                    <span className="text-sm text-gray-500">
-                      /{listing.rentalPeriod}
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {listing.type}
                 </div>
               </div>
               
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-600 border-t pt-4">
-                {listing.bedrooms && (
-                  <div className="flex items-center">
-                    <Bed className="h-4 w-4 mr-1" />
-                    <span>{listing.bedrooms} Beds</span>
-                  </div>
-                )}
-                {listing.bathrooms && (
-                  <div className="flex items-center">
-                    <Bath className="h-4 w-4 mr-1" />
-                    <span>{listing.bathrooms} Baths</span>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <Home className="h-4 w-4 mr-1" />
-                  <span>{listing.area} m²</span>
+              <CardContent className="p-4">
+                <div className="flex items-center text-sm text-gray-500 mb-2">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <span>{property.address?.city || "Location unavailable"}</span>
                 </div>
-              </div>
-            </CardContent>
-            
-            <CardFooter className="p-4 pt-0 border-t">
-              <div className="flex items-center w-full">
-                <img 
-                  src={listing.agent.image} 
-                  alt={listing.agent.name}
-                  className="h-8 w-8 rounded-full object-cover mr-2" 
-                />
-                <span className="text-sm font-medium">{listing.agent.name}</span>
-                <Link 
-                  to={`/properties/${listing.category}/${listing.id}`}
-                  className="ml-auto text-sm font-medium text-teal-600 hover:underline"
-                >
-                  View Details
+                
+                <Link to={`/properties/${property.category}/${property._id}`}>
+                  <h3 className="text-lg font-semibold text-gray-900 hover:text-teal-700 transition mb-1">
+                    {property.title}
+                  </h3>
                 </Link>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                
+                <p className="text-sm text-gray-600 line-clamp-2">{property.description}</p>
+                
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-lg font-bold text-blue-900">
+                      {formatPrice(property.price)}
+                    </span>
+                    {property.rentalPeriod && (
+                      <span className="text-sm text-gray-500">
+                        /{property.rentalPeriod}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {property.type}
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-600 border-t pt-4">
+                  {property.bedrooms && property.bedrooms > 0 && (
+                    <div className="flex items-center">
+                      <Bed className="h-4 w-4 mr-1" />
+                      <span>{property.bedrooms} Beds</span>
+                    </div>
+                  )}
+                  {property.bathrooms && property.bathrooms > 0 && (
+                    <div className="flex items-center">
+                      <Bath className="h-4 w-4 mr-1" />
+                      <span>{property.bathrooms} Baths</span>
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <Home className="h-4 w-4 mr-1" />
+                    <span>{property.size} m²</span>
+                  </div>
+                </div>
+              </CardContent>
+              
+              <CardFooter className="p-4 pt-0 border-t">
+                {property.agent ? (
+                  <div className="flex items-center w-full">
+                    <img 
+                      src={getAgentImage(property.agent)} 
+                      alt={getAgentName(property.agent)}
+                      className="h-8 w-8 rounded-full object-cover mr-2" 
+                    />
+                    <span className="text-sm font-medium">{getAgentName(property.agent)}</span>
+                    <Link 
+                      to={`/properties/${property.category}/${property._id}`}
+                      className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                    >
+                      View Details
+                    </Link>
+                  </div>
+                ) : (
+                  <Link 
+                    to={`/properties/${property.category}/${property._id}`}
+                    className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                  >
+                    View Details
+                  </Link>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
       
       <div className="mt-8 text-center">
         <Link to="/properties">
