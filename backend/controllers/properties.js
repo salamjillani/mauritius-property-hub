@@ -1,4 +1,3 @@
-
 const Property = require('../models/Property');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -228,22 +227,50 @@ exports.getFeaturedProperties = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.getPropertiesByCategory = asyncHandler(async (req, res, next) => {
   const { categorySlug } = req.params;
-  const limit = parseInt(req.query.limit) || 8;
+  const limit = parseInt(req.query.limit) || 20;
+  const page = parseInt(req.query.page) || 1;
+  const startIndex = (page - 1) * limit;
   
-  const properties = await Property.find({ 
+  // Create filter based on category
+  const filter = { 
     category: categorySlug,
     status: 'active'
-  })
+  };
+
+  // Count total properties in this category
+  const total = await Property.countDocuments(filter);
+  
+  // Get properties for this page
+  const properties = await Property.find(filter)
     .sort({ isPremium: -1, createdAt: -1 })
+    .skip(startIndex)
     .limit(limit)
     .populate([
       { path: 'agent', select: 'user title' },
       { path: 'agency', select: 'name logoUrl' }
     ]);
 
+  // Pagination info
+  const pagination = {};
+  if (endIndex < total) {
+    pagination.next = {
+      page: page + 1,
+      limit
+    };
+  }
+
+  if (startIndex > 0) {
+    pagination.prev = {
+      page: page - 1,
+      limit
+    };
+  }
+
   res.status(200).json({
     success: true,
     count: properties.length,
+    pagination,
+    total,
     data: properties
   });
 });
