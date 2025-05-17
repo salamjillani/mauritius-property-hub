@@ -26,6 +26,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogFooter } from "@/components/ui/dialog";
 
+interface Property {
+  _id?: string;
+  title: string;
+  description: string;
+  type: string;
+  category: string;
+  price: number;
+  size: number;
+  bedrooms: number;
+  bathrooms: number;
+  address: {
+    city: string;
+    street?: string;
+  };
+  featured?: boolean;
+  status?: string;
+  amenities?: string[];
+  images?: Array<{ url: string; caption?: string; isMain?: boolean }>;
+}
+
 const propertySchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -45,13 +65,14 @@ const propertySchema = z.object({
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
 interface PropertyFormProps {
-  property: any;
+  property: Property | null;
   userId: string;
   onSubmit: () => void;
   onCancel: () => void;
 }
 
 const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProps) => {
+  const [images, setImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [amenities, setAmenities] = useState<string[]>([]);
   const { toast } = useToast();
@@ -103,76 +124,98 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
     }
   }, [property, form]);
 
-  const handleFormSubmit = async (data: PropertyFormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-      
-      const formattedData = {
-        ...data,
-        address: {
-          city: data["address.city"],
-          street: data["address.street"],
-          country: "Mauritius",
-        },
-        // Mock location data (in a real app, would use geocoding API)
-        location: {
-          type: "Point",
-          coordinates: [-20.348404, 57.552152], // Default to Mauritius
-        },
-        owner: userId,
-      };
-      
-      let response;
-      if (property) {
-        // Update existing property
-        response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties/${property._id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formattedData),
-        });
-      } else {
-        // Create new property
-        response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formattedData),
-        });
-      }
-      
-      if (!response.ok) {
-        throw new Error("Failed to save property");
-      }
-      
-      toast({
-        title: property ? "Property updated" : "Property created",
-        description: property
-          ? "Your property has been updated successfully"
-          : "Your new property has been created successfully",
-      });
-      
-      onSubmit();
-    } catch (error) {
-      console.error("Error saving property:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save property",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+const handleImageUpload = async () => {
+  const uploadedUrls = [];
+  for (const image of images) {
+    const formData = new FormData();
+    formData.append("file", image);
+    formData.append("upload_preset", "your_upload_preset");
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: "POST", body: formData }
+    );
+    const data = await response.json();
+    uploadedUrls.push({ url: data.secure_url, isMain: false });
+  }
+  return uploadedUrls;
+};
+
+const handleFormSubmit = async (data: PropertyFormValues) => {
+  setIsSubmitting(true);
+  
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Authentication required");
     }
-  };
+
+    // Handle image uploads first
+    const uploadedImages = await handleImageUpload();
+    
+    const formattedData = {
+      ...data,
+      address: {
+        city: data["address.city"],
+        street: data["address.street"] || "",
+        country: "Mauritius",
+      },
+      // Include uploaded images in the formatted data
+      images: uploadedImages,
+      // Mock location data (in a real app, would use geocoding API)
+      location: {
+        type: "Point",
+        coordinates: [-20.348404, 57.552152], // Default to Mauritius
+      },
+      owner: userId,
+    };
+    
+    let response;
+    if (property) {
+      // Update existing property
+      response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties/${property._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedData),
+      });
+    } else {
+      // Create new property
+      response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedData),
+      });
+    }
+    
+    if (!response.ok) {
+      throw new Error("Failed to save property");
+    }
+    
+    toast({
+      title: property ? "Property updated" : "Property created",
+      description: property
+        ? "Your property has been updated successfully"
+        : "Your new property has been created successfully",
+    });
+    
+    onSubmit();
+  } catch (error) {
+    console.error("Error saving property:", error);
+    toast({
+      title: "Error",
+      description: error instanceof Error ? error.message : "Failed to save property",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleAmenityChange = (amenity: string) => {
     if (amenities.includes(amenity)) {
@@ -399,6 +442,22 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
           )}
         />
 
+         <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+          <FormItem>
+  <FormLabel>Images</FormLabel>
+  <Input 
+    type="file" 
+    multiple 
+    onChange={(e) => setImages(Array.from(e.target.files || []))}
+  />
+  <FormMessage />
+</FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="featured"
@@ -440,6 +499,25 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
           </div>
         </div>
 
+<div className="space-y-2">
+  <FormLabel>Upload Images</FormLabel>
+  <Input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={(e) => {
+      const files = e.target.files;
+      if (files) {
+        setImages(Array.from(files));
+      }
+    }}
+  />
+  {images.length > 0 && (
+    <div className="text-sm text-muted-foreground">
+      {images.length} files selected
+    </div>
+  )}
+</div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

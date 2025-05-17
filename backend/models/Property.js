@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -14,10 +13,13 @@ const PropertySchema = new Schema({
     required: [true, 'Please add a description']
   },
   address: {
-    street: String,
+    street: {
+      type: String,
+      required: false
+    },
     city: {
       type: String,
-      required: [true, 'Please add a city']
+      required: [true, 'City is required']
     },
     state: String,
     zipCode: String,

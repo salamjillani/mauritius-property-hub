@@ -26,7 +26,10 @@ const app = express();
 app.use(express.json());
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:8080', // Frontend URL
+  credentials: true
+}));
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {

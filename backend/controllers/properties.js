@@ -230,6 +230,7 @@ exports.getPropertiesByCategory = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 20;
   const page = parseInt(req.query.page) || 1;
   const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
   
   // Create filter based on category
   const filter = { 

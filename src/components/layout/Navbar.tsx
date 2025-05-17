@@ -1,7 +1,7 @@
-
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +24,31 @@ const Navbar = ({
   setActiveCurrency,
 }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Not authenticated");
+      return response.json();
+    },
+    retry: false,
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    queryClient.invalidateQueries(["user"]);
+    navigate("/login");
   };
+
+  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -40,135 +61,86 @@ const Navbar = ({
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/properties/for-sale" className="text-gray-700 hover:text-teal-600 transition">
-              For Sale
-            </Link>
-            <Link to="/properties/for-rent" className="text-gray-700 hover:text-teal-600 transition">
-              For Rent
-            </Link>
-            <Link to="/properties/offices" className="text-gray-700 hover:text-teal-600 transition">
-              Offices
-            </Link>
-            <Link to="/properties/land" className="text-gray-700 hover:text-teal-600 transition">
-              Land
-            </Link>
-            <Link to="/agents" className="text-gray-700 hover:text-teal-600 transition">
-              Agents
-            </Link>
+            <Link to="/properties/for-sale" className="text-gray-700 hover:text-teal-600 transition">For Sale</Link>
+            <Link to="/properties/for-rent" className="text-gray-700 hover:text-teal-600 transition">For Rent</Link>
+            <Link to="/properties/offices" className="text-gray-700 hover:text-teal-600 transition">Offices</Link>
+            <Link to="/properties/land" className="text-gray-700 hover:text-teal-600 transition">Land</Link>
+            <Link to="/agents" className="text-gray-700 hover:text-teal-600 transition">Agents</Link>
           </nav>
 
           <div className="hidden md:flex items-center space-x-4">
-            {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center">
-                  {activeLanguage.toUpperCase()}{" "}
+                  {activeLanguage.toUpperCase()}
                   <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setActiveLanguage("en")}>
-                  English
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveLanguage("fr")}>
-                  Français
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveLanguage("en")}>English</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveLanguage("fr")}>Français</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Currency Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center">
-                  {activeCurrency}{" "}
+                  {activeCurrency}
                   <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setActiveCurrency("MUR")}>
-                  MUR (₨)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveCurrency("USD")}>
-                  USD ($)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveCurrency("EUR")}>
-                  EUR (€)
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveCurrency("MUR")}>MUR (₨)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveCurrency("USD")}>USD ($)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveCurrency("EUR")}>EUR (€)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Auth Buttons */}
-            <Link to="/login">
-              <Button variant="outline" className="flex items-center">
-                <User className="mr-2 h-4 w-4" />
-                Login
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button className="bg-teal-600 hover:bg-teal-700">Register</Button>
-            </Link>
+            {user ? (
+              <Button onClick={handleLogout} variant="outline">Logout</Button>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="outline" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />Login
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-teal-600 hover:bg-teal-700">Register</Button>
+                </Link>
+              </>
+            )}
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
             <Button variant="ghost" onClick={toggleMobileMenu}>
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden px-4 pt-2 pb-4 bg-white border-t space-y-3">
-          <Link
-            to="/properties/for-sale"
-            className="block py-2 text-gray-700 hover:text-teal-600"
-            onClick={toggleMobileMenu}
-          >
-            For Sale
-          </Link>
-          <Link
-            to="/properties/for-rent"
-            className="block py-2 text-gray-700 hover:text-teal-600"
-            onClick={toggleMobileMenu}
-          >
-            For Rent
-          </Link>
-          <Link
-            to="/properties/offices"
-            className="block py-2 text-gray-700 hover:text-teal-600"
-            onClick={toggleMobileMenu}
-          >
-            Offices
-          </Link>
-          <Link
-            to="/properties/land"
-            className="block py-2 text-gray-700 hover:text-teal-600"
-            onClick={toggleMobileMenu}
-          >
-            Land
-          </Link>
-          <Link
-            to="/agents"
-            className="block py-2 text-gray-700 hover:text-teal-600"
-            onClick={toggleMobileMenu}
-          >
-            Agents
-          </Link>
+          <Link to="/properties/for-sale" className="block py-2 text-gray-700 hover:text-teal-600" onClick={toggleMobileMenu}>For Sale</Link>
+          <Link to="/properties/for-rent" className="block py-2 text-gray-700 hover:text-teal-600" onClick={toggleMobileMenu}>For Rent</Link>
+          <Link to="/properties/offices" className="block py-2 text-gray-700 hover:text-teal-600" onClick={toggleMobileMenu}>Offices</Link>
+          <Link to="/properties/land" className="block py-2 text-gray-700 hover:text-teal-600" onClick={toggleMobileMenu}>Land</Link>
+          <Link to="/agents" className="block py-2 text-gray-700 hover:text-teal-600" onClick={toggleMobileMenu}>Agents</Link>
           <div className="pt-2 flex justify-between">
-            <Link to="/login" className="w-1/2 pr-1">
-              <Button variant="outline" className="w-full">Login</Button>
-            </Link>
-            <Link to="/register" className="w-1/2 pl-1">
-              <Button className="w-full bg-teal-600 hover:bg-teal-700">Register</Button>
-            </Link>
+            {user ? (
+              <Button onClick={handleLogout} className="w-full">Logout</Button>
+            ) : (
+              <>
+                <Link to="/login" className="w-1/2 pr-1">
+                  <Button variant="outline" className="w-full">Login</Button>
+                </Link>
+                <Link to="/register" className="w-1/2 pl-1">
+                  <Button className="w-full bg-teal-600 hover:bg-teal-700">Register</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
