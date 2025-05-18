@@ -101,14 +101,24 @@ const PropertySchema = new Schema({
     default: 0
   },
   amenities: [String],
-  images: [{
-    url: String,
-    caption: String,
+images: [
+  {
+    url: {
+      type: String,
+      required: true
+    },
+    publicId: {
+      type: String,
+    },
+    caption: {
+      type: String,
+      default: ''
+    },
     isMain: {
       type: Boolean,
-      default: false
     }
-  }],
+  }
+],
   virtualTourUrl: String,
   videoUrl: String,
   floorPlanUrl: String,

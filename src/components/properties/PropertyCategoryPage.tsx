@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, ChevronLeft, MapPin, Home, Bed, Bath, Square } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -25,10 +24,16 @@ interface Property {
   bathrooms: number;
   size: number;
   type: string;
+  category: string;
 }
 
 const PropertyCategoryPage = () => {
-  const { categorySlug } = useParams<{ categorySlug: string }>();
+  // Extract category from URL path instead of params
+  const location = useLocation();
+  const pathSegments = location.pathname.split('/');
+  // The category will be the last segment in the path (for-sale, for-rent, etc.)
+  const categorySlug = pathSegments[pathSegments.length - 1];
+  
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [currency, setCurrency] = useState<"USD" | "EUR" | "MUR">("MUR");
@@ -53,17 +58,34 @@ const PropertyCategoryPage = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       setLoading(true);
+      console.log(`Fetching properties for category: ${categorySlug}`);
+      
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/properties/category/${categorySlug}`
-        );
+        let apiUrl;
+        
+        // Determine API endpoint based on category
+        if (categorySlug === "for-sale" || categorySlug === "for-rent" || categorySlug === "offices" || categorySlug === "land") {
+          apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/properties/category/${categorySlug}`;
+        } else {
+          // Fallback for invalid categories
+          apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/properties`;
+        }
+        
+        console.log(`Making API request to: ${apiUrl}`);
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
-          throw new Error("Failed to fetch properties");
+          throw new Error(`Failed to fetch properties: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
-        setProperties(data.data);
+        console.log(`Received ${data.data?.length || 0} properties`);
+        
+        // Filter properties based on category if needed
+        const filteredProperties = data.data || [];
+        
+        // Set the properties state
+        setProperties(filteredProperties);
       } catch (error) {
         console.error("Error fetching properties:", error);
         toast({
@@ -78,7 +100,9 @@ const PropertyCategoryPage = () => {
       }
     };
     
-    fetchProperties();
+    if (categorySlug) {
+      fetchProperties();
+    }
   }, [categorySlug, toast]);
 
   // Helper function to format price based on currency
@@ -91,6 +115,22 @@ const PropertyCategoryPage = () => {
       default:
         return `Rs ${price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
     }
+  };
+
+  // Helper function to get property image URL - FIX APPLIED HERE
+  const getImageUrl = (property: Property) => {
+    // Check if property has images array and it contains at least one item
+    if (property.images && property.images.length > 0 && property.images[0]?.url) {
+      const image = property.images[0];
+      // Check if the URL is already absolute
+      if (image.url.startsWith('http')) {
+        return image.url;
+      }
+      // Otherwise construct URL from backend
+      return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${image.url}`;
+    }
+    // Default image if none available
+    return "https://images.unsplash.com/photo-1582560475093-ba66accbc095?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60";
   };
 
   return (
@@ -130,9 +170,7 @@ const PropertyCategoryPage = () => {
               <Card key={property._id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
                 <div className="relative h-48 overflow-hidden">
                   <img 
-                    src={property.images && property.images.length > 0 
-                      ? `${import.meta.env.VITE_API_URL}/uploads/${property.images[0].url}`
-                      : "https://images.unsplash.com/photo-1582560475093-ba66accbc095?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60"}
+                    src={getImageUrl(property)}
                     alt={property.title}
                     className="w-full h-full object-cover"
                   />
@@ -149,24 +187,34 @@ const PropertyCategoryPage = () => {
                   </div>
                   <div className="flex items-center text-gray-600 mb-3 text-sm">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{property.address.city}, {property.address.country}</span>
+                    <span>
+                      {property.address?.city || 'Unknown City'}, {property.address?.country || 'Unknown Country'}
+                    </span>
                   </div>
                   <p className="text-gray-600 mb-4 line-clamp-2">{property.description}</p>
                   <div className="flex justify-between border-t pt-3">
                     <div className="flex items-center text-gray-600 text-sm">
                       <Bed className="h-4 w-4 mr-1" />
-                      <span>{property.bedrooms} Beds</span>
+                      <span>{property.bedrooms || 0} Beds</span>
                     </div>
                     <div className="flex items-center text-gray-600 text-sm">
                       <Bath className="h-4 w-4 mr-1" />
-                      <span>{property.bathrooms} Baths</span>
+                      <span>{property.bathrooms || 0} Baths</span>
                     </div>
                     <div className="flex items-center text-gray-600 text-sm">
                       <Square className="h-4 w-4 mr-1" />
-                      <span>{property.size} m²</span>
+                      <span>{property.size || 0} m²</span>
                     </div>
                   </div>
                 </CardContent>
+                <CardFooter className="p-4 pt-0 border-t">
+                  <Link 
+                    to={`/properties/${property.category || categorySlug}/${property._id}`}
+                    className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                  >
+                    View Details
+                  </Link>
+                </CardFooter>
               </Card>
             ))}
           </div>

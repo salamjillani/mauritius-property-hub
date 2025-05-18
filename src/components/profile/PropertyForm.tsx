@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +45,7 @@ interface Property {
   images?: Array<{ url: string; caption?: string; isMain?: boolean }>;
 }
 
+// Update the schema to handle nested address object properly
 const propertySchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -55,8 +55,10 @@ const propertySchema = z.object({
   size: z.coerce.number().positive("Size must be a positive number"),
   bedrooms: z.coerce.number().min(0, "Cannot be negative"),
   bathrooms: z.coerce.number().min(0, "Cannot be negative"),
-  "address.city": z.string().min(1, "City is required"),
-  "address.street": z.string().optional(),
+  address: z.object({
+    city: z.string().min(1, "City is required"),
+    street: z.string().optional().or(z.literal("")),
+  }),
   featured: z.boolean().optional().default(false),
   status: z.string().default("pending"),
   amenities: z.array(z.string()).optional().default([]),
@@ -77,8 +79,8 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
   const [amenities, setAmenities] = useState<string[]>([]);
   const { toast } = useToast();
 
-  // Form default values
-  const defaultValues = {
+  // Form default values - updated to match schema structure
+  const defaultValues: PropertyFormValues = {
     title: property?.title || "",
     description: property?.description || "",
     type: property?.type || "",
@@ -87,8 +89,10 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
     size: property?.size || 0,
     bedrooms: property?.bedrooms || 0,
     bathrooms: property?.bathrooms || 0,
-    "address.city": property?.address?.city || "",
-    "address.street": property?.address?.street || "",
+    address: {
+      city: property?.address?.city || "",
+      street: property?.address?.street || "",
+    },
     featured: property?.featured || false,
     status: property?.status || "pending",
     amenities: property?.amenities || [],
@@ -100,7 +104,7 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
   });
 
   useEffect(() => {
-    // Update form values when property changes
+    // Update form values when property changes - updated to match schema structure
     if (property) {
       form.reset({
         title: property.title,
@@ -111,8 +115,10 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
         size: property.size,
         bedrooms: property.bedrooms,
         bathrooms: property.bathrooms,
-        "address.city": property.address.city,
-        "address.street": property.address.street || "",
+        address: {
+          city: property.address.city,
+          street: property.address.street || "",
+        },
         featured: property.featured,
         status: property.status,
         amenities: property.amenities,
@@ -127,16 +133,32 @@ const PropertyForm = ({ property, userId, onSubmit, onCancel }: PropertyFormProp
 const handleImageUpload = async () => {
   const uploadedUrls = [];
   for (const image of images) {
-    const formData = new FormData();
-    formData.append("file", image);
-    formData.append("upload_preset", "your_upload_preset");
+    try {
+      const formData = new FormData();
+      formData.append("file", image);
+      formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: "POST", body: formData }
-    );
-    const data = await response.json();
-    uploadedUrls.push({ url: data.secure_url, isMain: false });
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      
+      if (!response.ok) throw new Error('Image upload failed');
+      
+      const data = await response.json();
+      uploadedUrls.push({ 
+        url: data.secure_url, 
+        publicId: data.public_id,
+        isMain: false 
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload error",
+        description: "Failed to upload one or more images",
+        variant: "destructive"
+      });
+    }
   }
   return uploadedUrls;
 };
@@ -152,20 +174,27 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
 
     // Handle image uploads first
     const uploadedImages = await handleImageUpload();
+
+      const formattedImages = uploadedImages.map((img) => ({
+      url: img.url,
+      publicId: img.publicId, // Must match server schema
+      caption: "", // Add if required
+      isMain: img.isMain
+    }));
     
     const formattedData = {
       ...data,
+      // Address is already properly structured now
       address: {
-        city: data["address.city"],
-        street: data["address.street"] || "",
+        ...data.address,
         country: "Mauritius",
       },
       // Include uploaded images in the formatted data
-      images: uploadedImages,
+      images: formattedImages,
       // Mock location data (in a real app, would use geocoding API)
       location: {
         type: "Point",
-        coordinates: [-20.348404, 57.552152], // Default to Mauritius
+        coordinates: [57.552152, -20.348404], // Default to Mauritius
       },
       owner: userId,
     };
@@ -194,8 +223,9 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
     }
     
     if (!response.ok) {
-      throw new Error("Failed to save property");
-    }
+  const errorData = await response.json();
+  throw new Error(errorData.message || "Failed to save property");
+}
     
     toast({
       title: property ? "Property updated" : "Property created",
@@ -217,13 +247,13 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
   }
 };
 
-  const handleAmenityChange = (amenity: string) => {
-    if (amenities.includes(amenity)) {
-      setAmenities(amenities.filter((item) => item !== amenity));
-    } else {
-      setAmenities([...amenities, amenity]);
-    }
-  };
+const handleAmenityChange = (amenity: string) => {
+  const updatedAmenities = amenities.includes(amenity)
+    ? amenities.filter((item) => item !== amenity)
+    : [...amenities, amenity];
+  setAmenities(updatedAmenities);
+  form.setValue('amenities', updatedAmenities);
+};
 
   const commonAmenities = [
     "Air Conditioning",
@@ -395,6 +425,7 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
             )}
           />
 
+          {/* Updated address fields to use the proper nested format */}
           <FormField
             control={form.control}
             name="address.city"
@@ -442,22 +473,6 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
           )}
         />
 
-         <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-          <FormItem>
-  <FormLabel>Images</FormLabel>
-  <Input 
-    type="file" 
-    multiple 
-    onChange={(e) => setImages(Array.from(e.target.files || []))}
-  />
-  <FormMessage />
-</FormItem>
-          )}
-        />
-
         <FormField
           control={form.control}
           name="featured"
@@ -499,25 +514,25 @@ const handleFormSubmit = async (data: PropertyFormValues) => {
           </div>
         </div>
 
-<div className="space-y-2">
-  <FormLabel>Upload Images</FormLabel>
-  <Input
-    type="file"
-    multiple
-    accept="image/*"
-    onChange={(e) => {
-      const files = e.target.files;
-      if (files) {
-        setImages(Array.from(files));
-      }
-    }}
-  />
-  {images.length > 0 && (
-    <div className="text-sm text-muted-foreground">
-      {images.length} files selected
-    </div>
-  )}
-</div>
+        <div className="space-y-2">
+          <FormLabel>Upload Images</FormLabel>
+          <Input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (files) {
+                setImages(Array.from(files));
+              }
+            }}
+          />
+          {images.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              {images.length} files selected
+            </div>
+          )}
+        </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

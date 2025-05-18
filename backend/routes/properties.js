@@ -1,3 +1,4 @@
+// routes/properties.js - Update with new Cloudinary route
 
 const express = require('express');
 const { 
@@ -8,7 +9,8 @@ const {
   deleteProperty,
   getFeaturedProperties,
   uploadPropertyImages,
-  getPropertiesByCategory
+  getPropertiesByCategory,
+  getCloudinarySignature  // Add this new function
 } = require('../controllers/properties');
 
 const router = express.Router();
@@ -21,6 +23,9 @@ router.route('/')
 
 router.get('/featured', getFeaturedProperties);
 router.get('/category/:categorySlug', getPropertiesByCategory);
+
+// Add new Cloudinary signature route
+router.get('/cloudinary-signature', protect, getCloudinarySignature);
 
 router.route('/:id')
   .get(getProperty)

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -96,36 +95,63 @@ const ListingsTab = ({ userId }: ListingTabProps) => {
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
+      if (!token) throw new Error("Authentication required");
 
+      // Log the URL and propertyToDelete for debugging
+      console.log(`Deleting property: ${propertyToDelete._id}`);
+      console.log(`API URL: ${import.meta.env.VITE_API_URL}/api/properties/${propertyToDelete._id}`);
+
+      // Try the deletion with a more robust approach
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/api/properties/${propertyToDelete._id}`,
         {
           method: "DELETE",
-          headers: {
+          headers: { 
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete property");
+      // Log the response status for debugging
+      console.log(`Delete response status: ${response.status}`);
+      
+      // For 500 errors, let's try to get the full response text
+      if (response.status === 500) {
+        const errorText = await response.text();
+        console.log("Server error details:", errorText);
+        
+        // Check if the error is related to Mongoose/MongoDB
+        if (errorText.includes("remove") || errorText.includes("deprecated")) {
+          console.log("Detected potential deprecated method issue");
+        }
       }
 
-      toast({
-        title: "Property deleted",
-        description: "Your property has been successfully deleted",
-      });
+      if (!response.ok) {
+        let errorMessage = "Failed to delete property";
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || `Server error (${response.status})`;
+        } catch (jsonError) {
+          errorMessage = `Server error (${response.status}). Check console for details.`;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
-      // Refresh the listings
+      toast({ 
+        title: "Success", 
+        description: "Property deleted successfully" 
+      });
+      
+      // Refresh the listings after successful deletion
       fetchListings();
     } catch (error) {
       console.error("Error deleting property:", error);
       toast({
         title: "Error",
-        description: "Failed to delete property",
+        description: error.message || "Failed to delete property",
         variant: "destructive",
       });
     } finally {

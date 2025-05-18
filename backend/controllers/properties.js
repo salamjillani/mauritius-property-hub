@@ -1,6 +1,8 @@
 const Property = require('../models/Property');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
+const Agent = require('../models/Agent');
+const Agency = require('../models/Agency');
 const path = require('path');
 const fs = require('fs');
 
@@ -196,7 +198,8 @@ exports.deleteProperty = asyncHandler(async (req, res, next) => {
     );
   }
 
-  await property.remove();
+  // Updated to use deleteOne instead of remove()
+  await Property.deleteOne({ _id: req.params.id });
 
   res.status(200).json({ success: true, data: {} });
 });
@@ -233,10 +236,10 @@ exports.getPropertiesByCategory = asyncHandler(async (req, res, next) => {
   const endIndex = page * limit;
   
   // Create filter based on category
-  const filter = { 
-    category: categorySlug,
-    status: 'active'
-  };
+ const filter = { 
+  category: req.params.categorySlug,
+  status: 'active'
+};
 
   // Count total properties in this category
   const total = await Property.countDocuments(filter);
@@ -280,6 +283,12 @@ exports.getPropertiesByCategory = asyncHandler(async (req, res, next) => {
 // @route   POST /api/properties/:id/images
 // @access  Private
 exports.uploadPropertyImages = asyncHandler(async (req, res, next) => {
+  const { cloudinaryUrls } = req.body;
+  
+  if (!cloudinaryUrls || !Array.isArray(cloudinaryUrls) || cloudinaryUrls.length === 0) {
+    return next(new ErrorResponse('Please provide valid image data', 400));
+  }
+
   const property = await Property.findById(req.params.id);
 
   if (!property) {
@@ -301,71 +310,47 @@ exports.uploadPropertyImages = asyncHandler(async (req, res, next) => {
     );
   }
 
-  if (!req.files) {
-    return next(new ErrorResponse(`Please upload files`, 400));
-  }
+  // Format images array for MongoDB
+  const images = cloudinaryUrls.map((img, index) => ({
+    url: img.url,
+    publicId: img.publicId,
+    caption: img.caption || `Image ${index + 1}`,
+    isMain: index === 0 // First image is main
+  }));
 
-  // Handle multiple images
-  const images = [];
-  
-  // Function to process each file
-  const processImage = async (file, index) => {
-    // Make sure the image is a photo
-    if (!file.mimetype.startsWith('image')) {
-      return next(new ErrorResponse(`Please upload an image file`, 400));
-    }
+  // Update property with new images
+  property.images = images;
+  await property.save();
 
-    // Check filesize
-    if (file.size > process.env.MAX_FILE_UPLOAD) {
-      return next(
-        new ErrorResponse(
-          `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
-          400
-        )
-      );
-    }
+  res.status(200).json({
+    success: true,
+    data: property.images
+  });
+});
 
-    // Create custom filename
-    file.name = `property_${property._id}_${Date.now()}${path.parse(file.name).ext}`;
-
-    // Move file to upload path
-    file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
-      if (err) {
-        console.error(err);
-        return next(new ErrorResponse(`Problem with file upload`, 500));
-      }
-
-      // Add to images array
-      images.push({
-        url: file.name,
-        caption: `Image ${index + 1}`,
-        isMain: index === 0 // First image is main
-      });
-
-      // If all images are processed, update property
-      if (images.length === req.files.length) {
-        await Property.findByIdAndUpdate(
-          req.params.id,
-          { images },
-          { new: true }
-        );
-
-        res.status(200).json({
-          success: true,
-          data: images
-        });
-      }
-    });
+// New function to handle direct Cloudinary upload URLs
+// @desc    Get Cloudinary signature for direct uploads
+// @route   GET /api/properties/cloudinary-signature
+// @access  Private
+exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = {
+    timestamp,
+    folder: 'property-images',
+    upload_preset: 'mauritius'
   };
 
-  // Process each file
-  if (Array.isArray(req.files.files)) {
-    // Multiple files
-    req.files.files.forEach((file, index) => {
-      processImage(file, index);
-    });
-  } else {
-    // Single file
-    processImage(req.files.files, 0);
-  }
+  const signature = cloudinary.utils.api_sign_request(
+    params,
+    process.env.CLOUDINARY_API_SECRET
+  );
+
+  res.status(200).json({
+    data: {
+      timestamp,
+      signature,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    }
+  });
 });

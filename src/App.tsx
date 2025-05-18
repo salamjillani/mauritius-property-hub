@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,8 @@ import PropertiesForSale from "./pages/properties/PropertiesForSale";
 import PropertiesForRent from "./pages/properties/PropertiesForRent";
 import Offices from "./pages/properties/Offices";
 import Land from "./pages/properties/Land";
+import Properties from "./pages/properties/Properties";
+import PropertyDetails from "./pages/properties/PropertyDetails";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
@@ -34,12 +35,22 @@ const App = () => (
           <Route path="/properties/for-rent" element={<PropertiesForRent />} />
           <Route path="/properties/offices" element={<Offices />} />
           <Route path="/properties/land" element={<Land />} />
+
+          {/* Add category-specific detail routes */}
+          <Route path="/properties/for-sale/:id" element={<PropertyDetails />} />
+          <Route path="/properties/for-rent/:id" element={<PropertyDetails />} />
+          <Route path="/properties/offices/:id" element={<PropertyDetails />} />
+          <Route path="/properties/land/:id" element={<PropertyDetails />} />
+          {/* Keep the general routes below */}
+          <Route path="/properties" element={<Properties />} />
+          <Route path="/properties/:id" element={<PropertyDetails />} />
           
+
           {/* Admin Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/properties" element={<AdminProperties />} />
-          
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -10,43 +10,44 @@ interface FeaturedListingsProps {
 }
 
 interface PropertyImage {
-  url: string;
-  caption: string;
-  isMain: boolean;
+  url?: string;
+  caption?: string;
+  isMain?: boolean;
 }
 
 interface Agent {
   _id: string;
-  user: {
-    firstName: string;
-    lastName: string;
-    avatarUrl: string;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
   };
-  title: string;
+  title?: string;
 }
 
 interface Agency {
   _id: string;
-  name: string;
-  logoUrl: string;
+  name?: string;
+  logoUrl?: string;
 }
 
 interface Property {
   _id: string;
   title: string;
-  address: {
-    city: string;
+  address?: {
+    city?: string;
+    country?: string;
   };
-  description: string;
+  description?: string;
   price: number;
   rentalPeriod?: string;
-  type: string;
-  category: string;
-  isPremium: boolean;
+  type?: string;
+  category?: string;
+  isPremium?: boolean;
   bedrooms?: number;
   bathrooms?: number;
-  size: number;
-  images: PropertyImage[];
+  size?: number;
+  images?: PropertyImage[];
   agent?: Agent;
   agency?: Agency;
 }
@@ -119,18 +120,18 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
 
   const nextSlide = (id: string) => {
     const property = properties.find(p => p._id === id);
-    if (!property) return;
+    if (!property || !property.images || property.images.length === 0) return;
     
     const totalSlides = property.images.length;
     setCurrentSlide(prev => ({
       ...prev,
-      [id]: (prev[id] + 1) % totalSlides || 1
+      [id]: (prev[id] + 1) % totalSlides
     }));
   };
 
   const prevSlide = (id: string) => {
     const property = properties.find(p => p._id === id);
-    if (!property) return;
+    if (!property || !property.images || property.images.length === 0) return;
     
     const totalSlides = property.images.length;
     setCurrentSlide(prev => ({
@@ -140,6 +141,11 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
   };
   
   const getImageUrl = (image: PropertyImage) => {
+    // Handle undefined image or url
+    if (!image || !image.url) {
+      return "https://via.placeholder.com/400x300?text=No+Image";
+    }
+    
     // Check if the image URL includes http or https
     if (image.url.startsWith('http')) {
       return image.url;
@@ -151,7 +157,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
 
   const getAgentName = (agent?: Agent) => {
     if (!agent || !agent.user) return "Unknown Agent";
-    return `${agent.user.firstName} ${agent.user.lastName}`;
+    return `${agent.user.firstName || ''} ${agent.user.lastName || ''}`.trim() || "Unknown Agent";
   };
 
   const getAgentImage = (agent?: Agent) => {
@@ -299,13 +305,13 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                   <span>{property.address?.city || "Location unavailable"}</span>
                 </div>
                 
-                <Link to={`/properties/${property.category}/${property._id}`}>
+                <Link to={`/properties/${property._id}`}>
                   <h3 className="text-lg font-semibold text-gray-900 hover:text-teal-700 transition mb-1">
                     {property.title}
                   </h3>
                 </Link>
                 
-                <p className="text-sm text-gray-600 line-clamp-2">{property.description}</p>
+                <p className="text-sm text-gray-600 line-clamp-2">{property.description || "No description available"}</p>
                 
                 <div className="mt-4 flex items-center justify-between">
                   <div>
@@ -319,27 +325,29 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                     )}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {property.type}
+                    {property.type || "Property"}
                   </div>
                 </div>
                 
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-600 border-t pt-4">
-                  {property.bedrooms && property.bedrooms > 0 && (
+                  {property.bedrooms !== undefined && property.bedrooms > 0 && (
                     <div className="flex items-center">
                       <Bed className="h-4 w-4 mr-1" />
                       <span>{property.bedrooms} Beds</span>
                     </div>
                   )}
-                  {property.bathrooms && property.bathrooms > 0 && (
+                  {property.bathrooms !== undefined && property.bathrooms > 0 && (
                     <div className="flex items-center">
                       <Bath className="h-4 w-4 mr-1" />
                       <span>{property.bathrooms} Baths</span>
                     </div>
                   )}
-                  <div className="flex items-center">
-                    <Home className="h-4 w-4 mr-1" />
-                    <span>{property.size} m²</span>
-                  </div>
+                  {property.size !== undefined && (
+                    <div className="flex items-center">
+                      <Home className="h-4 w-4 mr-1" />
+                      <span>{property.size} m²</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
               
@@ -353,7 +361,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                     />
                     <span className="text-sm font-medium">{getAgentName(property.agent)}</span>
                     <Link 
-                      to={`/properties/${property.category}/${property._id}`}
+                      to={`/properties/${property.category || ""}/${property._id}`}
                       className="ml-auto text-sm font-medium text-teal-600 hover:underline"
                     >
                       View Details
@@ -361,7 +369,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                   </div>
                 ) : (
                   <Link 
-                    to={`/properties/${property.category}/${property._id}`}
+                    to={`/properties/${property.category || ""}/${property._id}`}
                     className="ml-auto text-sm font-medium text-teal-600 hover:underline"
                   >
                     View Details
