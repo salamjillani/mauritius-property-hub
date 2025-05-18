@@ -3,7 +3,16 @@ import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, ChevronLeft, MapPin, Home, Bed, Bath, Square } from "lucide-react";
+import { 
+  Loader2, 
+  ChevronLeft, 
+  MapPin, 
+  Home, 
+  Bed, 
+  Bath, 
+  Square, 
+  ArrowRight 
+} from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -134,7 +143,7 @@ const PropertyCategoryPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar 
         activeLanguage="en"
         setActiveLanguage={() => {}}
@@ -142,90 +151,105 @@ const PropertyCategoryPage = () => {
         setActiveCurrency={setCurrency}
       />
       
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="mb-6">
+      <div className="bg-gradient-to-r from-teal-600 to-blue-700 text-white py-12">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl font-bold mb-2">
+            {formatCategoryName(categorySlug)}
+          </h1>
+          <p className="text-xl text-teal-50">
+            Discover exceptional properties across Mauritius
+          </p>
+        </div>
+      </div>
+      
+      <main className="flex-grow container mx-auto px-4 py-8 -mt-6">
+        <div className="mb-8 flex justify-between items-center">
           <Button 
             variant="outline" 
             onClick={() => window.history.back()} 
-            className="mb-4"
+            className="bg-white hover:bg-gray-100 shadow-sm"
           >
             <ChevronLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {formatCategoryName(categorySlug)}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Discover available {formatCategoryName(categorySlug).toLowerCase()} across Mauritius
-          </p>
+          
+          <span className="text-gray-500 font-medium">
+            {properties.length} {properties.length === 1 ? 'property' : 'properties'} found
+          </span>
         </div>
         
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">Loading properties...</p>
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm">
+            <Loader2 className="h-12 w-12 animate-spin text-teal-600 mb-4" />
+            <p className="text-gray-600 font-medium">Discovering available properties...</p>
           </div>
         ) : properties.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {properties.map((property) => (
-              <Card key={property._id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <div className="relative h-48 overflow-hidden">
+              <Card key={property._id} className="overflow-hidden rounded-xl border-none shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="relative h-56 overflow-hidden">
                   <img 
                     src={getImageUrl(property)}
                     alt={property.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   />
                   {property.type && (
-                    <div className="absolute top-2 left-2 bg-blue-800 text-white text-sm font-medium rounded-full py-1 px-2">
+                    <div className="absolute top-3 left-3 bg-teal-600 text-white text-sm font-semibold rounded-full py-1 px-3 shadow-md">
                       {property.type}
                     </div>
                   )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent h-20"></div>
                 </div>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{property.title}</h3>
-                    <span className="text-teal-600 font-bold">{formatPrice(property.price)}</span>
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{property.title}</h3>
+                    <span className="text-teal-600 text-lg font-bold">{formatPrice(property.price)}</span>
                   </div>
-                  <div className="flex items-center text-gray-600 mb-3 text-sm">
-                    <MapPin className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-gray-600 mb-4 text-sm">
+                    <MapPin className="h-4 w-4 mr-1 text-teal-600" />
                     <span>
                       {property.address?.city || 'Unknown City'}, {property.address?.country || 'Unknown Country'}
                     </span>
                   </div>
                   <p className="text-gray-600 mb-4 line-clamp-2">{property.description}</p>
-                  <div className="flex justify-between border-t pt-3">
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <Bed className="h-4 w-4 mr-1" />
-                      <span>{property.bedrooms || 0} Beds</span>
+                  <div className="flex justify-between py-3 border-t border-gray-100">
+                    <div className="flex items-center text-gray-700 font-medium">
+                      <Bed className="h-5 w-5 mr-2 text-teal-600" />
+                      <span>{property.bedrooms || 0}</span>
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <Bath className="h-4 w-4 mr-1" />
-                      <span>{property.bathrooms || 0} Baths</span>
+                    <div className="flex items-center text-gray-700 font-medium">
+                      <Bath className="h-5 w-5 mr-2 text-teal-600" />
+                      <span>{property.bathrooms || 0}</span>
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <Square className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-gray-700 font-medium">
+                      <Square className="h-5 w-5 mr-2 text-teal-600" />
                       <span>{property.size || 0} m²</span>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="p-4 pt-0 border-t">
+                <CardFooter className="p-0">
                   <Link 
                     to={`/properties/${property.category || categorySlug}/${property._id}`}
-                    className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                    className="w-full bg-gray-50 hover:bg-teal-50 text-teal-700 font-medium py-3 px-4 flex justify-center items-center transition-colors duration-300"
                   >
-                    View Details
+                    View Details <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </CardFooter>
               </Card>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Properties Found</h3>
-            <p className="text-gray-600">
-              We couldn't find any {formatCategoryName(categorySlug).toLowerCase()} at the moment.
+          <div className="text-center py-16 bg-white rounded-xl shadow-sm">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-teal-50 text-teal-600 mb-6">
+              <Home className="h-10 w-10" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">No Properties Found</h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              We couldn't find any {formatCategoryName(categorySlug).toLowerCase()} matching your criteria at the moment.
               <br />Please check back later or try a different category.
             </p>
+            <Button className="mt-6 bg-teal-600 hover:bg-teal-700" onClick={() => window.history.back()}>
+              Browse Other Categories
+            </Button>
           </div>
         )}
       </main>

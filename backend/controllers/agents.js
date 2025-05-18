@@ -4,6 +4,7 @@ const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const path = require('path');
+const mongoose = require('mongoose');
 
 // @desc    Get all agents
 // @route   GET /api/agents
@@ -58,7 +59,11 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
   ]);
 
   // Executing query
-  const agents = await query;
+ const agents = await query.populate([
+  { path: 'user', select: 'firstName lastName email avatarUrl' },
+  { path: 'agency', select: 'name logoUrl' },
+  { path: 'listingsCount' }
+]).exec();
 
   // Pagination result
   const pagination = {};
@@ -89,7 +94,13 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
 // @route   GET /api/agents/:id
 // @access  Public
 exports.getAgent = asyncHandler(async (req, res, next) => {
-  const agent = await Agent.findById(req.params.id)
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse(`Invalid agent ID format`, 400));
+  }
+
+  const agent = await Agent.findById(id)
     .populate([
       { path: 'user', select: 'firstName lastName email avatarUrl' },
       { path: 'agency', select: 'name logoUrl' },
@@ -98,7 +109,7 @@ exports.getAgent = asyncHandler(async (req, res, next) => {
 
   if (!agent) {
     return next(
-      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
+      new ErrorResponse(`Agent not found with id of ${id}`, 404)
     );
   }
 

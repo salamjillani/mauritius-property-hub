@@ -174,66 +174,81 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-        <p className="text-gray-600">Loading featured properties...</p>
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-200 rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-blue-600 rounded-full border-t-transparent animate-spin absolute top-0"></div>
+        </div>
+        <p className="mt-6 text-gray-600 font-medium">Discovering exceptional properties...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 mb-4">Error: {error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      <div className="text-center py-16 bg-red-50 rounded-lg">
+        <div className="bg-white p-8 max-w-md mx-auto rounded-xl shadow-md">
+          <p className="text-red-600 font-medium mb-4">Error: {error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium px-6 py-2 rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-10 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Featured Properties</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="mb-16 text-center">
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-800 to-teal-600 bg-clip-text text-transparent mb-4">
+          Featured Properties
+        </h2>
+        <div className="h-1 w-24 bg-gradient-to-r from-blue-600 to-teal-500 mx-auto rounded-full mb-4"></div>
+        <p className="text-gray-600 max-w-2xl mx-auto text-lg">
           Explore our handpicked selection of premium properties across Mauritius
         </p>
       </div>
       
       {properties.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No featured properties available at the moment.</p>
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <Home className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">No featured properties available at the moment.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {properties.map((property) => (
             <Card 
               key={property._id} 
-              className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${
+              className={`overflow-hidden transition-all duration-300 hover:shadow-xl rounded-xl ${
                 property.isPremium 
-                  ? "border-2 border-amber-400 shadow-md transform hover:-translate-y-1" 
-                  : ""
+                  ? "ring-2 ring-amber-400 shadow-md transform hover:-translate-y-2" 
+                  : "transform hover:-translate-y-1 hover:shadow-lg"
               }`}
             >
               {/* Image carousel */}
-              <div className="relative h-52 overflow-hidden">
+              <div className="relative h-64 overflow-hidden">
                 {property.images && property.images.length > 0 ? (
                   property.images.map((image, index) => (
                     <div 
                       key={index}
-                      className={`absolute inset-0 transition-opacity duration-300 ${
+                      className={`absolute inset-0 transition-opacity duration-500 ${
                         currentSlide[property._id] === index ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
                       <img 
                         src={getImageUrl(image)} 
                         alt={image.caption || property.title} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-70"></div>
                     </div>
                   ))
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                    <Home className="h-12 w-12 text-gray-400" />
+                    <Home className="h-16 w-16 text-gray-400" />
                   </div>
                 )}
                 
@@ -243,7 +258,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/50 text-white p-2 w-8 h-8 shadow-md transition-all duration-200"
                       onClick={(e) => {
                         e.preventDefault();
                         prevSlide(property._id);
@@ -254,7 +269,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/50 text-white p-2 w-8 h-8 shadow-md transition-all duration-200"
                       onClick={(e) => {
                         e.preventDefault();
                         nextSlide(property._id);
@@ -267,21 +282,21 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                 
                 {/* Premium badge */}
                 {property.isPremium && (
-                  <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                  <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
                     Premium
                   </div>
                 )}
                 
                 {/* Favorite and share buttons */}
-                <div className="absolute top-2 right-2 flex space-x-1">
+                <div className="absolute top-3 right-3 flex space-x-2">
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className={`rounded-full p-1 ${
+                    className={`rounded-full w-8 h-8 flex items-center justify-center ${
                       favorites.includes(property._id) 
                         ? "bg-red-500 text-white hover:bg-red-600" 
-                        : "bg-white/80 hover:bg-white text-gray-700"
-                    }`}
+                        : "bg-white/20 backdrop-blur-sm hover:bg-white/50 text-white"
+                    } transition-all duration-200 shadow-md`}
                     onClick={(e) => {
                       e.preventDefault();
                       toggleFavorite(property._id);
@@ -292,87 +307,104 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="rounded-full bg-white/80 hover:bg-white p-1"
+                    className="rounded-full w-8 h-8 flex items-center justify-center bg-white/20 backdrop-blur-sm hover:bg-white/50 text-white transition-all duration-200 shadow-md"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
+                
+                {/* Property price badge at bottom */}
+                <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-blue-900 px-3 py-1 rounded-lg shadow-md">
+                  <span className="font-bold">
+                    {formatPrice(property.price)}
+                  </span>
+                  {property.rentalPeriod && (
+                    <span className="text-sm text-gray-600 ml-1">
+                      /{property.rentalPeriod}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Property type badge at bottom */}
+                <div className="absolute bottom-3 right-3 bg-blue-900/80 text-white px-3 py-1 rounded-lg text-xs font-medium shadow-md">
+                  {property.type || "Property"}
+                </div>
               </div>
               
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 <div className="flex items-center text-sm text-gray-500 mb-2">
-                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <MapPin className="h-4 w-4 mr-1 text-teal-600" />
                   <span>{property.address?.city || "Location unavailable"}</span>
                 </div>
                 
-                <Link to={`/properties/${property._id}`}>
-                  <h3 className="text-lg font-semibold text-gray-900 hover:text-teal-700 transition mb-1">
+                <Link to={`/properties/${property._id}`} className="block">
+                  <h3 className="text-xl font-semibold text-gray-800 hover:text-teal-700 transition-colors duration-200 mb-2 line-clamp-1">
                     {property.title}
                   </h3>
                 </Link>
                 
-                <p className="text-sm text-gray-600 line-clamp-2">{property.description || "No description available"}</p>
+                <p className="text-sm text-gray-600 line-clamp-2 mb-4 italic">
+                  {property.description || "No description available"}
+                </p>
                 
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-lg font-bold text-blue-900">
-                      {formatPrice(property.price)}
-                    </span>
-                    {property.rentalPeriod && (
-                      <span className="text-sm text-gray-500">
-                        /{property.rentalPeriod}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {property.type || "Property"}
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex items-center justify-between text-sm text-gray-600 border-t pt-4">
+                <div className="flex items-center justify-between mt-4 py-4 border-t border-gray-100">
                   {property.bedrooms !== undefined && property.bedrooms > 0 && (
-                    <div className="flex items-center">
-                      <Bed className="h-4 w-4 mr-1" />
-                      <span>{property.bedrooms} Beds</span>
+                    <div className="flex flex-col items-center">
+                      <div className="rounded-full bg-blue-50 p-2 mb-1">
+                        <Bed className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="text-xs font-medium">{property.bedrooms} {property.bedrooms === 1 ? 'Bed' : 'Beds'}</span>
                     </div>
                   )}
                   {property.bathrooms !== undefined && property.bathrooms > 0 && (
-                    <div className="flex items-center">
-                      <Bath className="h-4 w-4 mr-1" />
-                      <span>{property.bathrooms} Baths</span>
+                    <div className="flex flex-col items-center">
+                      <div className="rounded-full bg-teal-50 p-2 mb-1">
+                        <Bath className="h-4 w-4 text-teal-600" />
+                      </div>
+                      <span className="text-xs font-medium">{property.bathrooms} {property.bathrooms === 1 ? 'Bath' : 'Baths'}</span>
                     </div>
                   )}
                   {property.size !== undefined && (
-                    <div className="flex items-center">
-                      <Home className="h-4 w-4 mr-1" />
-                      <span>{property.size} m²</span>
+                    <div className="flex flex-col items-center">
+                      <div className="rounded-full bg-amber-50 p-2 mb-1">
+                        <Home className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <span className="text-xs font-medium">{property.size} m²</span>
                     </div>
                   )}
                 </div>
               </CardContent>
               
-              <CardFooter className="p-4 pt-0 border-t">
+              <CardFooter className="px-6 py-4 bg-gray-50 border-t">
                 {property.agent ? (
                   <div className="flex items-center w-full">
-                    <img 
-                      src={getAgentImage(property.agent)} 
-                      alt={getAgentName(property.agent)}
-                      className="h-8 w-8 rounded-full object-cover mr-2" 
-                    />
-                    <span className="text-sm font-medium">{getAgentName(property.agent)}</span>
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
+                        <img 
+                          src={getAgentImage(property.agent)} 
+                          alt={getAgentName(property.agent)}
+                          className="h-full w-full object-cover" 
+                        />
+                      </div>
+                      <div className="ml-2">
+                        <p className="text-sm font-medium text-gray-900">{getAgentName(property.agent)}</p>
+                        <p className="text-xs text-gray-500">{property.agent.title || "Agent"}</p>
+                      </div>
+                    </div>
                     <Link 
                       to={`/properties/${property.category || ""}/${property._id}`}
-                      className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                      className="ml-auto text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors duration-200 flex items-center hover:underline"
                     >
                       View Details
+                      <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                   </div>
                 ) : (
                   <Link 
                     to={`/properties/${property.category || ""}/${property._id}`}
-                    className="ml-auto text-sm font-medium text-teal-600 hover:underline"
+                    className="w-full text-center py-2 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-teal-500 text-white font-medium hover:from-blue-700 hover:to-teal-600 transition-all duration-200 shadow-md hover:shadow-lg"
                   >
-                    View Details
+                    View Property Details
                   </Link>
                 )}
               </CardFooter>
@@ -381,9 +413,11 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ currency }) => {
         </div>
       )}
       
-      <div className="mt-8 text-center">
+      <div className="mt-16 text-center">
         <Link to="/properties">
-          <Button className="bg-blue-800 hover:bg-blue-900">View All Properties</Button>
+          <Button className="bg-gradient-to-r from-blue-800 to-teal-700 hover:from-blue-900 hover:to-teal-800 text-white font-medium px-8 py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+            View All Properties
+          </Button>
         </Link>
       </div>
     </div>

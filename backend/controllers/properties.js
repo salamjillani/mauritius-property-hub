@@ -4,12 +4,16 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Agent = require('../models/Agent');
 const Agency = require('../models/Agency');
 const path = require('path');
+const mongoose = require('mongoose');
 const fs = require('fs');
 
 // @desc    Get all properties
 // @route   GET /api/properties
 // @access  Public
 exports.getProperties = asyncHandler(async (req, res, next) => {
+  if (req.query.agent && !mongoose.Types.ObjectId.isValid(req.query.agent)) {
+  return next(new ErrorResponse('Invalid agent ID format', 400));
+}
   // Copy req.query
   const reqQuery = { ...req.query };
 
@@ -91,7 +95,14 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
 exports.getProperty = asyncHandler(async (req, res, next) => {
   const property = await Property.findById(req.params.id)
     .populate([
-      { path: 'agent', select: 'user title isPremium' },
+      { 
+        path: 'agent', 
+        select: '_id user title isPremium',
+        populate: {
+          path: 'user',
+          select: 'firstName lastName email contactDetails'
+        }
+      },
       { path: 'agency', select: 'name logoUrl' },
       { path: 'owner', select: 'firstName lastName' }
     ]);
@@ -100,6 +111,11 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse(`Property not found with id of ${req.params.id}`, 404)
     );
+  }
+
+  // Ensure agent field exists and has a valid _id before sending
+  if (property.agent && !property.agent._id) {
+    property.agent = null;
   }
 
   res.status(200).json({ success: true, data: property });

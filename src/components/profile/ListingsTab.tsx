@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { EditIcon, Trash2Icon, PlusIcon, Eye } from "lucide-react";
+import { EditIcon, Trash2Icon, PlusIcon, Eye, HomeIcon } from "lucide-react";
 import PropertyForm from "./PropertyForm";
 
 interface ListingTabProps {
@@ -171,13 +171,13 @@ const ListingsTab = ({ userId }: ListingTabProps) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium">Active</Badge>;
       case "pending":
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <Badge className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium">Pending</Badge>;
       case "sold":
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Sold</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-medium">Sold</Badge>;
       case "rented":
-        return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Rented</Badge>;
+        return <Badge className="bg-purple-500 hover:bg-purple-600 text-white font-medium">Rented</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -196,76 +196,116 @@ const ListingsTab = ({ userId }: ListingTabProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center p-16">
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-4 border-t-primary border-r-transparent border-b-primary border-l-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <HomeIcon className="h-6 w-6 text-primary/50" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">My Properties</h2>
-        <Button onClick={handleCreateProperty}>
-          <PlusIcon className="mr-2 h-4 w-4" />
+    <div className="space-y-8">
+      <div className="flex justify-between items-center bg-gradient-to-r from-primary/10 to-transparent p-6 rounded-lg">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">My Properties</h2>
+          <p className="text-muted-foreground mt-1">Manage your real estate portfolio</p>
+        </div>
+        <Button 
+          onClick={handleCreateProperty} 
+          className="bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl"
+          size="lg"
+        >
+          <PlusIcon className="mr-2 h-5 w-5" />
           Add New Property
         </Button>
       </div>
 
       {listings.length === 0 ? (
-        <div className="text-center p-8 border border-dashed rounded-lg">
-          <p className="text-muted-foreground mb-4">You don't have any properties listed yet.</p>
-          <Button onClick={handleCreateProperty}>
-            <PlusIcon className="mr-2 h-4 w-4" />
+        <div className="text-center p-16 border border-dashed rounded-xl bg-slate-50 dark:bg-slate-800/50">
+          <div className="flex justify-center mb-4">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <HomeIcon className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No Properties Yet</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">You don't have any properties listed yet. Start building your real estate portfolio today.</p>
+          <Button onClick={handleCreateProperty} size="lg" className="bg-primary hover:bg-primary/90 transition-all">
+            <PlusIcon className="mr-2 h-5 w-5" />
             Add Your First Property
           </Button>
         </div>
       ) : (
-        <Table>
-          <TableCaption>A list of your properties.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listings.map((property) => (
-              <TableRow key={property._id}>
-                <TableCell className="font-medium">{property.title}</TableCell>
-                <TableCell>{property.type}</TableCell>
-                <TableCell>{property.category}</TableCell>
-                <TableCell>{formatPrice(property.price)}</TableCell>
-                <TableCell>{getStatusBadge(property.status)}</TableCell>
-                <TableCell className="space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => viewProperty(property._id)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleEditProperty(property)}>
-                    <EditIcon className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteProperty(property)}>
-                    <Trash2Icon className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+        <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
+          <Table>
+            <TableCaption className="pb-4">A comprehensive list of your property portfolio.</TableCaption>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="font-semibold text-foreground">Title</TableHead>
+                <TableHead className="font-semibold text-foreground">Type</TableHead>
+                <TableHead className="font-semibold text-foreground">Category</TableHead>
+                <TableHead className="font-semibold text-foreground">Price</TableHead>
+                <TableHead className="font-semibold text-foreground">Status</TableHead>
+                <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {listings.map((property) => (
+                <TableRow key={property._id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-medium">{property.title}</TableCell>
+                  <TableCell>{property.type}</TableCell>
+                  <TableCell>{property.category}</TableCell>
+                  <TableCell className="font-semibold text-primary">{formatPrice(property.price)}</TableCell>
+                  <TableCell>{getStatusBadge(property.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => viewProperty(property._id)}
+                        className="hover:bg-primary/10 rounded-full h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEditProperty(property)}
+                        className="hover:bg-amber-500/10 rounded-full h-8 w-8 p-0"
+                      >
+                        <EditIcon className="h-4 w-4 text-amber-500" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleDeleteProperty(property)}
+                        className="hover:bg-red-500/10 rounded-full h-8 w-8 p-0"
+                      >
+                        <Trash2Icon className="h-4 w-4 text-red-500" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {/* Property Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-2xl">
               {editingProperty ? "Edit Property" : "Create New Property"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-muted-foreground">
               {editingProperty
                 ? "Update your property details below"
                 : "Add information about your new property"}
@@ -282,18 +322,18 @@ const ListingsTab = ({ userId }: ListingTabProps) => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-semibold text-red-600">Confirm Deletion</DialogTitle>
+            <DialogDescription className="pt-2">
               Are you sure you want to delete this property? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+          <DialogFooter className="gap-2 sm:justify-center pt-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteProperty}>
+            <Button variant="destructive" onClick={confirmDeleteProperty} className="w-full sm:w-auto">
               Delete
             </Button>
           </DialogFooter>

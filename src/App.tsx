@@ -17,6 +17,8 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
 import NotFound from "./pages/NotFound";
+import Agents from "./pages/agents/Agents";
+import AgentDetails from "./pages/agents/AgentDetails";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/agents" element={<Agents />} />
+          <Route path="/agents/:id" element={<AgentDetails />} />
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
