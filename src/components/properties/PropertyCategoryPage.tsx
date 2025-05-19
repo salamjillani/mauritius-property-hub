@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import PropertyCard from "../PropertyCard";
 
 interface Property {
   _id: string;
@@ -162,7 +163,7 @@ const PropertyCategoryPage = () => {
         </div>
       </div>
       
-      <main className="flex-grow container mx-auto px-4 py-8 -mt-6">
+        <main className="flex-grow container mx-auto px-4 py-8 -mt-6">
         <div className="mb-8 flex justify-between items-center">
           <Button 
             variant="outline" 
@@ -185,56 +186,12 @@ const PropertyCategoryPage = () => {
         ) : properties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {properties.map((property) => (
-              <Card key={property._id} className="overflow-hidden rounded-xl border-none shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="relative h-56 overflow-hidden">
-                  <img 
-                    src={getImageUrl(property)}
-                    alt={property.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                  {property.type && (
-                    <div className="absolute top-3 left-3 bg-teal-600 text-white text-sm font-semibold rounded-full py-1 px-3 shadow-md">
-                      {property.type}
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent h-20"></div>
-                </div>
-                <CardContent className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{property.title}</h3>
-                    <span className="text-teal-600 text-lg font-bold">{formatPrice(property.price)}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600 mb-4 text-sm">
-                    <MapPin className="h-4 w-4 mr-1 text-teal-600" />
-                    <span>
-                      {property.address?.city || 'Unknown City'}, {property.address?.country || 'Unknown Country'}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-4 line-clamp-2">{property.description}</p>
-                  <div className="flex justify-between py-3 border-t border-gray-100">
-                    <div className="flex items-center text-gray-700 font-medium">
-                      <Bed className="h-5 w-5 mr-2 text-teal-600" />
-                      <span>{property.bedrooms || 0}</span>
-                    </div>
-                    <div className="flex items-center text-gray-700 font-medium">
-                      <Bath className="h-5 w-5 mr-2 text-teal-600" />
-                      <span>{property.bathrooms || 0}</span>
-                    </div>
-                    <div className="flex items-center text-gray-700 font-medium">
-                      <Square className="h-5 w-5 mr-2 text-teal-600" />
-                      <span>{property.size || 0} m²</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="p-0">
-                  <Link 
-                    to={`/properties/${property.category || categorySlug}/${property._id}`}
-                    className="w-full bg-gray-50 hover:bg-teal-50 text-teal-700 font-medium py-3 px-4 flex justify-center items-center transition-colors duration-300"
-                  >
-                    View Details <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </CardFooter>
-              </Card>
+              <PropertyCard
+                key={property._id} 
+                property={property} 
+                currency={currency}
+                variant="standard"
+              />
             ))}
           </div>
         ) : (

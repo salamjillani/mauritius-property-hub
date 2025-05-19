@@ -14,11 +14,13 @@ import Land from "./pages/properties/Land";
 import Properties from "./pages/properties/Properties";
 import PropertyDetails from "./pages/properties/PropertyDetails";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AgentPage from '@/pages/AgentPage';
+import AllAgentsPage from '@/pages/AllAgentsPage';
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
 import NotFound from "./pages/NotFound";
-import Agents from "./pages/agents/Agents";
-import AgentDetails from "./pages/agents/AgentDetails";
+//import Agents from "./pages/agents/Agents";
+//import AgentDetails from "./pages/agents/AgentDetails";
 
 const queryClient = new QueryClient();
 
@@ -29,8 +31,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/agents/:id" element={<AgentDetails />} />
+            <Route path="/agent/:id" element={<AgentPage />} />
+            <Route path="/agents" element={<AllAgentsPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

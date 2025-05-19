@@ -23,21 +23,26 @@ const Hero = () => {
   }, []);
 
   return (
-    <div className="relative h-screen max-h-[700px] overflow-hidden bg-gradient-to-r from-blue-950 to-blue-800">
-      {/* Particle effect overlay */}
-      <div className="absolute inset-0 bg-black/30 z-10"></div>
+    <div className="relative h-screen max-h-[700px] overflow-hidden">
+      {/* Video Background with Parallax Effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        <video 
+          className="absolute w-full h-full object-cover transition-transform duration-700 ease-out"
+          style={{
+            transform: scrolled ? "scale(1.05)" : "scale(1)"
+          }}
+          autoPlay
+          muted
+          loop
+          playsInline
+        >
+          <source src="hero.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
       
-      {/* Background Image with Parallax Effect */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center opacity-40 transition-transform duration-700 ease-out"
-        style={{
-          backgroundImage: "url('/api/placeholder/1920/1080')",
-          transform: scrolled ? "scale(1.05)" : "scale(1)"
-        }}
-      />
-      
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 to-transparent z-10"></div>
+      {/* Gradient Overlay - Lighter */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10"></div>
       
       {/* Main Content */}
       <div className="container mx-auto px-6 h-full flex items-center relative z-20">
@@ -63,8 +68,8 @@ const Hero = () => {
             </Link>
             <Link to="/properties/for-rent">
               <Button 
-                size="lg" 
-                variant="outline" 
+                size="lg"
+                variant="outline"
                 className="bg-white/10 text-white hover:bg-white/20 border-white/30 px-8 py-6 rounded-lg backdrop-blur-sm transition-all duration-300"
               >
                 Explore Rental Options

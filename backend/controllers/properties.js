@@ -189,6 +189,58 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: property });
 });
 
+// @desc    Search properties and count results
+// @route   GET /api/properties/search
+// @access  Public
+exports.searchProperties = asyncHandler(async (req, res, next) => {
+  const { category, q, type, maxPrice } = req.query;
+  
+  // Build search query
+  const filter = {};
+  
+  // Always filter by active status
+  filter.status = 'active';
+  
+  // Filter by category if provided
+  if (category) {
+    filter.category = category;
+  }
+  
+  // Filter by property type if provided and not 'all'
+  if (type && type !== 'all') {
+    filter.type = type.charAt(0).toUpperCase() + type.slice(1);
+  }
+  
+  // Filter by maximum price if provided
+  if (maxPrice && !isNaN(maxPrice)) {
+    filter.price = { $lte: parseInt(maxPrice) };
+  }
+  
+  // Add text search if search term provided
+  if (q) {
+    filter.$or = [
+      { title: { $regex: q, $options: 'i' } },
+      { description: { $regex: q, $options: 'i' } },
+      { 'address.city': { $regex: q, $options: 'i' } },
+      { 'address.street': { $regex: q, $options: 'i' } }
+    ];
+  }
+  
+  // Count matching properties
+  const count = await Property.countDocuments(filter);
+  
+  res.status(200).json({
+    success: true,
+    count,
+    searchParams: {
+      category,
+      q,
+      type,
+      maxPrice
+    }
+  });
+});
+
 // @desc    Delete property
 // @route   DELETE /api/properties/:id
 // @access  Private

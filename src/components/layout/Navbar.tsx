@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -9,29 +9,43 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { User, ChevronDown, Menu, X, LogOut, UserCircle } from "lucide-react";
+import { 
+  User, 
+  ChevronDown, 
+  Menu, 
+  X, 
+  LogOut, 
+  UserCircle, 
+  Heart,
+  Globe,
+  DollarSign,
+} from "lucide-react";
 
 interface NavbarProps {
-  activeLanguage: "en" | "fr";
+  activeLanguage?: "en" | "fr";
   setActiveLanguage: (lang: "en" | "fr") => void;
-  activeCurrency: "USD" | "EUR" | "MUR";
+  activeCurrency?: "USD" | "EUR" | "MUR";
   setActiveCurrency: (currency: "USD" | "EUR" | "MUR") => void;
 }
 
 const Navbar = ({
-  activeLanguage,
+  activeLanguage = "en",
   setActiveLanguage,
-  activeCurrency,
+  activeCurrency = "MUR",
   setActiveCurrency,
 }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -41,78 +55,146 @@ const Navbar = ({
       return response.json();
     },
     retry: false,
+    enabled: !!localStorage.getItem("token"),
   });
+
+  // Handle scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    queryClient.invalidateQueries(["user"]);
+    queryClient.invalidateQueries({ queryKey: ["user"] });
     navigate("/login");
   };
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
+  const isActive = (path) => {
+    return location.pathname.includes(path);
+  };
+
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
+    <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#374163] shadow-md" : "bg-[#374163]/95 backdrop-blur-md"}`}>
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img src="/logo.png" alt="PropertyMauritius Logo" className="h-20 mr-2" />
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/properties/for-sale" className="text-gray-700 hover:text-teal-600 font-medium transition duration-200">For Sale</Link>
-            <Link to="/properties/for-rent" className="text-gray-700 hover:text-teal-600 font-medium transition duration-200">For Rent</Link>
-            <Link to="/properties/offices" className="text-gray-700 hover:text-teal-600 font-medium transition duration-200">Offices</Link>
-            <Link to="/properties/land" className="text-gray-700 hover:text-teal-600 font-medium transition duration-200">Land</Link>
-            <Link to="/agents" className="text-gray-700 hover:text-teal-600 font-medium transition duration-200">Agents</Link>
+          <nav className="hidden md:flex items-center space-x-1">
+            <Link to="/properties/for-sale" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 flex items-center gap-1 ${isActive('/properties/for-sale') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+          
+              <span>For Sale</span>
+            </Link>
+            <Link to="/properties/for-rent" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 flex items-center gap-1 ${isActive('/properties/for-rent') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+              
+              <span>For Rent</span>
+            </Link>
+            <Link to="/properties/offices" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 flex items-center gap-1 ${isActive('/properties/offices') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+            
+              <span>Offices</span>
+            </Link>
+            <Link to="/properties/land" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 flex items-center gap-1 ${isActive('/properties/land') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+            
+              <span>Land</span>
+            </Link>
+            <Link to="/agents" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 ${isActive('/agents') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+              <span>Agents</span>
+            </Link>
+            {/* Favorites link */}
+            <Link to="/favorites" className={`px-4 py-2 rounded-full text-white hover:text-white font-medium transition duration-200 flex items-center gap-1 ${isActive('/favorites') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985]'}`}>
+              <Heart className={`h-4 w-4 ${isActive('/favorites') ? 'fill-white text-white' : 'fill-transparent hover:fill-red-100'}`} />
+              <span>Favorites</span>
+            </Link>
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center hover:bg-gray-100">
+                <Button variant="ghost" className="flex items-center hover:bg-[#4c5985] rounded-full text-white">
+                  <Globe className="mr-1 h-4 w-4" />
                   {activeLanguage.toUpperCase()}
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-36">
-                <DropdownMenuItem onClick={() => setActiveLanguage("en")} className="cursor-pointer">English</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveLanguage("fr")} className="cursor-pointer">Français</DropdownMenuItem>
+              <DropdownMenuContent className="w-36 rounded-xl shadow-lg border-[#4c5985] bg-[#374163] text-white">
+                <DropdownMenuItem onClick={() => setActiveLanguage("en")} className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white">
+                  {activeLanguage === "en" && <span className="mr-2 text-white">✓</span>}
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveLanguage("fr")} className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white">
+                  {activeLanguage === "fr" && <span className="mr-2 text-white">✓</span>}
+                  Français
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center hover:bg-gray-100">
+                <Button variant="ghost" className="flex items-center hover:bg-[#4c5985] rounded-full text-white">
+                  <DollarSign className="mr-1 h-4 w-4" />
                   {activeCurrency}
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-36">
-                <DropdownMenuItem onClick={() => setActiveCurrency("MUR")} className="cursor-pointer">MUR (₨)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveCurrency("USD")} className="cursor-pointer">USD ($)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveCurrency("EUR")} className="cursor-pointer">EUR (€)</DropdownMenuItem>
+              <DropdownMenuContent className="w-36 rounded-xl shadow-lg border-[#4c5985] bg-[#374163] text-white">
+                <DropdownMenuItem onClick={() => setActiveCurrency("MUR")} className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white">
+                  {activeCurrency === "MUR" && <span className="mr-2 text-white">✓</span>}
+                  MUR (₨)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveCurrency("USD")} className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white">
+                  {activeCurrency === "USD" && <span className="mr-2 text-white">✓</span>}
+                  USD ($)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveCurrency("EUR")} className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white">
+                  {activeCurrency === "EUR" && <span className="mr-2 text-white">✓</span>}
+                  EUR (€)
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Mobile-only Favorites Button */}
+            <Link to="/favorites" className="md:hidden flex items-center">
+              <Button variant="ghost" className="text-white hover:text-white rounded-full p-2 hover:bg-[#4c5985]">
+                <Heart className={`h-5 w-5 ${isActive('/favorites') ? 'fill-white text-white' : 'fill-transparent'}`} />
+              </Button>
+            </Link>
 
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center hover:bg-gray-100">
-                    <User className="mr-2 h-5 w-5 text-teal-600" />
-                    <span className="mr-1">{user.name || "Account"}</span>
-                    <ChevronDown className="h-4 w-4" />
+                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-[#4c5985] rounded-full px-4 text-white">
+                    <div className="h-8 w-8 rounded-full bg-[#5a6894] flex items-center justify-center text-white font-medium">
+                      {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                    </div>
+                    <span className="hidden lg:inline mr-1 font-medium">{user.name || "Account"}</span>
+                    <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48">
-                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
+                <DropdownMenuContent className="w-48 rounded-xl shadow-lg border-[#4c5985] bg-[#374163] text-white">
+                  <div className="px-4 py-2 text-sm font-medium text-white">
+                    {user.email}
+                  </div>
+                  <DropdownMenuSeparator className="bg-[#4c5985]" />
+                  <DropdownMenuItem className="cursor-pointer rounded-lg hover:bg-[#4c5985] text-white" onClick={() => navigate("/profile")}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
+                  <DropdownMenuSeparator className="bg-[#4c5985]" />
+                  <DropdownMenuItem className="cursor-pointer text-red-300 rounded-lg hover:bg-[#4c5985]" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>
                   </DropdownMenuItem>
@@ -120,20 +202,33 @@ const Navbar = ({
               </DropdownMenu>
             ) : (
               <>
+                <Link to="/favorites" className="md:flex hidden">
+                  <Button variant="ghost" className="rounded-full hover:bg-[#4c5985] border border-transparent hover:border-[#5a6894] text-white">
+                    <Heart className="h-5 w-5 mr-1" />
+                    <span className="hidden lg:inline">Favorites</span>
+                  </Button>
+                </Link>
                 <Link to="/login">
-                  <Button variant="outline" className="flex items-center border-gray-300 hover:bg-gray-100">
+                  <Button variant="outline" className="flex items-center rounded-full border-[#5a6894] hover:bg-[#4c5985] text-white hover:border-white">
                     <User className="mr-2 h-4 w-4" />Login
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="bg-teal-600 hover:bg-teal-700 transition duration-200">Register</Button>
+                  <Button className="bg-white text-[#374163] hover:bg-gray-200 transition duration-200 rounded-full">Register</Button>
                 </Link>
               </>
             )}
           </div>
 
-          <div className="md:hidden">
-            <Button variant="ghost" onClick={toggleMobileMenu} className="hover:bg-gray-100">
+          <div className="md:hidden flex gap-2">
+            {/* Favorites icon for mobile */}
+            <Link to="/favorites">
+              <Button variant="ghost" className="p-2 rounded-full hover:bg-[#4c5985] text-white">
+                <Heart className={`h-5 w-5 ${isActive('/favorites') ? 'fill-white text-white' : 'fill-transparent'}`} />
+              </Button>
+            </Link>
+            
+            <Button variant="ghost" onClick={toggleMobileMenu} className="p-2 rounded-full hover:bg-[#4c5985] text-white">
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
@@ -141,52 +236,88 @@ const Navbar = ({
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden px-4 pt-2 pb-4 bg-white border-t space-y-3 shadow-lg animate-in slide-in-from-top duration-200">
-          <Link to="/properties/for-sale" className="block py-2 text-gray-700 hover:text-teal-600 font-medium" onClick={toggleMobileMenu}>For Sale</Link>
-          <Link to="/properties/for-rent" className="block py-2 text-gray-700 hover:text-teal-600 font-medium" onClick={toggleMobileMenu}>For Rent</Link>
-          <Link to="/properties/offices" className="block py-2 text-gray-700 hover:text-teal-600 font-medium" onClick={toggleMobileMenu}>Offices</Link>
-          <Link to="/properties/land" className="block py-2 text-gray-700 hover:text-teal-600 font-medium" onClick={toggleMobileMenu}>Land</Link>
-          <Link to="/agents" className="block py-2 text-gray-700 hover:text-teal-600 font-medium" onClick={toggleMobileMenu}>Agents</Link>
+        <div className="md:hidden px-4 pt-3 pb-5 bg-[#374163] border-t border-[#4c5985] space-y-3 shadow-xl animate-in slide-in-from-top duration-200">
+          <div className="space-y-1 py-2">
+            <Link to="/properties/for-sale" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/properties/for-sale') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985] text-white'}`} onClick={toggleMobileMenu}>
+        
+              <span className="font-medium">For Sale</span>
+            </Link>
+            <Link to="/properties/for-rent" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/properties/for-rent') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985] text-white'}`} onClick={toggleMobileMenu}>
+             
+              <span className="font-medium">For Rent</span>
+            </Link>
+            <Link to="/properties/offices" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/properties/offices') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985] text-white'}`} onClick={toggleMobileMenu}>
+           
+              <span className="font-medium">Offices</span>
+            </Link>
+            <Link to="/properties/land" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/properties/land') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985] text-white'}`} onClick={toggleMobileMenu}>
           
-          <div className="pt-2 space-y-2">
-            <div className="flex justify-between items-center">
-              <Button variant="ghost" className="w-1/2 justify-start" onClick={() => setActiveLanguage("en")}>
-                English {activeLanguage === "en" && "✓"}
+              <span className="font-medium">Land</span>
+            </Link>
+            <Link to="/agents" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/agents') ? 'bg-[#4c5985] text-white' : 'hover:bg-[#4c5985] text-white'}`} onClick={toggleMobileMenu}>
+              <User className="h-5 w-5" />
+              <span className="font-medium">Agents</span>
+            </Link>
+            <Link to="/favorites" className={`flex items-center gap-2 py-3 px-4 rounded-lg ${isActive('/favorites') ? 'bg-[#5a6894] text-white' : 'hover:bg-[#5a6894] text-white'}`} onClick={toggleMobileMenu}>
+              <Heart className={`h-5 w-5 ${isActive('/favorites') ? 'fill-white text-white' : ''}`} />
+              <span className="font-medium">Favorites</span>
+            </Link>
+          </div>
+          
+          <div className="space-y-4 pt-3 border-t border-[#4c5985]">
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Button variant={activeLanguage === "en" ? "default" : "outline"} className={`flex-1 rounded-full px-4 py-2 text-sm ${activeLanguage === "en" ? 'bg-white text-[#374163]' : 'text-white border-white'}`} onClick={() => setActiveLanguage("en")}>
+                <Globe className="h-4 w-4 mr-1" />
+                English
               </Button>
-              <Button variant="ghost" className="w-1/2 justify-start" onClick={() => setActiveLanguage("fr")}>
-                Français {activeLanguage === "fr" && "✓"}
+              <Button variant={activeLanguage === "fr" ? "default" : "outline"} className={`flex-1 rounded-full px-4 py-2 text-sm ${activeLanguage === "fr" ? 'bg-white text-[#374163]' : 'text-white border-white'}`} onClick={() => setActiveLanguage("fr")}>
+                <Globe className="h-4 w-4 mr-1" />
+                Français
               </Button>
             </div>
-            <div className="flex justify-between items-center">
-              <Button variant="ghost" className="w-1/3 justify-start" onClick={() => setActiveCurrency("MUR")}>
-                MUR {activeCurrency === "MUR" && "✓"}
+            
+            <div className="flex flex-wrap gap-2">
+              <Button variant={activeCurrency === "MUR" ? "default" : "outline"} className={`flex-1 rounded-full px-3 py-2 text-sm ${activeCurrency === "MUR" ? 'bg-white text-[#374163]' : 'text-white border-white'}`} onClick={() => setActiveCurrency("MUR")}>
+                <DollarSign className="h-4 w-4 mr-1" />
+                MUR (₨)
               </Button>
-              <Button variant="ghost" className="w-1/3 justify-start" onClick={() => setActiveCurrency("USD")}>
-                USD {activeCurrency === "USD" && "✓"}
+              <Button variant={activeCurrency === "USD" ? "default" : "outline"} className={`flex-1 rounded-full px-3 py-2 text-sm ${activeCurrency === "USD" ? 'bg-white text-[#374163]' : 'text-white border-white'}`} onClick={() => setActiveCurrency("USD")}>
+                <DollarSign className="h-4 w-4 mr-1" />
+                USD ($)
               </Button>
-              <Button variant="ghost" className="w-1/3 justify-start" onClick={() => setActiveCurrency("EUR")}>
-                EUR {activeCurrency === "EUR" && "✓"}
+              <Button variant={activeCurrency === "EUR" ? "default" : "outline"} className={`flex-1 rounded-full px-3 py-2 text-sm ${activeCurrency === "EUR" ? 'bg-white text-[#374163]' : 'text-white border-white'}`} onClick={() => setActiveCurrency("EUR")}>
+                <DollarSign className="h-4 w-4 mr-1" />
+                EUR (€)
               </Button>
             </div>
             
             {user ? (
-              <div className="space-y-2 border-t pt-2 mt-2">
+              <div className="space-y-2 border-t border-[#4c5985] pt-3">
+                <div className="flex items-center gap-3 px-4 mb-3">
+                  <div className="h-10 w-10 rounded-full bg-[#5a6894] flex items-center justify-center text-white font-medium text-lg">
+                    {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  </div>
+                  <div>
+                    <div className="font-medium text-white">{user.name}</div>
+                    <div className="text-sm text-gray-300">{user.email}</div>
+                  </div>
+                </div>
                 <Link to="/profile" onClick={toggleMobileMenu}>
-                  <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                    <UserCircle className="h-4 w-4" />Profile
+                  <Button variant="outline" className="w-full rounded-lg flex items-center justify-center gap-2 border-white text-white hover:bg-[#4c5985]">
+                    <UserCircle className="h-5 w-5" />Profile
                   </Button>
                 </Link>
-                <Button onClick={handleLogout} variant="outline" className="w-full flex items-center justify-center gap-2 border-red-200 text-red-600 hover:bg-red-50">
-                  <LogOut className="h-4 w-4" />Logout
+                <Button onClick={handleLogout} variant="outline" className="w-full rounded-lg flex items-center justify-center gap-2 border-red-300 text-red-300 hover:bg-[#4c5985]">
+                  <LogOut className="h-5 w-5" />Logout
                 </Button>
               </div>
             ) : (
-              <div className="flex justify-between pt-2 border-t mt-2">
-                <Link to="/login" className="w-1/2 pr-1" onClick={toggleMobileMenu}>
-                  <Button variant="outline" className="w-full">Login</Button>
+              <div className="flex justify-between pt-3 border-t border-[#4c5985] gap-3">
+                <Link to="/login" className="w-1/2" onClick={toggleMobileMenu}>
+                  <Button variant="outline" className="w-full rounded-lg border-white text-white">Login</Button>
                 </Link>
-                <Link to="/register" className="w-1/2 pl-1" onClick={toggleMobileMenu}>
-                  <Button className="w-full bg-teal-600 hover:bg-teal-700">Register</Button>
+                <Link to="/register" className="w-1/2" onClick={toggleMobileMenu}>
+                  <Button className="w-full bg-white text-[#374163] hover:bg-gray-200 rounded-lg">Register</Button>
                 </Link>
               </div>
             )}
