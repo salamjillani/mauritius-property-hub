@@ -9,7 +9,7 @@ const Register = () => {
     lastName: "",
     email: "",
     password: "",
-    accountType: "individual"
+    accountType: "agent"
   });
   const [errors, setErrors] = useState({
     firstName: "",
@@ -207,17 +207,16 @@ const Register = () => {
             <label className="block text-sm font-medium text-gray-700">
               Account Type
             </label>
-            <select
-              name="accountType"
-              value={formData.accountType}
-              onChange={handleChange}
-              className="w-full border border-gray-200 rounded-md h-10 px-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-700"
-            >
-              <option value="individual">Individual</option>
-              <option value="agent">Agent</option>
-              <option value="agency">Agency</option>
-              <option value="promoter">Promoter</option>
-            </select>
+        <select
+  name="accountType"
+  value={formData.accountType}
+  onChange={handleChange}
+  className="w-full border border-gray-200 rounded-md h-10 px-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-700"
+>
+  <option value="agent">Agent</option>
+  <option value="agency">Agency</option>
+  <option value="promoter">Promoter</option>
+</select>
           </div>
 
           <button

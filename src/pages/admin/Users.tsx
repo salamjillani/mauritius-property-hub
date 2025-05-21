@@ -139,20 +139,20 @@ const Users = () => {
     });
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Badge className="bg-red-500">Admin</Badge>;
-      case "agent":
-        return <Badge className="bg-blue-500">Agent</Badge>;
-      case "agency":
-        return <Badge className="bg-purple-500">Agency</Badge>;
-      case "individual":
-        return <Badge variant="outline">Individual</Badge>;
-      default:
-        return <Badge variant="outline">{role}</Badge>;
-    }
-  };
+ const getRoleBadge = (role: string) => {
+  switch (role) {
+    case "admin":
+      return <Badge className="bg-red-500">Admin</Badge>;
+    case "agent":
+      return <Badge className="bg-blue-500">Agent</Badge>;
+    case "agency":
+      return <Badge className="bg-purple-500">Agency</Badge>;
+    case "promoter":
+      return <Badge className="bg-green-500">Promoter</Badge>;
+    default:
+      return <Badge variant="outline">{role}</Badge>;
+  }
+};
 
   const filteredUsers = users.filter(user => 
     user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||

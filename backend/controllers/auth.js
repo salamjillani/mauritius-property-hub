@@ -9,6 +9,10 @@ const asyncHandler = require('../middleware/asyncHandler');
 exports.register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, accountType } = req.body;
 
+  if (!['agent', 'agency', 'promoter', 'admin'].includes(accountType)) {
+  return next(new ErrorResponse('Invalid account type', 400));
+}
+
   // Create user
   const user = await User.create({
     firstName,

@@ -128,6 +128,11 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
   // Add user to req.body
   req.body.owner = req.user.id;
 
+  // Validate user role
+  if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
+    return next(new ErrorResponse('Invalid user role for creating property', 403));
+  }
+
   // If user is an agent, set the agent field
   if (req.user.role === 'agent') {
     const agent = await Agent.findOne({ user: req.user.id });
@@ -148,6 +153,17 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     }
   }
 
+  // If user is a promoter, set the agent field if they have an agent profile
+  if (req.user.role === 'promoter') {
+    const agent = await Agent.findOne({ user: req.user.id });
+    if (agent) {
+      req.body.agent = agent._id;
+      if (agent.agency) {
+        req.body.agency = agent.agency;
+      }
+    }
+  }
+
   const property = await Property.create(req.body);
 
   res.status(201).json({
@@ -155,7 +171,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     data: property
   });
 });
-
 // @desc    Update property
 // @route   PUT /api/properties/:id
 // @access  Private

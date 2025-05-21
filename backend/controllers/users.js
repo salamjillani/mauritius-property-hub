@@ -26,7 +26,20 @@ exports.getUser = asyncHandler(async (req, res, next) => {
 // @route   POST /api/users
 // @access  Private/Admin
 exports.createUser = asyncHandler(async (req, res, next) => {
-  const user = await User.create(req.body);
+  const { firstName, lastName, email, password, role } = req.body;
+
+  // Validate role
+  if (!['agent', 'agency', 'promoter', 'admin'].includes(role)) {
+    return next(new ErrorResponse('Invalid role', 400));
+  }
+
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    password,
+    role
+  });
 
   res.status(201).json({
     success: true,
