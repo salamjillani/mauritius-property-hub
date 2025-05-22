@@ -3,6 +3,35 @@ const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 const path = require("path");
+const cloudinary = require('../config/cloudinary');
+
+
+// @desc    Get Cloudinary signature for agent photo uploads
+// @route   GET /api/agents/cloudinary-signature
+// @access  Private
+exports.getAgentCloudinarySignature = asyncHandler(async (req, res, next) => {
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = {
+    timestamp,
+    folder: 'agent-photos',
+    upload_preset: 'mauritius'
+  };
+
+  const signature = cloudinary.utils.api_sign_request(
+    params,
+    process.env.CLOUDINARY_API_SECRET
+  );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      timestamp,
+      signature,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    }
+  });
+});
 
 // @desc    Get all agents
 // @route   GET /api/agents
@@ -186,49 +215,37 @@ exports.getPremiumAgents = asyncHandler(async (req, res, next) => {
 // @route   POST /api/agents/:id/photo
 // @access  Private
 exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
+  const { cloudinaryUrl } = req.body;
+  
+  if (!cloudinaryUrl) {
+    return next(new ErrorResponse('Please provide image data', 400));
+  }
+
   const agent = await Agent.findById(req.params.id);
 
   if (!agent) {
-    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
-  }
-
-  if (agent.user.toString() !== req.user.id && req.user.role !== "admin") {
     return next(
-      new ErrorResponse(`User ${req.user.id} is not authorized to update this agent`, 401)
+      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
     );
   }
 
-  if (!req.files) {
-    return next(new ErrorResponse(`Please upload a file`, 400));
-  }
-
-  const file = req.files.file;
-
-  if (!file.mimetype.startsWith("image")) {
-    return next(new ErrorResponse(`Please upload an image file`, 400));
-  }
-
-  if (file.size > process.env.MAX_FILE_UPLOAD) {
+  // Make sure user owns the agent profile or is admin
+  if (agent.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(
-      new ErrorResponse(`Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`, 400)
+      new ErrorResponse(
+        `User ${req.user.id} is not authorized to update this agent profile`,
+        401
+      )
     );
   }
 
-  file.name = `agent_${agent._id}${path.parse(file.name).ext}`;
+  // Update the agent's photo URL and also update the user's avatarUrl
+  await Agent.findByIdAndUpdate(req.params.id, { photoUrl: cloudinaryUrl });
+  await User.findByIdAndUpdate(agent.user, { avatarUrl: cloudinaryUrl });
 
-  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
-    if (err) {
-      console.error(err);
-      return next(new ErrorResponse(`Problem with file upload`, 500));
-    }
-
-    await User.findByIdAndUpdate(agent.user, { avatarUrl: file.name });
-    await Agent.findByIdAndUpdate(req.params.id, { avatarUrl: file.name });
-
-    res.status(200).json({
-      success: true,
-      data: file.name,
-    });
+  res.status(200).json({
+    success: true,
+    data: { photoUrl: cloudinaryUrl }
   });
 });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { uploadToCloudinary } from "@/utils/cloudinaryService";
+import { uploadAgentPhotoToCloudinary } from "@/utils/cloudinaryService"; // Updated import
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,8 +59,10 @@ const AgentProfileForm = ({ agent, onProfileUpdate }: { agent?: any; onProfileUp
 
     try {
       let avatarUrl = agent?.user?.avatarUrl || "default-avatar.jpg";
+      
+      // Upload image to Cloudinary if a new file was selected
       if (formData.avatarFile) {
-        const uploadedImage = await uploadToCloudinary(formData.avatarFile);
+        const uploadedImage = await uploadAgentPhotoToCloudinary(formData.avatarFile); // Updated function call
         avatarUrl = uploadedImage.url;
       }
 
@@ -91,7 +93,8 @@ const AgentProfileForm = ({ agent, onProfileUpdate }: { agent?: any; onProfileUp
       );
 
       if (!response.ok) {
-        throw new Error("Failed to save agent profile");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save agent profile");
       }
 
       toast({
@@ -101,6 +104,7 @@ const AgentProfileForm = ({ agent, onProfileUpdate }: { agent?: any; onProfileUp
 
       if (onProfileUpdate) onProfileUpdate();
     } catch (error) {
+      console.error("Error saving profile:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save profile",
