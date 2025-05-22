@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, MapPin, Star, Bed, Bath, Square, Check } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Square, Check } from "lucide-react";
 
 const PropertyCard = ({ 
   property, 
   currency = "MUR",
-  showRating = true,
   variant = "standard" // 'standard', 'featured', or 'simple'
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
@@ -162,8 +161,8 @@ const PropertyCard = ({
               </div>
             </div>
             
-            {/* Rating and Price (on the right side) */}
-            <div className="flex flex-col items-end gap-2">
+            {/* Price (on the right side) */}
+            <div className="flex flex-col items-end">
               {/* Price tag */}
               <div className="font-bold text-blue-900 text-right">
                 {formatPrice(property.price)}
@@ -173,19 +172,6 @@ const PropertyCard = ({
                   </span>
                 )}
               </div>
-              
-              {/* 5-star rating */}
-              {showRating && (
-                <div className="flex mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i}
-                      className="h-4 w-4 text-amber-400" 
-                      fill="currentColor"
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </CardContent>

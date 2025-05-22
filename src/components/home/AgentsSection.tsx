@@ -1,65 +1,28 @@
-import { motion } from "framer-motion";
-import { Star, MapPin } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import AgentCarousel from './AgentCarousel';
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
+/**
+ * AgentsSection Component
+ * Displays a section with a carousel of top agents
+ */
+interface AgentsSectionProps {
+  className?: string;
+}
 
-const AgentsSection = ({ className, agents }: { className?: string; agents: any[] }) => {
-  const navigate = useNavigate();
-
-  const handleAgentClick = (id: string) => {
-    navigate(`/agent/${id}`);
-  };
-
+const AgentsSection: React.FC<AgentsSectionProps> = ({ className }) => {
   return (
-    <motion.section
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
-      variants={fadeInUp}
-      className={`py-12 ${className}`}
-    >
-      <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
-        Our Expert Agents
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {agents.slice(0, 4).map((agent) => (
-          <motion.div
-            key={agent._id}
-            className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleAgentClick(agent._id)}
-            variants={fadeInUp}
-          >
-            <img
-              src={agent.user?.avatarUrl || "default-avatar.jpg"}
-              alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-slate-800">
-                {agent.user?.firstName} {agent.user?.lastName}
-              </h3>
-              <p className="text-sm text-slate-600">{agent.title}</p>
-              <div className="flex items-center gap-1 text-slate-500 mt-2">
-                <MapPin size={16} />
-                <span className="text-sm">{agent.location || "Mauritius"}</span>
-              </div>
-              <div className="flex mt-2">
-                {[...Array(agent.rating || 4)].map((_, i) => (
-                  <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
-                ))}
-                {[...Array(5 - (agent.rating || 4))].map((_, i) => (
-                  <Star key={i} size={16} className="text-slate-200" />
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        ))}
+    <section className={`py-12 px-4 bg-white ${className}`} id="agents-section">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-2">Meet Our Top Agents</h2>
+          <p className="text-muted-foreground">Experienced professionals ready to help you find your dream home</p>
+        </div>
+        
+        <div className="py-4">
+          <AgentCarousel />
+        </div>
       </div>
-    </motion.section>
+    </section>
   );
 };
 

@@ -133,17 +133,16 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid user role for creating property', 403));
   }
 
-  // If user is an agent, set the agent field
-  if (req.user.role === 'agent') {
-    const agent = await Agent.findOne({ user: req.user.id });
-    if (agent) {
-      req.body.agent = agent._id;
-      // If agent belongs to an agency, set agency field too
-      if (agent.agency) {
-        req.body.agency = agent.agency;
-      }
-    }
+ if (req.user.role === 'agent') {
+  const agent = await Agent.findOne({ user: req.user.id });
+  if (!agent) {
+    return next(new ErrorResponse('Agent profile not found for this user', 400));
   }
+  req.body.agent = agent._id;
+  if (agent.agency) {
+    req.body.agency = agent.agency;
+  }
+}
 
   // If user is an agency, set the agency field
   if (req.user.role === 'agency') {
