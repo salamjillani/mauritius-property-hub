@@ -1,48 +1,34 @@
-
-const Agent = require('../models/Agent');
-const User = require('../models/User');
-const ErrorResponse = require('../utils/errorResponse');
-const asyncHandler = require('../middleware/asyncHandler');
-const path = require('path');
-const mongoose = require('mongoose');
+const Agent = require("../models/Agent");
+const User = require("../models/User");
+const ErrorResponse = require("../utils/errorResponse");
+const asyncHandler = require("../middleware/asyncHandler");
+const path = require("path");
 
 // @desc    Get all agents
 // @route   GET /api/agents
 // @access  Public
 exports.getAgents = asyncHandler(async (req, res, next) => {
-  // Copy req.query
   const reqQuery = { ...req.query };
+  const removeFields = ["select", "sort", "page", "limit"];
+  removeFields.forEach((param) => delete reqQuery[param]);
 
-  // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
-
-  // Loop over removeFields and delete them from reqQuery
-  removeFields.forEach(param => delete reqQuery[param]);
-
-  // Create query string
   let queryStr = JSON.stringify(reqQuery);
+  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, (match) => `$${match}`);
 
-  // Create operators ($gt, $gte, etc)
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
-
-  // Finding resource
   let query = Agent.find(JSON.parse(queryStr));
 
-  // Select Fields
   if (req.query.select) {
-    const fields = req.query.select.split(',').join(' ');
+    const fields = req.query.select.split(",").join(" ");
     query = query.select(fields);
   }
 
-  // Sort
   if (req.query.sort) {
-    const sortBy = req.query.sort.split(',').join(' ');
+    const sortBy = req.query.sort.split(",").join(" ");
     query = query.sort(sortBy);
   } else {
-    query = query.sort('-createdAt');
+    query = query.sort("-createdAt");
   }
 
-  // Pagination
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
@@ -51,42 +37,27 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
 
   query = query.skip(startIndex).limit(limit);
 
-  // Populate
   query = query.populate([
-    { path: 'user', select: 'firstName lastName email avatarUrl' },
-    { path: 'agency', select: 'name logoUrl' },
-    { path: 'listingsCount' }
+    { path: "user", select: "firstName lastName email avatarUrl" },
+    { path: "agency", select: "name logoUrl" },
+    { path: "listingsCount" },
   ]);
 
-  // Executing query
- const agents = await query.populate([
-  { path: 'user', select: 'firstName lastName email avatarUrl' },
-  { path: 'agency', select: 'name logoUrl' },
-  { path: 'listingsCount' }
-]).exec();
+  const agents = await query;
 
-  // Pagination result
   const pagination = {};
-
   if (endIndex < total) {
-    pagination.next = {
-      page: page + 1,
-      limit
-    };
+    pagination.next = { page: page + 1, limit };
   }
-
   if (startIndex > 0) {
-    pagination.prev = {
-      page: page - 1,
-      limit
-    };
+    pagination.prev = { page: page - 1, limit };
   }
 
   res.status(200).json({
     success: true,
     count: agents.length,
     pagination,
-    data: agents
+    data: agents,
   });
 });
 
@@ -100,17 +71,14 @@ exports.getAgent = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
 
-  const agent = await Agent.findById(id)
-    .populate([
-      { path: 'user', select: 'firstName lastName email avatarUrl' },
-      { path: 'agency', select: 'name logoUrl' },
-      { path: 'properties' }
-    ]);
+  const agent = await Agent.findById(id).populate([
+    { path: "user", select: "firstName lastName email avatarUrl" },
+    { path: "agency", select: "name logoUrl" },
+    { path: "properties" },
+  ]);
 
   if (!agent) {
-    return next(
-      new ErrorResponse(`Agent not found with id of ${id}`, 404)
-    );
+    return next(new ErrorResponse(`Agent not found with id of ${id}`, 404));
   }
 
   res.status(200).json({ success: true, data: agent });
@@ -120,28 +88,25 @@ exports.getAgent = asyncHandler(async (req, res, next) => {
 // @route   POST /api/agents
 // @access  Private
 exports.createAgent = asyncHandler(async (req, res, next) => {
-  // Check if agent profile already exists for this user
   const existingAgent = await Agent.findOne({ user: req.user.id });
 
   if (existingAgent) {
-    return next(
-      new ErrorResponse(`You already have an agent profile`, 400)
-    );
+    return next(new ErrorResponse(`You already have an agent profile`, 400));
   }
 
-  // Add user to req.body
   req.body.user = req.user.id;
+  const agent = await Agent.create({
+    ...req.body,
+    avatarUrl: req.body.avatarUrl || "default-avatar.jpg",
+  });
 
-  const agent = await Agent.create(req.body);
-
-  // Update user role if needed
-  if (req.user.role !== 'agent') {
-    await User.findByIdAndUpdate(req.user.id, { role: 'agent' });
+  if (req.user.role !== "agent") {
+    await User.findByIdAndUpdate(req.user.id, { role: "agent", avatarUrl: req.body.avatarUrl || "default-avatar.jpg" });
   }
 
   res.status(201).json({
     success: true,
-    data: agent
+    data: agent,
   });
 });
 
@@ -152,28 +117,24 @@ exports.updateAgent = asyncHandler(async (req, res, next) => {
   let agent = await Agent.findById(req.params.id);
 
   if (!agent) {
+    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
+  }
+
+  if (agent.user.toString() !== req.user.id && req.user.role !== "admin") {
     return next(
-      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
+      new ErrorResponse(`User ${req.user.id} is not authorized to update this agent profile`, 401)
     );
   }
 
-  // Make sure user is agent owner or admin
-  if (
-    agent.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to update this agent profile`,
-        401
-      )
-    );
-  }
+  agent = await Agent.findByIdAndUpdate(
+    req.params.id,
+    { ...req.body, avatarUrl: req.body.avatarUrl || agent.user.avatarUrl },
+    { new: true, runValidators: true }
+  );
 
-  agent = await Agent.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  });
+  if (req.body.avatarUrl) {
+    await User.findByIdAndUpdate(agent.user, { avatarUrl: req.body.avatarUrl });
+  }
 
   res.status(200).json({ success: true, data: agent });
 });
@@ -185,21 +146,12 @@ exports.deleteAgent = asyncHandler(async (req, res, next) => {
   const agent = await Agent.findById(req.params.id);
 
   if (!agent) {
-    return next(
-      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
-    );
+    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is agent owner or admin
-  if (
-    agent.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
+  if (agent.user.toString() !== req.user.id && req.user.role !== "admin") {
     return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to delete this agent profile`,
-        401
-      )
+      new ErrorResponse(`User ${req.user.id} is not authorized to delete this agent profile`, 401)
     );
   }
 
@@ -213,20 +165,20 @@ exports.deleteAgent = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.getPremiumAgents = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 4;
-  
+
   const agents = await Agent.find({ isPremium: true })
-    .sort('-createdAt')
+    .sort("-createdAt")
     .limit(limit)
     .populate([
-      { path: 'user', select: 'firstName lastName email avatarUrl' },
-      { path: 'agency', select: 'name logoUrl' },
-      { path: 'listingsCount' }
+      { path: "user", select: "firstName lastName email avatarUrl" },
+      { path: "agency", select: "name logoUrl" },
+      { path: "listingsCount" },
     ]);
 
   res.status(200).json({
     success: true,
     count: agents.length,
-    data: agents
+    data: agents,
   });
 });
 
@@ -237,21 +189,12 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
   const agent = await Agent.findById(req.params.id);
 
   if (!agent) {
-    return next(
-      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
-    );
+    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is agent owner or admin
-  if (
-    agent.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
+  if (agent.user.toString() !== req.user.id && req.user.role !== "admin") {
     return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to update this agent`,
-        401
-      )
+      new ErrorResponse(`User ${req.user.id} is not authorized to update this agent`, 401)
     );
   }
 
@@ -261,37 +204,30 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
 
   const file = req.files.file;
 
-  // Make sure the image is a photo
-  if (!file.mimetype.startsWith('image')) {
+  if (!file.mimetype.startsWith("image")) {
     return next(new ErrorResponse(`Please upload an image file`, 400));
   }
 
-  // Check filesize
   if (file.size > process.env.MAX_FILE_UPLOAD) {
     return next(
-      new ErrorResponse(
-        `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
-        400
-      )
+      new ErrorResponse(`Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`, 400)
     );
   }
 
-  // Create custom filename
   file.name = `agent_${agent._id}${path.parse(file.name).ext}`;
 
-  // Upload file
-  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
+  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
     if (err) {
       console.error(err);
       return next(new ErrorResponse(`Problem with file upload`, 500));
     }
 
-    // Update user avatar
     await User.findByIdAndUpdate(agent.user, { avatarUrl: file.name });
+    await Agent.findByIdAndUpdate(req.params.id, { avatarUrl: file.name });
 
     res.status(200).json({
       success: true,
-      data: file.name
+      data: file.name,
     });
   });
 });
@@ -304,28 +240,16 @@ exports.linkAgentToAgency = asyncHandler(async (req, res, next) => {
   const agency = await Agency.findById(req.params.agencyId);
 
   if (!agent) {
-    return next(
-      new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404)
-    );
+    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
   }
 
   if (!agency) {
-    return next(
-      new ErrorResponse(`Agency not found with id of ${req.params.agencyId}`, 404)
-    );
+    return next(new ErrorResponse(`Agency not found with id of ${req.params.agencyId}`, 404));
   }
 
-  // Make sure user is agent owner or agency owner or admin
-  if (
-    agent.user.toString() !== req.user.id &&
-    agency.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
+  if (agent.user.toString() !== req.user.id && agency.user.toString() !== req.user.id && req.user.role !== "admin") {
     return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to link this agent with agency`,
-        401
-      )
+      new ErrorResponse(`User ${req.user.id} is not authorized to link this agent with agency`, 401)
     );
   }
 

@@ -1,87 +1,65 @@
-import React from 'react';
-import AgentCarousel from './AgentCarousel';
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
+import { Star, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-/**
- * AgentsSection Component
- * Displays a section with a carousel of top agents
- */
-interface AgentsSectionProps {
-  className?: string;
-}
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+};
 
-const AgentsSection: React.FC<AgentsSectionProps> = ({ className }) => {
+const AgentsSection = ({ className, agents }: { className?: string; agents: any[] }) => {
+  const navigate = useNavigate();
+
+  const handleAgentClick = (id: string) => {
+    navigate(`/agent/${id}`);
+  };
+
   return (
-    <section 
-      className={`py-16 md:py-24 px-4 bg-gradient-to-b from-white to-gray-50 ${className}`} 
-      id="agents-section"
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      variants={fadeInUp}
+      className={`py-12 ${className}`}
     >
-      <div className="max-w-7xl mx-auto">
-        <motion.div 
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          {/* Section highlight badge */}
-          <div className="inline-block mb-3">
-            <div className="flex items-center bg-primary/10 rounded-full px-3 py-1">
-              <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
-              <span className="text-xs font-medium text-primary">Expert Agents</span>
+      <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
+        Our Expert Agents
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {agents.slice(0, 4).map((agent) => (
+          <motion.div
+            key={agent._id}
+            className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => handleAgentClick(agent._id)}
+            variants={fadeInUp}
+          >
+            <img
+              src={agent.user?.avatarUrl || "default-avatar.jpg"}
+              alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
+              className="w-full h-48 object-cover"
+            />
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-800">
+                {agent.user?.firstName} {agent.user?.lastName}
+              </h3>
+              <p className="text-sm text-slate-600">{agent.title}</p>
+              <div className="flex items-center gap-1 text-slate-500 mt-2">
+                <MapPin size={16} />
+                <span className="text-sm">{agent.location || "Mauritius"}</span>
+              </div>
+              <div className="flex mt-2">
+                {[...Array(agent.rating || 4)].map((_, i) => (
+                  <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
+                ))}
+                {[...Array(5 - (agent.rating || 4))].map((_, i) => (
+                  <Star key={i} size={16} className="text-slate-200" />
+                ))}
+              </div>
             </div>
-          </div>
-          
-          <h2 className="text-3xl md:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700">
-            Meet Our Top Agents
-          </h2>
-          
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Experienced professionals ready to help you find your dream home. 
-            Our agents combine market expertise with personalized service to ensure you find the perfect property.
-          </p>
-        </motion.div>
-        
-        <motion.div 
-          className="py-6"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          <AgentCarousel />
-        </motion.div>
-        
-        {/* Stats section */}
-        <motion.div 
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4, staggerChildren: 0.1 }}
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          <div className="text-center p-6 rounded-2xl bg-white shadow-md border border-gray-100">
-            <div className="text-3xl font-bold text-primary mb-1">15+</div>
-            <div className="text-sm text-gray-600">Years Experience</div>
-          </div>
-          
-          <div className="text-center p-6 rounded-2xl bg-white shadow-md border border-gray-100">
-            <div className="text-3xl font-bold text-primary mb-1">250+</div>
-            <div className="text-sm text-gray-600">Properties Sold</div>
-          </div>
-          
-          <div className="text-center p-6 rounded-2xl bg-white shadow-md border border-gray-100">
-            <div className="text-3xl font-bold text-primary mb-1">98%</div>
-            <div className="text-sm text-gray-600">Client Satisfaction</div>
-          </div>
-          
-          <div className="text-center p-6 rounded-2xl bg-white shadow-md border border-gray-100">
-            <div className="text-3xl font-bold text-primary mb-1">24/7</div>
-            <div className="text-sm text-gray-600">Support Available</div>
-          </div>
-        </motion.div>
+          </motion.div>
+        ))}
       </div>
-    </section>
+    </motion.section>
   );
 };
 
