@@ -7,9 +7,11 @@ const {
   deleteAgent,
   uploadAgentPhoto,
   getPremiumAgents,
-  linkAgentToAgency,
   getAgentCloudinarySignature,
-  approveAgent
+  requestLinkToAgency,
+  approveAgentLink,
+  rejectAgentLink,
+  getLinkingRequests
 } = require('../controllers/agents');
 
 const router = express.Router();
@@ -24,6 +26,8 @@ router.get('/premium', getPremiumAgents);
 
 router.get('/cloudinary-signature', protect, getAgentCloudinarySignature);
 
+router.get('/linking-requests', protect, authorize('agency', 'admin'), getLinkingRequests);
+
 router.route('/:id')
   .get(getAgent)
   .put(protect, updateAgent)
@@ -32,10 +36,13 @@ router.route('/:id')
 router.route('/:id/photo')
   .post(protect, uploadAgentPhoto);
 
-router.route('/:id/agency/:agencyId')
-  .put(protect, linkAgentToAgency);
+router.route('/request-link')
+  .post(protect, authorize('agent', 'admin'), requestLinkToAgency);
 
-router.route('/:id/approve')
-  .put(protect, authorize('agency', 'admin'), approveAgent);
+router.route('/:agentId/approve/:requestId')
+  .put(protect, authorize('agency', 'admin'), approveAgentLink);
+
+router.route('/:agentId/reject/:requestId')
+  .put(protect, authorize('agency', 'admin'), rejectAgentLink);
 
 module.exports = router;

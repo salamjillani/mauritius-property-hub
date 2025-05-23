@@ -21,7 +21,10 @@ import PromoterPage from "./pages/PromoterPage";
 import ProjectDetails from "./pages/ProjectDetails";
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
+import Favorites from "./pages/Favorites";
+import AllAgenciesPage from "./pages/AllAgenciesPage"; // Ensure this is imported
 import NotFound from "./pages/NotFound";
+import ErrorBoundary from "./components/ErrorBoundary"; // Add ErrorBoundary
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/properties" element={<Properties />} />
           <Route path="/properties/for-sale" element={<PropertiesForSale />} />
           <Route path="/properties/for-rent" element={<PropertiesForRent />} />
@@ -47,6 +51,14 @@ const App = () => (
           <Route path="/properties/land/:id" element={<PropertyDetails />} />
           <Route path="/properties/:id" element={<PropertyDetails />} />
           <Route path="/agents" element={<AllAgentsPage />} />
+          <Route
+            path="/agencies"
+            element={
+              <ErrorBoundary>
+                <AllAgenciesPage />
+              </ErrorBoundary>
+            }
+          /> {/* Added Agencies route with ErrorBoundary */}
           <Route path="/agent/:id" element={<AgentPage />} />
           <Route path="/agency/:id" element={<AgencyPage />} />
           <Route path="/promoters/:id" element={<PromoterPage />} />

@@ -1,39 +1,28 @@
-
 const Agency = require('../models/Agency');
 const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const path = require('path');
+const cloudinary = require('../config/cloudinary');
 
 // @desc    Get all agencies
 // @route   GET /api/agencies
 // @access  Public
 exports.getAgencies = asyncHandler(async (req, res, next) => {
-  // Copy req.query
   const reqQuery = { ...req.query };
-
-  // Fields to exclude
   const removeFields = ['select', 'sort', 'page', 'limit'];
-
-  // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
 
-  // Create query string
   let queryStr = JSON.stringify(reqQuery);
-
-  // Create operators ($gt, $gte, etc)
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
-  // Finding resource
   let query = Agency.find(JSON.parse(queryStr));
 
-  // Select Fields
   if (req.query.select) {
     const fields = req.query.select.split(',').join(' ');
     query = query.select(fields);
   }
 
-  // Sort
   if (req.query.sort) {
     const sortBy = req.query.sort.split(',').join(' ');
     query = query.sort(sortBy);
@@ -41,7 +30,6 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
     query = query.sort('-createdAt');
   }
 
-  // Pagination
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
@@ -50,19 +38,15 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
 
   query = query.skip(startIndex).limit(limit);
 
-  // Populate
   query = query.populate([
     { path: 'user', select: 'firstName lastName email' },
     { path: 'agents' },
     { path: 'listingsCount' }
   ]);
 
-  // Executing query
   const agencies = await query;
 
-  // Pagination result
   const pagination = {};
-
   if (endIndex < total) {
     pagination.next = {
       page: page + 1,
@@ -109,7 +93,6 @@ exports.getAgency = asyncHandler(async (req, res, next) => {
 // @route   POST /api/agencies
 // @access  Private
 exports.createAgency = asyncHandler(async (req, res, next) => {
-  // Check if agency profile already exists for this user
   const existingAgency = await Agency.findOne({ user: req.user.id });
 
   if (existingAgency) {
@@ -118,12 +101,10 @@ exports.createAgency = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Add user to req.body
   req.body.user = req.user.id;
 
   const agency = await Agency.create(req.body);
 
-  // Update user role if needed
   if (req.user.role !== 'agency') {
     await User.findByIdAndUpdate(req.user.id, { role: 'agency' });
   }
@@ -146,7 +127,6 @@ exports.updateAgency = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Make sure user is agency owner or admin
   if (
     agency.user.toString() !== req.user.id &&
     req.user.role !== 'admin'
@@ -179,7 +159,6 @@ exports.deleteAgency = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Make sure user is agency owner or admin
   if (
     agency.user.toString() !== req.user.id &&
     req.user.role !== 'admin'
@@ -202,7 +181,7 @@ exports.deleteAgency = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.getPremiumAgencies = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 4;
-  
+
   const agencies = await Agency.find({ isPremium: true })
     .sort('-createdAt')
     .limit(limit)
@@ -231,7 +210,6 @@ exports.uploadAgencyLogo = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Make sure user is agency owner or admin
   if (
     agency.user.toString() !== req.user.id &&
     req.user.role !== 'admin'
@@ -244,43 +222,41 @@ exports.uploadAgencyLogo = asyncHandler(async (req, res, next) => {
     );
   }
 
-  if (!req.files) {
-    return next(new ErrorResponse(`Please upload a file`, 400));
+  if (!req.body.cloudinaryUrl) {
+    return next(new ErrorResponse(`Please provide a Cloudinary URL`, 400));
   }
 
-  const file = req.files.file;
+  await Agency.findByIdAndUpdate(req.params.id, { logoUrl: req.body.cloudinaryUrl });
 
-  // Make sure the image is a photo
-  if (!file.mimetype.startsWith('image')) {
-    return next(new ErrorResponse(`Please upload an image file`, 400));
-  }
+  res.status(200).json({
+    success: true,
+    data: { logoUrl: req.body.cloudinaryUrl }
+  });
+});
 
-  // Check filesize
-  if (file.size > process.env.MAX_FILE_UPLOAD) {
-    return next(
-      new ErrorResponse(
-        `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
-        400
-      )
-    );
-  }
+// @desc    Get Cloudinary signature for agency logo upload
+// @route   GET /api/agencies/cloudinary-signature
+// @access  Private
+exports.getAgencyCloudinarySignature = asyncHandler(async (req, res, next) => {
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = {
+    timestamp,
+    folder: 'agency-logos',
+    upload_preset: 'mauritius'
+  };
 
-  // Create custom filename
-  file.name = `agency_logo_${agency._id}${path.parse(file.name).ext}`;
+  const signature = cloudinary.utils.api_sign_request(
+    params,
+    process.env.CLOUDINARY_API_SECRET
+  );
 
-  // Upload file
-  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
-    if (err) {
-      console.error(err);
-      return next(new ErrorResponse(`Problem with file upload`, 500));
+  res.status(200).json({
+    success: true,
+    data: {
+      timestamp,
+      signature,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
     }
-
-    // Update agency logo
-    await Agency.findByIdAndUpdate(req.params.id, { logoUrl: file.name });
-
-    res.status(200).json({
-      success: true,
-      data: file.name
-    });
   });
 });

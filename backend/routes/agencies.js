@@ -1,13 +1,13 @@
-
 const express = require('express');
-const { 
+const {
   getAgencies,
   getAgency,
   createAgency,
   updateAgency,
   deleteAgency,
   uploadAgencyLogo,
-  getPremiumAgencies
+  getPremiumAgencies,
+  getAgencyCloudinarySignature,
 } = require('../controllers/agencies');
 
 const router = express.Router();
@@ -19,6 +19,8 @@ router.route('/')
   .post(protect, authorize('agency', 'admin'), createAgency);
 
 router.get('/premium', getPremiumAgencies);
+
+router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature); // New route
 
 router.route('/:id')
   .get(getAgency)

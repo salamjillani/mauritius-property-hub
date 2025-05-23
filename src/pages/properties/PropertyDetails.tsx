@@ -1,13 +1,13 @@
+// pages/properties/PropertyDetails.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { MapPin, Phone, Mail, Share2, Heart, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BackButton from "@/components/BackButton";
-import { Share2, Heart, MapPin, Bed, Bath, Square, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -17,6 +17,7 @@ const PropertyDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [activeCurrency] = useState<"USD" | "EUR" | "MUR">("MUR");
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -25,9 +26,17 @@ const PropertyDetails = () => {
         if (!response.ok) throw new Error("Failed to fetch property");
         const data = await response.json();
         setProperty(data.data);
-        // Check if property is in favorites (assuming a localStorage-based favorites system)
-        const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-        setIsFavorite(favorites.includes(id));
+
+        const token = localStorage.getItem("token");
+        if (token) {
+          const favoritesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (favoritesResponse.ok) {
+            const favoritesData = await favoritesResponse.json();
+            setIsFavorite(favoritesData.data.some(fav => fav.property._id === id));
+          }
+        }
       } catch (error) {
         toast({ title: "Error", description: "Failed to load property", variant: "destructive" });
       } finally {
@@ -37,7 +46,7 @@ const PropertyDetails = () => {
     fetchProperty();
   }, [id, toast]);
 
-  const handleShare = () => {
+  const handleShare = (method) => {
     const shareUrl = window.location.href;
     const shareData = {
       title: property.title,
@@ -45,28 +54,45 @@ const PropertyDetails = () => {
       url: shareUrl,
     };
 
-    // Share via Web Share API if available
-    if (navigator.share) {
-      navigator.share(shareData).catch((err) => console.error("Share failed:", err));
-    } else {
-      // Fallback: Copy to clipboard
+    if (method === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareUrl)}`, '_blank');
+    } else if (method === 'x') {
+      window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(shareData.text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+    } else if (method === 'email') {
+      window.open(`mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(shareData.text + ' ' + shareUrl)}`, '_blank');
+    } else if (method === 'copy') {
       navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link Copied", description: "Property URL copied to clipboard" });
     }
   };
 
-  const toggleFavorite = () => {
-    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    if (isFavorite) {
-      const updatedFavorites = favorites.filter((favId) => favId !== id);
-      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
-      setIsFavorite(false);
-      toast({ title: "Removed from Favorites", description: `${property.title} removed from your favorites` });
-    } else {
-      favorites.push(id);
-      localStorage.setItem("favorites", JSON.stringify(favorites));
-      setIsFavorite(true);
-      toast({ title: "Added to Favorites", description: `${property.title} added to your favorites` });
+  const handleFavorite = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast({ title: "Authentication Required", description: "Please log in to save favorites", variant: "destructive" });
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const method = isFavorite ? "DELETE" : "POST";
+      const url = isFavorite
+        ? `${import.meta.env.VITE_API_URL}/api/favorites/${id}`
+        : `${import.meta.env.VITE_API_URL}/api/favorites`;
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: isFavorite ? null : JSON.stringify({ propertyId: id }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update favorite");
+      setIsFavorite(!isFavorite);
+      toast({ title: isFavorite ? "Removed from Favorites" : "Added to Favorites", description: `Property ${isFavorite ? "removed from" : "added to"} your favorites` });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update favorite", variant: "destructive" });
     }
   };
 
@@ -75,7 +101,7 @@ const PropertyDetails = () => {
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
         <Footer />
       </div>
@@ -94,18 +120,23 @@ const PropertyDetails = () => {
     );
   }
 
+  const convertPrice = (price) => {
+    if (activeCurrency === "USD") return (price * 0.021).toFixed(2); // Example conversion
+    if (activeCurrency === "EUR") return (price * 0.019).toFixed(2);
+    return price.toFixed(2);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-12">
-        <BackButton to="/properties" label="Back to Properties" className="mb-6" />
+        <BackButton to={`/properties/${property.category}`} label={`Back to ${property.category.replace('-', ' ')}`} className="mb-6" />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-8"
         >
-          {/* Image Grid */}
           <div className="lg:col-span-2">
             <div className="relative mb-6">
               <img
@@ -114,12 +145,13 @@ const PropertyDetails = () => {
                 className="w-full h-96 object-cover rounded-xl"
               />
               <div className="absolute top-4 right-4 flex gap-2">
-                <Button onClick={handleShare} variant="secondary">
+                <Button onClick={handleFavorite} variant={isFavorite ? "default" : "secondary"}>
+                  <Heart size={20} className={isFavorite ? "fill-red-500" : ""} />
+                  {isFavorite ? "Remove Favorite" : "Add to Favorites"}
+                </Button>
+                <Button onClick={() => handleShare('copy')} variant="secondary">
                   <Share2 size={20} className="mr-2" />
                   Share
-                </Button>
-                <Button onClick={toggleFavorite} variant={isFavorite ? "default" : "outline"}>
-                  <Heart size={20} className={isFavorite ? "fill-red-500" : ""} />
                 </Button>
               </div>
             </div>
@@ -135,48 +167,24 @@ const PropertyDetails = () => {
               ))}
             </div>
           </div>
-
-          {/* Property Details */}
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">{property.title}</h1>
-            <Badge variant={property.status === "active" ? "default" : "secondary"} className="mb-4">
-              {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
-            </Badge>
-            <p className="text-2xl font-bold text-amber-600 mb-4">
-              ${property.price.toLocaleString()}
-              {property.category.includes("rent") && (
-                <span className="text-sm text-slate-500">
-                  /{property.rentalPeriod || "month"}
-                </span>
-              )}
-            </p>
+            <p className="text-sm text-slate-500 capitalize mb-4">{property.status}</p>
             <div className="flex items-center gap-2 text-slate-600 mb-4">
               <MapPin size={20} />
               <p>{property.address?.city}, {property.address?.country || "Mauritius"}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {property.bedrooms > 0 && (
-                <div className="flex items-center gap-2">
-                  <Bed size={20} />
-                  <span>{property.bedrooms} Bedrooms</span>
-                </div>
-              )}
-              {property.bathrooms > 0 && (
-                <div className="flex items-center gap-2">
-                  <Bath size={20} />
-                  <span>{property.bathrooms} Bathrooms</span>
-                </div>
-              )}
-              {property.size && (
-                <div className="flex items-center gap-2">
-                  <Square size={20} />
-                  <span>{property.size} m²</span>
-                </div>
-              )}
-            </div>
             <p className="text-slate-600 mb-4">{property.description}</p>
-
-            {/* Amenities with Logos */}
+            <p className="text-lg font-bold mb-4">
+              {activeCurrency} {convertPrice(property.price)}
+              {property.rentalPeriod && ` / ${property.rentalPeriod}`}
+            </p>
+            <div className="mb-4">
+              <h3 className="text-lg font-bold mb-2">Details</h3>
+              <p>Bedrooms: {property.bedrooms}</p>
+              <p>Bathrooms: {property.bathrooms}</p>
+              <p>Size: {property.size} m²</p>
+            </div>
             {property.amenities?.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Amenities</h3>
@@ -195,53 +203,53 @@ const PropertyDetails = () => {
                 </div>
               </div>
             )}
-
-            {/* Agent Contact Card */}
-            {property.agent && (
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-bold mb-2">Contact Agent</h3>
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-bold mb-2">Contact Agent</h3>
+              {property.agent ? (
                 <div className="flex items-center gap-4">
                   <img
-                    src={property.agent.user?.avatarUrl || "/default-avatar.jpg"}
-                    alt={`${property.agent.user?.firstName} ${property.agent.user?.lastName}`}
+                    src={property.agent?.user?.avatarUrl || "/default-avatar.jpg"}
+                    alt={`${property.agent?.user?.firstName} ${property.agent?.user?.lastName}`}
                     className="w-16 h-16 rounded-full"
                   />
                   <div>
-                    <p className="font-bold">
-                      {property.agent.user?.firstName} {property.agent.user?.lastName}
-                    </p>
-                    <p className="text-sm text-slate-600">{property.agent.title}</p>
+                    <p className="font-bold">{property.agent?.user?.firstName} {property.agent?.user?.lastName}</p>
+                    <p className="text-sm text-slate-600">{property.agent?.title}</p>
                     {localStorage.getItem("token") ? (
                       <>
-                        <p className="text-sm text-slate-600">{property.agent.user?.contactDetails?.phone}</p>
-                        <p className="text-sm text-slate-600">{property.agent.user?.contactDetails?.email}</p>
+                        <p className="text-sm text-slate-600">{property.agent?.user?.contactDetails?.phone}</p>
+                        <p className="text-sm text-slate-600">{property.agent?.user?.contactDetails?.email}</p>
                       </>
                     ) : (
                       <p className="text-sm text-slate-600">Log in to view contact details</p>
                     )}
+                    {property.agency && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <img
+                          src={property.agency.logoUrl || "/default-agency-logo.png"}
+                          alt={property.agency.name}
+                          className="h-8 w-auto"
+                        />
+                        <p className="text-sm text-slate-600">{property.agency.name}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {/* Agency Branding */}
-                {property.agency && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <img
-                      src={property.agency.logoUrl || "/default-agency-logo.png"}
-                      alt={property.agency.name}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    <p className="font-medium">{property.agency.name}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Contact Form for Non-Logged-In Users */}
+              ) : (
+                <p>No agent assigned</p>
+              )}
+            </div>
             {!localStorage.getItem("token") && (
               <div className="mt-4">
                 <h3 className="text-lg font-bold mb-2">Send Inquiry</h3>
                 <InquiryForm propertyId={id} agentId={property.agent?._id} />
               </div>
             )}
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => handleShare('whatsapp')} variant="outline">WhatsApp</Button>
+              <Button onClick={() => handleShare('x')} variant="outline">X</Button>
+              <Button onClick={() => handleShare('email')} variant="outline">Email</Button>
+            </div>
           </div>
         </motion.div>
       </main>
@@ -250,7 +258,6 @@ const PropertyDetails = () => {
   );
 };
 
-// Inquiry Form Component
 const InquiryForm = ({ propertyId, agentId }) => {
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);

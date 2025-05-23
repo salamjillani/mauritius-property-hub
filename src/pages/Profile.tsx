@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -11,9 +12,11 @@ import { Button } from "@/components/ui/button";
 import UserProfileForm from "@/components/profile/UserProfileForm";
 import ListingsTab from "@/components/profile/ListingsTab";
 import AgentProfileForm from "@/components/profile/AgentProfileForm";
+import AgencyProfileForm from "@/components/profile/AgencyProfileForm";
+import AgentLinkRequests from "@/components/profile/AgentLinkRequests";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
-import { UserCircle, ListChecks, Briefcase } from "lucide-react";
+import { UserCircle, ListChecks, Building } from "lucide-react";
 
 const Profile = () => {
   const [activeLanguage, setActiveLanguage] = useState<"en" | "fr">("en");
@@ -21,6 +24,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
+  const [agency, setAgency] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -63,6 +67,17 @@ const Profile = () => {
             const agentData = await agentResponse.json();
             setAgent(agentData.data[0] || null);
           }
+        } else if (userData.data.role === "agency") {
+          const agencyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies?user=${userData.data._id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (agencyResponse.ok) {
+            const agencyData = await agencyResponse.json();
+            setAgency(agencyData.data[0] || null);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -80,15 +95,24 @@ const Profile = () => {
   }, [navigate, toast]);
 
   const handleProfileUpdate = () => {
-    // Refresh agent data after update
     const token = localStorage.getItem("token");
-    fetch(`${import.meta.env.VITE_API_URL}/api/agents?user=${user._id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setAgent(data.data[0] || null));
+    if (user.role === "agent") {
+      fetch(`${import.meta.env.VITE_API_URL}/api/agents?user=${user._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => setAgent(data.data[0] || null));
+    } else if (user.role === "agency") {
+      fetch(`${import.meta.env.VITE_API_URL}/api/agencies?user=${user._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => setAgency(data.data[0] || null));
+    }
   };
 
   if (isLoading) {
@@ -138,21 +162,13 @@ const Profile = () => {
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <Tabs defaultValue="profile" className="w-full">
             <div className="px-6 pt-6">
-              <TabsList className="grid w-full grid-cols-3 mb-8 rounded-lg bg-gray-100">
+              <TabsList className="grid w-full grid-cols-2 mb-8 rounded-lg bg-gray-100">
                 <TabsTrigger
                   value="profile"
                   className="flex items-center justify-center gap-2 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg"
                 >
                   <UserCircle size={18} />
-                  <span>Profile</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="agent"
-                  className="flex items-center justify-center gap-2 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg"
-                  disabled={user?.role !== "agent"}
-                >
-                  <Briefcase size={18} />
-                  <span>Agent Profile</span>
+                  <span>{user?.role === "agency" ? "Agency Profile" : "Agent Profile"}</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="listings"
@@ -166,13 +182,14 @@ const Profile = () => {
 
             <TabsContent value="profile" className="p-6 pt-0">
               <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                <UserProfileForm user={user} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="agent" className="p-6 pt-0">
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                <AgentProfileForm agent={agent} onProfileUpdate={handleProfileUpdate} />
+                {user?.role === "agency" ? (
+                  <>
+                    <AgencyProfileForm agency={agency} onProfileUpdate={handleProfileUpdate} />
+                    <AgentLinkRequests user={user} />
+                  </>
+                ) : (
+                  <AgentProfileForm agent={agent} onProfileUpdate={handleProfileUpdate} />
+                )}
               </div>
             </TabsContent>
 

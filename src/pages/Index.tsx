@@ -1,3 +1,4 @@
+// pages/Index.jsx
 import { useState, useEffect } from "react";
 import Hero from "@/components/home/Hero";
 import FeaturedListings from "@/components/home/FeaturedListings";
@@ -13,12 +14,14 @@ import AgencyLogosSection from "@/components/home/AgencyLogosSection";
 import AgentsSection from "@/components/home/AgentsSection";
 import PromoterProjects from "@/components/home/PromoterProjects";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 
 const Index = () => {
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
   const [activeLanguage, setActiveLanguage] = useState<"en" | "fr">("en");
   const [activeCurrency, setActiveCurrency] = useState<"USD" | "EUR" | "MUR">("MUR");
   const [agents, setAgents] = useState([]);
+  const [agencies, setAgencies] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,7 +42,25 @@ const Index = () => {
       }
     };
 
+    const fetchAgencies = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/premium`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch premium agencies");
+        }
+        const data = await response.json();
+        setAgencies(data.data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load agencies",
+          variant: "destructive",
+        });
+      }
+    };
+
     fetchAgents();
+    fetchAgencies();
   }, [toast]);
 
   const toggleAgentSidebar = () => {
@@ -66,7 +87,7 @@ const Index = () => {
         </div>
 
         <div className="container mx-auto px-4 py-12">
-          <AgencyLogosSection />
+          <AgencyLogosSection agencies={agencies} />
         </div>
 
         <div className="w-full px-0 mt-0">

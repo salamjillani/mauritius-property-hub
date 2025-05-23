@@ -26,7 +26,6 @@ export const getCloudinarySignature = async () => {
   }
 };
 
-// NEW: Get signature for agent photos
 export const getAgentCloudinarySignature = async () => {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -55,7 +54,34 @@ export const getAgentCloudinarySignature = async () => {
   }
 };
 
-// Generic upload function that accepts a signature getter
+export const getAgencyCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Agency Cloudinary signature error response:", errorData);
+      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting agency Cloudinary signature:", error);
+    throw error;
+  }
+};
+
 const uploadToCloudinaryWithSignature = async (file, getSignatureFn, folder = "property-images") => {
   try {
     const signatureData = await getSignatureFn();
@@ -89,14 +115,16 @@ const uploadToCloudinaryWithSignature = async (file, getSignatureFn, folder = "p
   }
 };
 
-// Upload for property images
 export const uploadToCloudinary = async (file, folder = "property-images") => {
   return uploadToCloudinaryWithSignature(file, getCloudinarySignature, folder);
 };
 
-// NEW: Upload for agent photos
 export const uploadAgentPhotoToCloudinary = async (file, folder = "agent-photos") => {
   return uploadToCloudinaryWithSignature(file, getAgentCloudinarySignature, folder);
+};
+
+export const uploadAgencyLogoToCloudinary = async (file, folder = "agency-logos") => {
+  return uploadToCloudinaryWithSignature(file, getAgencyCloudinarySignature, folder);
 };
 
 export const uploadMultipleImages = async (files, folder = "property-images") => {

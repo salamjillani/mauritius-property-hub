@@ -1,21 +1,31 @@
-const Inquiry = require('../models/Inquiry');
-const ErrorResponse = require('../utils/errorResponse');
-const asyncHandler = require('../middleware/asyncHandler');
+const Inquiry = require("../models/Inquiry");
+const ErrorResponse = require("../utils/errorResponse");
+const asyncHandler = require("../middleware/asyncHandler");
 
-// @desc    Create new inquiry
-// @route   POST /api/inquiries
-// @access  Public
-const createInquiry = asyncHandler(async (req, res, next) => {
+exports.createInquiry = asyncHandler(async (req, res, next) => {
   const inquiry = await Inquiry.create(req.body);
-  res.status(201).json({ success: true, data: inquiry });
+
+  res.status(201).json({
+    success: true,
+    data: inquiry,
+  });
 });
 
-// @desc    Get inquiries for an agent
-// @route   GET /api/inquiries/agent/:agentId
-// @access  Private
-const getAgentInquiries = asyncHandler(async (req, res, next) => {
-  const inquiries = await Inquiry.find({ agentId: req.params.agentId }).populate('propertyId', 'title');
-  res.status(200).json({ success: true, data: inquiries });
-});
+exports.getInquiries = asyncHandler(async (req, res, next) => {
+  const query = req.user.role === "agent"
+    ? { agent: req.body.agentId }
+    : req.user.role === "admin"
+    ? {}
+    : {};
 
-module.exports = { createInquiry, getAgentInquiries };
+  const inquiries = await Inquiry.find(query)
+    .populate("property", "title")
+    .populate("agent", "user")
+    .sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    count: inquiries.length,
+    data: inquiries,
+  });
+});

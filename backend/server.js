@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
@@ -20,6 +21,7 @@ const propertyRoutes = require('./routes/properties');
 const agencyRoutes = require('./routes/agencies');
 const agentRoutes = require('./routes/agents');
 const inquiryRoutes = require('./routes/inquiries');
+const favoriteRoutes = require('./routes/favorites'); // Added favorites route
 
 const app = express();
 
@@ -41,7 +43,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Set static folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/public', express.static(path.join(__dirname, 'public'))); // Updated to 'public' for consistency
 
 // Mount routers
 app.use('/api/auth', authRoutes);
@@ -50,6 +52,7 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/favorites', favoriteRoutes); // Added favorites route
 
 // Error handler middleware
 app.use(errorHandler);

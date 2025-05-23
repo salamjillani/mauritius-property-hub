@@ -1,3 +1,4 @@
+// models/Agent.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -26,6 +27,22 @@ const AgentSchema = new Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  linkingRequests: [{
+    agency: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agency',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    requestedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   isPremium: {
     type: Boolean,
     default: false
@@ -42,6 +59,7 @@ const AgentSchema = new Schema({
     phone: String,
     website: String
   },
+  photoUrl: String,
   createdAt: {
     type: Date,
     default: Date.now

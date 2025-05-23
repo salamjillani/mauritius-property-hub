@@ -1,3 +1,4 @@
+// pages/PromoterPage.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -97,11 +98,11 @@ const PromoterPage = () => {
           <div className="flex-1 flex justify-center md:justify-end gap-4">
             <div className="flex items-center gap-2 text-blue-100">
               <Phone size={20} />
-              <span>{promoter.phone || "(555) 123-4567"}</span>
+              <span>{localStorage.getItem("token") ? promoter.phone || "(555) 123-4567" : "Log in to view"}</span>
             </div>
             <div className="flex items-center gap-2 text-blue-100">
               <Mail size={20} />
-              <span>{promoter.email || "promoter@example.com"}</span>
+              <span>{localStorage.getItem("token") ? promoter.email || "promoter@example.com" : "Log in to view"}</span>
             </div>
           </div>
         </motion.div>

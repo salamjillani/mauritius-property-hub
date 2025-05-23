@@ -1,10 +1,9 @@
-const express = require('express');
-const { createInquiry, getAgentInquiries } = require('../controllers/inquiries');
-const { protect, authorize } = require('../middleware/auth');
+const express = require("express");
+const { createInquiry, getInquiries } = require("../controllers/inquiries");
+const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.post('/', createInquiry);
-router.get('/agent/:agentId', protect, authorize('agent', 'admin'), getAgentInquiries);
+router.route("/").post(createInquiry).get(protect, authorize("agent", "admin"), getInquiries);
 
 module.exports = router;
