@@ -17,6 +17,8 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AgentPage from "./pages/AgentPage";
 import AllAgentsPage from "./pages/AllAgentsPage";
 import AgencyPage from "./pages/AgencyPage";
+import PromoterPage from "./pages/PromoterPage";
+import ProjectDetails from "./pages/ProjectDetails";
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
 import NotFound from "./pages/NotFound";
@@ -30,13 +32,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/agent/:id" element={<AgentPage />} />
-          <Route path="/agents" element={<AllAgentsPage />} />
-          <Route path="/agency/:id" element={<AgencyPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/properties" element={<Properties />} />
           <Route path="/properties/for-sale" element={<PropertiesForSale />} />
           <Route path="/properties/for-rent" element={<PropertiesForRent />} />
           <Route path="/properties/offices" element={<Offices />} />
@@ -45,8 +45,12 @@ const App = () => (
           <Route path="/properties/for-rent/:id" element={<PropertyDetails />} />
           <Route path="/properties/offices/:id" element={<PropertyDetails />} />
           <Route path="/properties/land/:id" element={<PropertyDetails />} />
-          <Route path="/properties" element={<Properties />} />
           <Route path="/properties/:id" element={<PropertyDetails />} />
+          <Route path="/agents" element={<AllAgentsPage />} />
+          <Route path="/agent/:id" element={<AgentPage />} />
+          <Route path="/agency/:id" element={<AgencyPage />} />
+          <Route path="/promoters/:id" element={<PromoterPage />} />
+          <Route path="/projects/:id" element={<ProjectDetails />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/properties" element={<AdminProperties />} />

@@ -1,8 +1,7 @@
-const asyncHandler = require('../middleware/asyncHandler');
-const ErrorResponse = require('../utils/errorResponse');
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const InquirySchema = new mongoose.Schema({
+const InquirySchema = new Schema({
   name: {
     type: String,
     required: [true, 'Please add a name'],
@@ -19,14 +18,20 @@ const InquirySchema = new mongoose.Schema({
     required: [true, 'Please add a message']
   },
   propertyId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
+    type: Schema.Types.ObjectId,
+    ref: 'Property'
+  },
+  projectId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Project'
   },
   agentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Agent',
-    required: true
+    type: Schema.Types.ObjectId,
+    ref: 'Agent'
+  },
+  promoterId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   },
   createdAt: {
     type: Date,
@@ -34,4 +39,4 @@ const InquirySchema = new mongoose.Schema({
   }
 });
 
-const Inquiry = mongoose.model('Inquiry', InquirySchema);
+module.exports = mongoose.model
