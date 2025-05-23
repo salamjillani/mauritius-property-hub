@@ -16,6 +16,7 @@ import PropertyDetails from "./pages/properties/PropertyDetails";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AgentPage from "./pages/AgentPage";
 import AllAgentsPage from "./pages/AllAgentsPage";
+import AgencyPage from "./pages/AgencyPage";
 import AdminUsers from "./pages/admin/Users";
 import AdminProperties from "./pages/admin/Properties";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
         <Routes>
           <Route path="/agent/:id" element={<AgentPage />} />
           <Route path="/agents" element={<AllAgentsPage />} />
+          <Route path="/agency/:id" element={<AgencyPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

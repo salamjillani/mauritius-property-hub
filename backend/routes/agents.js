@@ -8,7 +8,8 @@ const {
   uploadAgentPhoto,
   getPremiumAgents,
   linkAgentToAgency,
-  getAgentCloudinarySignature // Add this new import
+  getAgentCloudinarySignature,
+  approveAgent
 } = require('../controllers/agents');
 
 const router = express.Router();
@@ -21,7 +22,6 @@ router.route('/')
 
 router.get('/premium', getPremiumAgents);
 
-// Add the new Cloudinary signature route
 router.get('/cloudinary-signature', protect, getAgentCloudinarySignature);
 
 router.route('/:id')
@@ -34,5 +34,8 @@ router.route('/:id/photo')
 
 router.route('/:id/agency/:agencyId')
   .put(protect, linkAgentToAgency);
+
+router.route('/:id/approve')
+  .put(protect, authorize('agency', 'admin'), approveAgent);
 
 module.exports = router;

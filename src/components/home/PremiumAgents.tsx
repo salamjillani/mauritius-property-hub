@@ -1,60 +1,49 @@
 import { motion } from "framer-motion";
-import { Star, MapPin } from "lucide-react";
+import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
-
-const PremiumAgents = ({ agents }: { agents: any[] }) => {
+const PremiumAgents = ({ agents }) => {
   const navigate = useNavigate();
-
-  const handleAgentClick = (id: string) => {
-    navigate(`/agent/${id}`);
-  };
 
   return (
     <motion.section
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
-      variants={fadeInUp}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
       className="py-12"
     >
-      <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
-        Meet Our Premium Agents
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <h2 className="text-3xl font-bold text-slate-800 mb-8">Our Premium Agents</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {agents.map((agent) => (
           <motion.div
             key={agent._id}
-            className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleAgentClick(agent._id)}
-            variants={fadeInUp}
+            className={`group relative bg-white rounded-xl overflow-hidden shadow-lg transition-all duration-300 cursor-pointer ${
+              agent.isPremium ? "border-4 border-amber-400 scale-105 animate-pulse" : ""
+            }`}
+            onClick={() => navigate(`/agent/${agent._id}`)}
+            whileHover={{ scale: 1.05 }}
           >
-            <img
-              src={agent.user?.avatarUrl || "default-avatar.jpg"}
-              alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-slate-800">
+            <div className="relative p-6 flex flex-col items-center">
+              <div className="w-28 h-28 rounded-full overflow-hidden mb-5 border-4 border-white shadow-md">
+                <img
+                  src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+                  alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="font-bold text-lg text-center mb-1">
                 {agent.user?.firstName} {agent.user?.lastName}
               </h3>
-              <p className="text-sm text-slate-600">{agent.title}</p>
-              <div className="flex items-center gap-1 text-slate-500 mt-2">
-                <MapPin size={16} />
-                <span className="text-sm">{agent.location || "Mauritius"}</span>
-              </div>
-              <div className="flex mt-2">
-                {[...Array(agent.rating || 4)].map((_, i) => (
-                  <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
+              <p className="text-sm text-blue-600 font-medium text-center mb-3">{agent.title}</p>
+              <div className="flex mb-3">
+                {Array.from({ length: agent.rating || 4 }).map((_, i) => (
+                  <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
                 ))}
-                {[...Array(5 - (agent.rating || 4))].map((_, i) => (
-                  <Star key={i} size={16} className="text-slate-200" />
+                {Array.from({ length: 5 - (agent.rating || 4) }).map((_, i) => (
+                  <Star key={i} className="w-4 h-4 text-slate-200" />
                 ))}
               </div>
+              <p className="text-sm text-slate-500">{agent.listingsCount || 0} Listings</p>
             </div>
           </motion.div>
         ))}

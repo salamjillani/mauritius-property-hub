@@ -1,4 +1,3 @@
-
 const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
@@ -6,6 +5,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const path = require('path');
+const fileUpload = require('express-fileupload');
 
 // Load env variables
 dotenv.config();
@@ -19,6 +19,7 @@ const userRoutes = require('./routes/users');
 const propertyRoutes = require('./routes/properties');
 const agencyRoutes = require('./routes/agencies');
 const agentRoutes = require('./routes/agents');
+const inquiryRoutes = require('./routes/inquiries');
 
 const app = express();
 
@@ -30,6 +31,9 @@ app.use(cors({
   origin: 'http://localhost:8080', // Frontend URL
   credentials: true
 }));
+
+// File upload middleware
+app.use(fileUpload());
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
@@ -45,6 +49,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/api/inquiries', inquiryRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

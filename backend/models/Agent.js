@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -21,6 +20,11 @@ const AgentSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Agency',
     required: false
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   isPremium: {
     type: Boolean,
@@ -47,7 +51,6 @@ const AgentSchema = new Schema({
   toObject: { virtuals: true }
 });
 
-// Reverse populate with properties
 AgentSchema.virtual('properties', {
   ref: 'Property',
   localField: '_id',

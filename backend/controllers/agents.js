@@ -1,15 +1,11 @@
 const Agent = require("../models/Agent");
 const User = require("../models/User");
-const Agency = require("../models/Agency"); // Add missing import
+const Agency = require("../models/Agency");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
-const path = require("path");
 const cloudinary = require('../config/cloudinary');
-const mongoose = require('mongoose'); // Add missing import
+const mongoose = require('mongoose');
 
-// @desc    Get Cloudinary signature for agent photo uploads
-// @route   GET /api/agents/cloudinary-signature
-// @access  Private
 exports.getAgentCloudinarySignature = asyncHandler(async (req, res, next) => {
   const timestamp = Math.round(Date.now() / 1000);
   const params = {
@@ -34,9 +30,6 @@ exports.getAgentCloudinarySignature = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get all agents
-// @route   GET /api/agents
-// @access  Public
 exports.getAgents = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
   const removeFields = ["select", "sort", "page", "limit"];
@@ -91,13 +84,9 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get single agent
-// @route   GET /api/agents/:id
-// @access  Public
 exports.getAgent = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  // Validate ObjectId format
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
@@ -115,9 +104,6 @@ exports.getAgent = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: agent });
 });
 
-// @desc    Create new agent
-// @route   POST /api/agents
-// @access  Private
 exports.createAgent = asyncHandler(async (req, res, next) => {
   const existingAgent = await Agent.findOne({ user: req.user.id });
 
@@ -141,11 +127,7 @@ exports.createAgent = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Update agent
-// @route   PUT /api/agents/:id
-// @access  Private
 exports.updateAgent = asyncHandler(async (req, res, next) => {
-  // Validate ObjectId format
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
@@ -175,11 +157,7 @@ exports.updateAgent = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: agent });
 });
 
-// @desc    Delete agent
-// @route   DELETE /api/agents/:id
-// @access  Private
 exports.deleteAgent = asyncHandler(async (req, res, next) => {
-  // Validate ObjectId format
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
@@ -196,15 +174,11 @@ exports.deleteAgent = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Use deleteOne instead of remove()
   await Agent.deleteOne({ _id: req.params.id });
 
   res.status(200).json({ success: true, data: {} });
 });
 
-// @desc    Get premium agents
-// @route   GET /api/agents/premium
-// @access  Public
 exports.getPremiumAgents = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 4;
 
@@ -224,9 +198,6 @@ exports.getPremiumAgents = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Upload photo for agent
-// @route   POST /api/agents/:id/photo
-// @access  Private
 exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
   const { cloudinaryUrl } = req.body;
   
@@ -234,7 +205,6 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Please provide image data', 400));
   }
 
-  // Validate ObjectId format
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
@@ -247,7 +217,6 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Make sure user owns the agent profile or is admin
   if (agent.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(
       new ErrorResponse(
@@ -257,7 +226,6 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Update the agent's photo URL and also update the user's avatarUrl
   await Agent.findByIdAndUpdate(req.params.id, { photoUrl: cloudinaryUrl });
   await User.findByIdAndUpdate(agent.user, { avatarUrl: cloudinaryUrl });
 
@@ -267,11 +235,7 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Link agent to agency
-// @route   PUT /api/agents/:id/agency/:agencyId
-// @access  Private
 exports.linkAgentToAgency = asyncHandler(async (req, res, next) => {
-  // Validate ObjectId formats
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next(new ErrorResponse(`Invalid agent ID format`, 400));
   }
@@ -298,6 +262,29 @@ exports.linkAgentToAgency = asyncHandler(async (req, res, next) => {
   }
 
   agent.agency = req.params.agencyId;
+  agent.approvalStatus = 'pending';
+  await agent.save();
+
+  res.status(200).json({ success: true, data: agent });
+});
+
+exports.approveAgent = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorResponse(`Invalid agent ID format`, 400));
+  }
+
+  const agent = await Agent.findById(req.params.id);
+  if (!agent) {
+    return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
+  }
+
+  if (req.user.role !== 'admin' && (!agent.agency || agent.agency.user.toString() !== req.user.id)) {
+    return next(
+      new ErrorResponse(`User ${req.user.id} is not authorized to approve this agent`, 401)
+    );
+  }
+
+  agent.approvalStatus = 'approved';
   await agent.save();
 
   res.status(200).json({ success: true, data: agent });

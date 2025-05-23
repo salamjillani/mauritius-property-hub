@@ -29,7 +29,6 @@ const PropertySchema = new Schema({
     }
   },
   location: {
-    // GeoJSON Point
     type: {
       type: String,
       enum: ['Point'],
@@ -47,8 +46,17 @@ const PropertySchema = new Schema({
   },
   rentalPeriod: {
     type: String,
-    enum: ['', 'day', 'week', 'month', 'year'],
-    default: ''
+    enum: ['', 'day', 'month'],
+    default: '',
+    validate: {
+      validator: function(v) {
+        if (this.category === 'for-rent' || this.category === 'office-rent') {
+          return v === 'day' || v === 'month';
+        }
+        return v === '';
+      },
+      message: 'Rental period must be "day" or "month" for rentals, empty for others'
+    }
   },
   type: {
     type: String,
@@ -101,24 +109,24 @@ const PropertySchema = new Schema({
     default: 0
   },
   amenities: [String],
-images: [
-  {
-    url: {
-      type: String,
-      required: true
-    },
-    publicId: {
-      type: String,
-    },
-    caption: {
-      type: String,
-      default: ''
-    },
-    isMain: {
-      type: Boolean,
+  images: [
+    {
+      url: {
+        type: String,
+        required: true
+      },
+      publicId: {
+        type: String,
+      },
+      caption: {
+        type: String,
+        default: ''
+      },
+      isMain: {
+        type: Boolean,
+      }
     }
-  }
-],
+  ],
   virtualTourUrl: String,
   videoUrl: String,
   floorPlanUrl: String,
@@ -150,14 +158,12 @@ images: [
   toObject: { virtuals: true }
 });
 
-// Index for search
 PropertySchema.index({
   title: 'text',
   description: 'text',
   'address.city': 'text'
 });
 
-// Create locations field (for MongoDB Atlas Search)
 PropertySchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',

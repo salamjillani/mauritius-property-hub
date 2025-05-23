@@ -1,285 +1,253 @@
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import BackButton from "@/components/BackButton";
+import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Home, Bed, Bath, Square, Check, Phone, Mail, ArrowLeft, Star } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Share2, Heart, MessageCircle, Bed, Bath, Square, MapPin, Phone, Mail } from "lucide-react";
+import PropertyStatusBadge from "@/components/PropertyStatusBadge";
+import ContactForm from "@/components/ContactForm";
 
-const fetchProperty = async (id) => {
-  const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/properties/${id}`
-  );
-  if (!res.ok) throw new Error('Failed to fetch property');
-  return res.json();
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
 
 const PropertyDetails = () => {
   const { id } = useParams();
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["property", id],
-    queryFn: () => fetchProperty(id),
-  });
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [property, setProperty] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  if (isLoading) return (
-    <div className="container mx-auto p-4 max-w-7xl">
-      <div className="mb-6">
-        <Skeleton className="h-8 w-40 rounded-lg" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Skeleton className="h-96 w-full rounded-2xl" />
-          <div className="grid grid-cols-4 gap-2 mt-2">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-lg" />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-6">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-8 w-2/3 rounded-lg" />
-          <div className="space-y-3">
-            <Skeleton className="h-6 w-full rounded-lg" />
-            <Skeleton className="h-6 w-full rounded-lg" />
-            <Skeleton className="h-6 w-full rounded-lg" />
-          </div>
-          <Skeleton className="h-40 w-full rounded-xl" />
-          <Skeleton className="h-12 w-full rounded-xl" />
-        </div>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    const fetchProperty = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties/${id}`);
+        if (!response.ok) throw new Error("Failed to fetch property");
+        const data = await response.json();
+        setProperty(data.data);
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load property", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProperty();
+  }, [id, toast]);
 
-  if (error) return (
-    <div className="container mx-auto p-4 max-w-7xl">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <h3 className="text-red-600 text-lg font-medium mb-2">Error Loading Property</h3>
-        <p className="text-red-500">{error.message}</p>
-        <Button variant="outline" className="mt-4" asChild>
-          <Link to="/properties"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Properties</Link>
-        </Button>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % (property?.images?.length || 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [property]);
 
-  const property = data.data;
-  
-  // Check if agent data exists and has a valid _id
-  const hasValidAgent = property.agent && property.agent._id;
-
-  // Helper function to format price with commas
-  const formatPrice = (price) => {
-    return typeof price === 'number' ? price.toLocaleString() : price;
+  const handleShare = async (platform) => {
+    const shareUrl = window.location.href;
+    const shareText = `Check out this property: ${property.title}`;
+    try {
+      if (platform === "whatsapp") {
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank");
+      } else if (platform === "x") {
+        window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "_blank");
+      } else if (platform === "email") {
+        window.open(`mailto:?subject=${encodeURIComponent(property.title)}&body=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank");
+      } else if (platform === "copy") {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Link Copied", description: "Property link copied to clipboard" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to share property", variant: "destructive" });
+    }
   };
 
-  return (
-    <div className="container mx-auto p-4 py-8 max-w-7xl">
-      {/* Breadcrumb & Back button */}
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" className="mr-2 p-2" asChild>
-          <Link to="/properties"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div className="text-sm text-gray-500">
-          Properties / {property.type || 'Property'} / {property.address?.city || 'Details'}
-        </div>
-      </div>
+  const toggleFavorite = () => {
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    if (isFavorited) {
+      localStorage.setItem("favorites", JSON.stringify(favorites.filter((fav) => fav !== id)));
+      setIsFavorited(false);
+      toast({ title: "Removed from Favorites", description: "Property removed from your favorites" });
+    } else {
+      localStorage.setItem("favorites", JSON.stringify([...favorites, id]));
+      setIsFavorited(true);
+      toast({ title: "Added to Favorites", description: "Property added to your favorites" });
+    }
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Images */}
-        <div className="lg:col-span-2">
-          <div className="overflow-hidden rounded-2xl shadow-lg mb-4 bg-gray-50">
-            {property.images && property.images[0]?.url ? (
-              <img
-                src={property.images[0].url}
-                alt={property.title}
-                className="w-full h-96 object-cover hover:scale-105 transition-transform duration-300"
-              />
-            ) : (
-              <div className="w-full h-96 bg-gray-100 flex items-center justify-center">
-                <Home className="h-20 w-20 text-gray-300" />
-              </div>
-            )}
-          </div>
-          
-          {/* Thumbnail gallery */}
-          {property.images && property.images.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {property.images.slice(1, 5).map((image, i) => (
-                <div key={i} className="overflow-hidden rounded-lg shadow-sm h-24">
-                  <img 
-                    src={image.url} 
-                    alt={`${property.title} - view ${i+2}`} 
-                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Description Section */}
-          <div className="mt-8 bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold border-b pb-4 mb-4">About this property</h2>
-            <p className="text-gray-700 leading-relaxed">
-              {property.description || 'No description provided for this property.'}
-            </p>
-            
-            {/* Amenities Section */}
-            {property.amenities && property.amenities.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">Amenities & Features</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3">
-                  {property.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-center group">
-                      <div className="bg-primary/10 p-2 rounded-full group-hover:bg-primary/20 transition-colors">
-                        <Check className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="ml-2 text-gray-700">{amenity}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+  useEffect(() => {
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setIsFavorited(favorites.includes(id));
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
-        
-        {/* Right Column - Details */}
-        <div className="space-y-6">
-          {/* Price & Title Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-primary">
-            <div className="flex justify-between items-start">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{property.title}</h1>
-              {property.featured && (
-                <div className="bg-yellow-100 text-yellow-700 text-xs font-medium px-2 py-1 rounded flex items-center">
-                  <Star className="h-3 w-3 mr-1 fill-yellow-500 text-yellow-500" />
-                  Featured
-                </div>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-primary mt-3">
-              MUR {formatPrice(property.price)}
-            </p>
-          </div>
-          
-          {/* Property Details Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="font-semibold text-lg mb-4">Property Details</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {property.address?.city && (
-                <div className="flex items-center">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <MapPin className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs text-gray-500">Location</p>
-                    <p className="font-medium">{property.address.city}</p>
-                  </div>
-                </div>
-              )}
-              
-              {property.type && (
-                <div className="flex items-center">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Home className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs text-gray-500">Type</p>
-                    <p className="font-medium">{property.type}</p>
-                  </div>
-                </div>
-              )}
-              
-              {property.size && (
-                <div className="flex items-center">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Square className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs text-gray-500">Size</p>
-                    <p className="font-medium">{property.size} m²</p>
-                  </div>
-                </div>
-              )}
-              
-              {property.bedrooms > 0 && (
-                <div className="flex items-center">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Bed className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs text-gray-500">Bedrooms</p>
-                    <p className="font-medium">{property.bedrooms}</p>
-                  </div>
-                </div>
-              )}
-              
-              {property.bathrooms > 0 && (
-                <div className="flex items-center">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Bath className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs text-gray-500">Bathrooms</p>
-                    <p className="font-medium">{property.bathrooms}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Agent Contact Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="font-semibold text-lg mb-4">Contact Details</h2>
-            {hasValidAgent ? (
-              <div>
-                <div className="flex items-center mb-4">
-                  {property.agent.avatar ? (
-                    <img 
-                      src={property.agent.avatar} 
-                      alt={property.agent.name} 
-                      className="w-12 h-12 rounded-full object-cover mr-3"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-primary font-bold text-lg">
-                        {property.agent.name?.charAt(0) || 'A'}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium">{property.agent.name || 'Real Estate Agent'}</p>
-                    <p className="text-sm text-gray-500">Licensed Agent</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-3 mb-4">
-                  {property.agent.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 text-primary mr-2" />
-                      <span>{property.agent.phone}</span>
-                    </div>
-                  )}
-                  {property.agent.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 text-primary mr-2" />
-                      <span className="text-sm">{property.agent.email}</span>
-                    </div>
-                  )}
-                </div>
-                
-                <Button className="w-full" asChild>
-                  <Link to={`/agents/${property.agent._id}`}>
-                    Contact Agent
-                  </Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-gray-500">No agent information available</p>
-             
-              </div>
-            )}
-          </div>
-        </div>
+        <Footer />
       </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-gray-500">Property not found</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+      <Navbar />
+      <div className="container mx-auto px-4 py-12">
+        <BackButton to={`/properties/${property.category}`} label="Back to Listings" className="mb-10" />
+        <motion.div initial="hidden" animate="visible" variants={fadeInUp}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="relative rounded-3xl overflow-hidden shadow-lg mb-8">
+                <img
+                  src={property.images?.[currentImageIndex]?.url || "/placeholder.jpg"}
+                  alt={property.title}
+                  className="w-full h-96 object-cover"
+                />
+                <div className="absolute top-4 left-4 z-10">
+                  <PropertyStatusBadge status={property.category} />
+                </div>
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <Button variant="ghost" size="icon" onClick={toggleFavorite}>
+                    <Heart size={20} className={isFavorited ? "text-red-500 fill-red-500" : "text-white"} />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowModal(true)}>
+                    <Share2 size={20} className="text-white" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8">
+                {property.images?.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image.url}
+                    alt={image.caption}
+                    className="h-24 w-full object-cover rounded-lg cursor-pointer"
+                    onClick={() => setCurrentImageIndex(index)}
+                  />
+                ))}
+              </div>
+              <Card className="mb-8">
+                <CardContent className="p-6">
+                  <h1 className="text-3xl font-bold mb-4">{property.title}</h1>
+                  <div className="flex items-center gap-2 text-slate-500 mb-4">
+                    <MapPin size={18} />
+                    <span>{property.address.city}, {property.address.country}</span>
+                  </div>
+                  <div className="text-amber-600 font-bold text-2xl mb-4">
+                    {property.price.toLocaleString()} {property.rentalPeriod && `/ ${property.rentalPeriod}`}
+                  </div>
+                  <p className="text-slate-600 mb-6">{property.description}</p>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {property.bedrooms > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Bed size={18} />
+                        <span>{property.bedrooms} Bedrooms</span>
+                      </div>
+                    )}
+                    {property.bathrooms > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Bath size={18} />
+                        <span>{property.bathrooms} Bathrooms</span>
+                      </div>
+                    )}
+                    {property.size && (
+                      <div className="flex items-center gap-2">
+                        <Square size={18} />
+                        <span>{property.size} m²</span>
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">Amenities</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {property.amenities?.map((amenity, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <img src={`/amenities/${amenity.toLowerCase().replace(/\s/g, '-')}.webp`} alt={amenity} className="w-6 h-6" />
+                        <span>{amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div>
+              <Card className="mb-8">
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Agent Contact</h3>
+                  {property.agent ? (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={property.agent.user?.avatarUrl || "/default-avatar.jpg"}
+                          alt={`${property.agent.user?.firstName} ${property.agent.user?.lastName}`}
+                          className="w-16 h-16 rounded-full"
+                        />
+                        <div>
+                          <p className="font-bold">{property.agent.user?.firstName} {property.agent.user?.lastName}</p>
+                          <p className="text-sm text-slate-500">{property.agent.title}</p>
+                        </div>
+                      </div>
+                      {localStorage.getItem("token") ? (
+                        <>
+                          <p className="flex items-center gap-2"><Phone size={16} /> {property.agent.user?.contactDetails?.phone}</p>
+                          <p className="flex items-center gap-2"><Mail size={16} /> {property.agent.user?.contactDetails?.email}</p>
+                        </>
+                      ) : (
+                        <ContactForm propertyId={property._id} agentId={property.agent._id} />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500">No agent assigned</p>
+                  )}
+                  {property.agency && (
+                    <div className="mt-4">
+                      <p className="font-bold">Agency: {property.agency.name}</p>
+                      <img src={property.agency.logoUrl} alt={property.agency.name} className="h-12 mt-2" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="bg-white p-6 rounded-lg">
+            <CardContent>
+              <h3 className="text-lg font-bold mb-4">Share Property</h3>
+              <div className="flex gap-4">
+                <Button onClick={() => handleShare("whatsapp")}>WhatsApp</Button>
+                <Button onClick={() => handleShare("x")}>X</Button>
+                <Button onClick={() => handleShare("email")}>Email</Button>
+                <Button onClick={() => handleShare("copy")}>Copy Link</Button>
+              </div>
+              <Button variant="outline" className="mt-4" onClick={() => setShowModal(false)}>Close</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      <Footer />
     </div>
   );
 };

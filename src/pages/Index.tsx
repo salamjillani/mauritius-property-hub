@@ -11,6 +11,7 @@ import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
 import AgencyLogosSection from "@/components/home/AgencyLogosSection";
 import AgentsSection from "@/components/home/AgentsSection";
+import PromoterProjects from "@/components/home/PromoterProjects";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -109,6 +110,10 @@ const Index = () => {
 
         <div className="container mx-auto px-4 py-12">
           <PremiumAgents agents={agents} />
+        </div>
+
+        <div className="container mx-auto px-4 py-12 bg-gray-50">
+          <PromoterProjects />
         </div>
       </main>
 
