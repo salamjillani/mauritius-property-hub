@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
-const AgentLinkRequestForm = ({ agent }) => {
+const AgentLinkRequestForm = ({ agent, onRequestSent }) => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [agencies, setAgencies] = useState([]);
   const [selectedAgency, setSelectedAgency] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState(null);
 
   useEffect(() => {
     const fetchAgencies = async () => {
@@ -28,7 +28,15 @@ const AgentLinkRequestForm = ({ agent }) => {
     };
 
     fetchAgencies();
-  }, [toast]);
+
+    if (agent?.linkingRequests?.length > 0) {
+      const pending = agent.linkingRequests.find(req => req.status === "pending");
+      setPendingRequest(pending || null);
+      if (pending) {
+        setSelectedAgency(pending.agency._id);
+      }
+    }
+  }, [agent, toast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +70,8 @@ const AgentLinkRequestForm = ({ agent }) => {
         title: "Success",
         description: "Link request sent successfully",
       });
+
+      onRequestSent();
     } catch (error) {
       toast({
         title: "Error",
@@ -74,40 +84,48 @@ const AgentLinkRequestForm = ({ agent }) => {
   };
 
   return (
-    <div className="bg-gray-50 p-6 rounded-lg border border-gray-100 mt-6">
-      <h3 className="text-lg font-bold mb-4">Request to Link with Agency</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="agency">Select Agency</Label>
-          <select
-            id="agency"
-            value={selectedAgency}
-            onChange={(e) => setSelectedAgency(e.target.value)}
-            className="w-full border border-gray-200 rounded-md h-10 px-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-700"
-          >
-            <option value="">Select an agency</option>
-            {agencies.map((agency) => (
-              <option key={agency._id} value={agency._id}>
-                {agency.name}
-              </option>
-            ))}
-          </select>
+    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+      <h3 className="text-lg font-semibold mb-4">Request to Link with Agency</h3>
+      {pendingRequest ? (
+        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+          <p className="font-medium">Pending request to {pendingRequest.agency?.name}</p>
+          <p className="text-sm text-yellow-600">Awaiting agency approval</p>
         </div>
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-gradient-to-r from-teal-600 to-blue-700 hover:from-teal-700 hover:to-blue-800 text-white"
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Sending Request...</span>
-            </div>
-          ) : (
-            "Send Link Request"
-          )}
-        </Button>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="agency" className="block text-sm font-medium text-gray-700">
+              Select Agency
+            </label>
+            <Select onValueChange={setSelectedAgency} value={selectedAgency}>
+              <SelectTrigger id="agency">
+                <SelectValue placeholder="Choose an agency" />
+              </SelectTrigger>
+              <SelectContent>
+                {agencies.map((agency) => (
+                  <SelectItem key={agency._id} value={agency._id}>
+                    {agency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="submit"
+            disabled={isLoading || !selectedAgency}
+            className="w-full bg-gradient-to-r from-teal-600 to-blue-700 hover:from-teal-700 hover:to-blue-800 text-white"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Sending...</span>
+              </div>
+            ) : (
+              "Send Link Request"
+            )}
+          </Button>
+        </form>
+      )}
     </div>
   );
 };

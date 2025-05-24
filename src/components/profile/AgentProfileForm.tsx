@@ -31,7 +31,6 @@ const AgentProfileForm = ({ agent, onProfileUpdate }) => {
     languages: "",
     photoUrl: "",
   });
-  const [photoFile, setPhotoFile] = useState(null);
 
   useEffect(() => {
     if (agent) {
@@ -133,8 +132,31 @@ const AgentProfileForm = ({ agent, onProfileUpdate }) => {
     }
   };
 
+  const [photoFile, setPhotoFile] = useState(null);
+
   return (
-    <div>
+    <div className="space-y-6">
+      {agent?.agency && agent.approvalStatus === "approved" ? (
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-4">
+          <img
+            src={agent.agency.logoUrl || "/default-agency-logo.png"}
+            alt={agent.agency.name}
+            className="h-12 w-auto object-contain"
+          />
+          <div>
+            <p className="font-medium">You are linked with {agent.agency.name}</p>
+            <p className="text-sm text-gray-600">Status: Approved</p>
+          </div>
+        </div>
+      ) : agent?.linkingRequests?.length > 0 && agent.linkingRequests.some(req => req.status === "pending") ? (
+        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+          <p className="font-medium">Pending request to {agent.linkingRequests.find(req => req.status === "pending")?.agency?.name || "an agency"}</p>
+          <p className="text-sm text-yellow-600">Awaiting agency approval</p>
+        </div>
+      ) : (
+        <AgentLinkRequestForm agent={agent} onRequestSent={onProfileUpdate} />
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="title">Professional Title</Label>
@@ -263,6 +285,17 @@ const AgentProfileForm = ({ agent, onProfileUpdate }) => {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="languages">Languages (comma-separated)</Label>
+          <Input
+            id="languages"
+            name="languages"
+            value={formData.languages}
+            onChange={handleChange}
+            placeholder="e.g., English, French, Creole"
+          />
+        </div>
+
         <Button
           type="submit"
           disabled={isLoading}
@@ -274,12 +307,10 @@ const AgentProfileForm = ({ agent, onProfileUpdate }) => {
               <span>Saving...</span>
             </div>
           ) : (
-            "Save Profile"
+            "Save Agent Profile"
           )}
         </Button>
       </form>
-
-      {agent && <AgentLinkRequestForm agent={agent} />}
     </div>
   );
 };

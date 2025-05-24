@@ -8,27 +8,27 @@ const AgentLinkRequests = ({ user }) => {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/linking-requests`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) throw new Error("Failed to fetch linking requests");
-        const data = await response.json();
-        setRequests(data.data);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load linking requests",
-          variant: "destructive",
-        });
-      }
-    };
+  const fetchRequests = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/linking-requests`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch linking requests");
+      const data = await response.json();
+      setRequests(data.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load linking requests",
+        variant: "destructive",
+      });
+    }
+  };
 
+  useEffect(() => {
     if (user?.role === "agency") {
       fetchRequests();
     }
@@ -59,19 +59,7 @@ const AgentLinkRequests = ({ user }) => {
         description: "Agent link request approved successfully",
       });
 
-      // Refresh the requests list
-      const updatedResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/linking-requests`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (updatedResponse.ok) {
-        const updatedData = await updatedResponse.json();
-        setRequests(updatedData.data);
-      }
+      await fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -108,19 +96,7 @@ const AgentLinkRequests = ({ user }) => {
         description: "Agent link request rejected successfully",
       });
 
-      // Refresh the requests list
-      const updatedResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/linking-requests`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (updatedResponse.ok) {
-        const updatedData = await updatedResponse.json();
-        setRequests(updatedData.data);
-      }
+      await fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -163,7 +139,7 @@ const AgentLinkRequests = ({ user }) => {
                 <Button
                   onClick={() => handleApprove(agent._id, agent.linkingRequests[0]._id)}
                   disabled={isLoading}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -174,7 +150,7 @@ const AgentLinkRequests = ({ user }) => {
                 <Button
                   onClick={() => handleReject(agent._id, agent.linkingRequests[0]._id)}
                   disabled={isLoading}
-                  variant="destructive"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
