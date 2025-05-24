@@ -82,6 +82,34 @@ export const getAgencyCloudinarySignature = async () => {
   }
 };
 
+export const getPromoterCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/promoters/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Promoter Cloudinary signature error response:", errorData);
+      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting promoter Cloudinary signature:", error);
+    throw error;
+  }
+};
+
 const uploadToCloudinaryWithSignature = async (file, getSignatureFn, folder = "property-images") => {
   try {
     const signatureData = await getSignatureFn();
@@ -125,6 +153,10 @@ export const uploadAgentPhotoToCloudinary = async (file, folder = "agent-photos"
 
 export const uploadAgencyLogoToCloudinary = async (file, folder = "agency-logos") => {
   return uploadToCloudinaryWithSignature(file, getAgencyCloudinarySignature, folder);
+};
+
+export const uploadPromoterLogoToCloudinary = async (file, folder = "promoter-logos") => {
+  return uploadToCloudinaryWithSignature(file, getPromoterCloudinarySignature, folder);
 };
 
 export const uploadMultipleImages = async (files, folder = "property-images") => {

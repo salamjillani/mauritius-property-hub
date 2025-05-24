@@ -1,4 +1,3 @@
-// pages/Index.jsx
 import { useState, useEffect } from "react";
 import Hero from "@/components/home/Hero";
 import FeaturedListings from "@/components/home/FeaturedListings";
@@ -11,7 +10,7 @@ import SearchBar from "@/components/common/SearchBar";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
 import AgencyLogosSection from "@/components/home/AgencyLogosSection";
-import AgentsSection from "@/components/home/AgentsSection";
+import AgentsCarousel from "@/components/home/AgentsCarousel";
 import PromoterProjects from "@/components/home/PromoterProjects";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -27,12 +26,13 @@ const Index = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/premium`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents`);
         if (!response.ok) {
-          throw new Error("Failed to fetch premium agents");
+          throw new Error("Failed to fetch agents");
         }
         const data = await response.json();
-        setAgents(data.data);
+        // Sort agents: premium first, then by creation date (newest first)
+        setAgents(data.data.sort((a, b) => b.isPremium - a.isPremium || new Date(b.createdAt) - new Date(a.createdAt)));
       } catch (error) {
         toast({
           title: "Error",
@@ -90,9 +90,7 @@ const Index = () => {
           <AgencyLogosSection agencies={agencies} />
         </div>
 
-        <div className="w-full px-0 mt-0">
-          <AgentsSection className="max-w-full w-full" agents={agents} />
-        </div>
+        <AgentsCarousel agents={agents} className="w-full px-0 mt-0" />
 
         <div className="container mx-auto px-4 py-12">
           <PropertyCategories />
@@ -130,7 +128,7 @@ const Index = () => {
         </div>
 
         <div className="container mx-auto px-4 py-12">
-          <PremiumAgents agents={agents} />
+          <PremiumAgents agents={agents.filter(agent => agent.isPremium)} />
         </div>
 
         <div className="container mx-auto px-4 py-12 bg-gray-50">

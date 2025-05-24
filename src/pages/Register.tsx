@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -9,7 +11,7 @@ const Register = () => {
     lastName: "",
     email: "",
     password: "",
-    accountType: "agent"
+    accountType: "individual"
   });
   const [errors, setErrors] = useState({
     firstName: "",
@@ -17,8 +19,9 @@ const Register = () => {
     email: "",
     password: ""
   });
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -26,7 +29,6 @@ const Register = () => {
       [name]: value
     }));
     
-    // Clear errors when typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -35,7 +37,6 @@ const Register = () => {
     }
   };
 
-  // Validate form fields
   const validateForm = () => {
     let valid = true;
     const newErrors = {
@@ -70,7 +71,6 @@ const Register = () => {
     return valid;
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -78,7 +78,7 @@ const Register = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/register`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,14 +92,18 @@ const Register = () => {
         throw new Error(result.message || "Registration failed");
       }
       
-      // Simulating toast notification
-      alert("Registration successful! You can now log in with your credentials");
+      toast({
+        title: "Registration Successful",
+        description: "You can now log in with your credentials"
+      });
       
-      // Redirect to login page
-      window.location.href = "/login";
+      navigate("/login");
     } catch (error) {
-      // Simulating toast notification
-      alert(`Registration failed: ${error.message || "Something went wrong. Please try again."}`);
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -207,16 +211,17 @@ const Register = () => {
             <label className="block text-sm font-medium text-gray-700">
               Account Type
             </label>
-        <select
-  name="accountType"
-  value={formData.accountType}
-  onChange={handleChange}
-  className="w-full border border-gray-200 rounded-md h-10 px-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-700"
->
-  <option value="agent">Agent</option>
-  <option value="agency">Agency</option>
-  <option value="promoter">Promoter</option>
-</select>
+            <select
+              name="accountType"
+              value={formData.accountType}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-md h-10 px-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-700"
+            >
+              <option value="individual">Individual</option>
+              <option value="agent">Agent</option>
+              <option value="agency">Agency</option>
+              <option value="promoter">Promoter</option>
+            </select>
           </div>
 
           <button
