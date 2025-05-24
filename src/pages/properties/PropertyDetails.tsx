@@ -1,23 +1,24 @@
-// pages/properties/PropertyDetails.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Mail, Share2, Heart, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Heart, Share2, MapPin, Loader2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BackButton from "@/components/BackButton";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [property, setProperty] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
-  const [activeCurrency] = useState<"USD" | "EUR" | "MUR">("MUR");
+  const [activeCurrency, setActiveCurrency] = useState("MUR");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -26,74 +27,53 @@ const PropertyDetails = () => {
         if (!response.ok) throw new Error("Failed to fetch property");
         const data = await response.json();
         setProperty(data.data);
+        setSelectedImage(data.data.images?.[0]?.url || "/placeholder.jpg");
 
-        const token = localStorage.getItem("token");
-        if (token) {
-          const favoritesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (favoritesResponse.ok) {
-            const favoritesData = await favoritesResponse.json();
-            setIsFavorite(favoritesData.data.some(fav => fav.property._id === id));
-          }
-        }
+        const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+        setIsFavorite(favorites.includes(id));
       } catch (error) {
         toast({ title: "Error", description: "Failed to load property", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchProperty();
   }, [id, toast]);
 
-  const handleShare = (method) => {
-    const shareUrl = window.location.href;
-    const shareData = {
-      title: property.title,
-      text: `Check out this property: ${property.title} in ${property.address?.city}, ${property.address?.country || 'Mauritius'}`,
-      url: shareUrl,
-    };
-
-    if (method === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareUrl)}`, '_blank');
-    } else if (method === 'x') {
-      window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(shareData.text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
-    } else if (method === 'email') {
-      window.open(`mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(shareData.text + ' ' + shareUrl)}`, '_blank');
-    } else if (method === 'copy') {
-      navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Link Copied", description: "Property URL copied to clipboard" });
+  const handleFavorite = () => {
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    if (isFavorite) {
+      localStorage.setItem("favorites", JSON.stringify(favorites.filter((favId) => favId !== id)));
+      setIsFavorite(false);
+      toast({ title: "Removed from Favorites", description: `${property.title} removed` });
+    } else {
+      favorites.push(id);
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+      setIsFavorite(true);
+      toast({ title: "Added to Favorites", description: `${property.title} added` });
     }
   };
 
-  const handleFavorite = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast({ title: "Authentication Required", description: "Please log in to save favorites", variant: "destructive" });
-      navigate("/login");
-      return;
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    let shareUrl = "";
+    switch (platform) {
+      case "whatsapp":
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(url)}`;
+        break;
+      case "x":
+        shareUrl = `https://x.com/intent/tweet?url=${encodeURIComponent(url)}`;
+        break;
+      case "email":
+        shareUrl = `mailto:?subject=Check out this property&body=${encodeURIComponent(url)}`;
+        break;
+      case "copy":
+        navigator.clipboard.writeText(url);
+        toast({ title: "Link Copied", description: "Property link copied to clipboard" });
+        return;
     }
-
-    try {
-      const method = isFavorite ? "DELETE" : "POST";
-      const url = isFavorite
-        ? `${import.meta.env.VITE_API_URL}/api/favorites/${id}`
-        : `${import.meta.env.VITE_API_URL}/api/favorites`;
-      const response = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: isFavorite ? null : JSON.stringify({ propertyId: id }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update favorite");
-      setIsFavorite(!isFavorite);
-      toast({ title: isFavorite ? "Removed from Favorites" : "Added to Favorites", description: `Property ${isFavorite ? "removed from" : "added to"} your favorites` });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to update favorite", variant: "destructive" });
-    }
+    window.open(shareUrl, "_blank");
   };
 
   if (isLoading) {
@@ -101,7 +81,10 @@ const PropertyDetails = () => {
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <p className="text-gray-500 font-medium">Loading property...</p>
+          </div>
         </div>
         <Footer />
       </div>
@@ -125,6 +108,9 @@ const PropertyDetails = () => {
     if (activeCurrency === "EUR") return (price * 0.019).toFixed(2);
     return price.toFixed(2);
   };
+
+  // Select an agent: prefer property.agent, fallback to first approved agent from agency
+  const selectedAgent = property.agent || (property.agency?.agents?.find(agent => agent.approvalStatus === 'approved'));
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -205,20 +191,15 @@ const PropertyDetails = () => {
             )}
             <div className="border-t pt-4">
               <h3 className="text-lg font-bold mb-2">Contact Agent</h3>
-              {property.agent ? (
+              {selectedAgent ? (
                 <div className="flex items-center gap-4">
-                  <img
-                    src={property.agent?.user?.avatarUrl || "/default-avatar.jpg"}
-                    alt={`${property.agent?.user?.firstName} ${property.agent?.user?.lastName}`}
-                    className="w-16 h-16 rounded-full"
-                  />
+                 
                   <div>
-                    <p className="font-bold">{property.agent?.user?.firstName} {property.agent?.user?.lastName}</p>
-                    <p className="text-sm text-slate-600">{property.agent?.title}</p>
+                    <p className="font-bold">{selectedAgent.user?.firstName} {selectedAgent.user?.lastName}</p>
+                    <p className="text-sm text-slate-600">{selectedAgent.title}</p>
                     {localStorage.getItem("token") ? (
                       <>
-                        <p className="text-sm text-slate-600">{property.agent?.user?.contactDetails?.phone}</p>
-                        <p className="text-sm text-slate-600">{property.agent?.user?.contactDetails?.email}</p>
+
                       </>
                     ) : (
                       <p className="text-sm text-slate-600">Log in to view contact details</p>
@@ -242,7 +223,7 @@ const PropertyDetails = () => {
             {!localStorage.getItem("token") && (
               <div className="mt-4">
                 <h3 className="text-lg font-bold mb-2">Send Inquiry</h3>
-                <InquiryForm propertyId={id} agentId={property.agent?._id} />
+                <InquiryForm propertyId={id} agentId={selectedAgent?._id} />
               </div>
             )}
             <div className="mt-4 flex gap-2">
@@ -291,7 +272,7 @@ const InquiryForm = ({ propertyId, agentId }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
+        <Input
           name="name"
           value={formData.name}
           onChange={handleChange}
@@ -301,7 +282,7 @@ const InquiryForm = ({ propertyId, agentId }) => {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Email</label>
-        <input
+        <Input
           name="email"
           type="email"
           value={formData.email}
@@ -312,7 +293,7 @@ const InquiryForm = ({ propertyId, agentId }) => {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Phone</label>
-        <input
+        <Input
           name="phone"
           value={formData.phone}
           onChange={handleChange}
@@ -321,7 +302,7 @@ const InquiryForm = ({ propertyId, agentId }) => {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Message</label>
-        <textarea
+        <Textarea
           name="message"
           value={formData.message}
           onChange={handleChange}

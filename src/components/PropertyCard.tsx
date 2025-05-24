@@ -66,7 +66,7 @@ const PropertyCard = ({
         : ""
     }`}>
       <Link to={`/properties/${property.category || ""}/${property._id}`} className="block">
-        {/* Image container with tag and favorite button */}
+        {/* Image container with tag, favorite button, and agency name */}
         <div className={`relative ${variant === 'simple' ? 'h-48' : 'h-64'} overflow-hidden`}>
           <img 
             src={getImageUrl()} 
@@ -83,6 +83,13 @@ const PropertyCard = ({
           {property.isPremium && (
             <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md">
               Premium
+            </div>
+          )}
+          
+          {/* Agency name (bottom-left) */}
+          {property.agency?.name && (
+            <div className="absolute bottom-3 left-3 bg-teal-600/80 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md">
+              {property.agency.name}
             </div>
           )}
           

@@ -106,10 +106,21 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
       select: '_id user title isPremium',
       populate: {
         path: 'user',
-        select: req.user ? 'firstName lastName email contactDetails' : 'firstName lastName'
+        select: req.user ? 'firstName lastName email contactDetails avatarUrl' : 'firstName lastName'
       }
     },
-    { path: 'agency', select: 'name logoUrl' },
+    {
+      path: 'agency',
+      select: 'name logoUrl',
+      populate: {
+        path: 'agents',
+        select: '_id user title isPremium approvalStatus',
+        populate: {
+          path: 'user',
+          select: req.user ? 'firstName lastName email contactDetails avatarUrl' : 'firstName lastName'
+        }
+      }
+    },
     { path: 'owner', select: 'firstName lastName' }
   ]);
 
@@ -150,11 +161,19 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // If user is an agency, set the agency field
+  // If user is an agency, set the agency field and assign a linked agent
   if (req.user.role === 'agency') {
-    const agency = await Agency.findOne({ user: req.user.id });
-    if (agency) {
-      req.body.agency = agency._id;
+    const agency = await Agency.findOne({ user: req.user.id }).populate('agents');
+    if (!agency) {
+      return next(new ErrorResponse('Agency profile not found for this user', 400));
+    }
+    req.body.agency = agency._id;
+    // If no agent is specified, assign the first approved agent from the agency
+    if (!req.body.agent && agency.agents && agency.agents.length > 0) {
+      const approvedAgent = agency.agents.find(agent => agent.approvalStatus === 'approved');
+      if (approvedAgent) {
+        req.body.agent = approvedAgent._id;
+      }
     }
   }
 
@@ -180,7 +199,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
 
   const property = await Property.create(req.body);
 
-  res.status(201).json({
+  res.status(200).json({
     success: true,
     data: property
   });

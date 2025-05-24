@@ -68,8 +68,10 @@ const AgentsCarousel = ({ agents, className }) => {
 
   return (
     <section className={`${className} overflow-hidden py-12`}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold text-slate-800 mb-6">Meet Our Agents</h2>
+      <div className="container text-center mx-auto px-4">
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
+          <span className="bg-gradient-to-r from-blue-600 to-indigo-800 bg-clip-text text-transparent">Meet Our Agents</span>
+        </h2>
         <div className="relative">
           {/* Gradient overlay for 3D carousel */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/70 pointer-events-none z-10"></div>
