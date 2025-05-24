@@ -66,7 +66,7 @@ const PropertyCard = ({
         : ""
     }`}>
       <Link to={`/properties/${property.category || ""}/${property._id}`} className="block">
-        {/* Image container with tag, favorite button, and agency name */}
+        {/* Image container with tag, favorite button, and agency logo/name */}
         <div className={`relative ${variant === 'simple' ? 'h-48' : 'h-64'} overflow-hidden`}>
           <img 
             src={getImageUrl()} 
@@ -75,26 +75,32 @@ const PropertyCard = ({
           />
           
           {/* Property type tag */}
-          <div className="absolute top-3 left-3 bg-teal-600 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md">
+          <div className="absolute top-3 left-3 bg-teal-600 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
             {property.type || "Property"}
           </div>
           
           {/* Premium badge if applicable */}
           {property.isPremium && (
-            <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md">
+            <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
               Premium
             </div>
           )}
           
-          {/* Agency name (bottom-left) */}
-          {property.agency?.name && (
-            <div className="absolute bottom-3 left-3 bg-teal-600/80 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md">
-              {property.agency.name}
+          {/* Agency logo and name (bottom-left) */}
+          {property.agency?.name && property.agency?.logoUrl && (
+            <div className="absolute bottom-3 left-3 bg-teal-600/90 text-white text-sm font-semibold rounded-full py-1 pl-2 pr-3 shadow-md flex items-center gap-2 max-w-[150px] truncate z-10">
+              <img
+                src={property.agency.logoUrl}
+                alt={property.agency.name}
+                className="h-5 w-5 rounded-full object-cover"
+                onError={(e) => (e.currentTarget.src = "/default-agency-logo.png")}
+              />
+              <span className="truncate">{property.agency.name}</span>
             </div>
           )}
           
           {/* Heart button */}
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 z-10">
             <button 
               onClick={toggleFavorite}
               className={`w-8 h-8 flex items-center justify-center rounded-full shadow-md ${
