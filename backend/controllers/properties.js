@@ -28,9 +28,7 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
   const removeFields = ['select', 'sort', 'page', 'limit'];
   removeFields.forEach((param) => delete reqQuery[param]);
 
-  // Allow owners to see all their properties, including pending/inactive
   if (!reqQuery.owner || (req.user && reqQuery.owner !== req.user.id)) {
-    // For non-owners or non-authenticated users, show only approved properties
     if (!req.user || req.user.role !== 'admin') {
       reqQuery.status = 'approved';
     }
@@ -128,7 +126,6 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
   }
 
-  // Restrict pending or inactive properties to admins or owners
   if (['pending', 'inactive'].includes(property.status) && (!req.user || (req.user.role !== 'admin' && property.owner._id.toString() !== req.user.id))) {
     return next(new ErrorResponse('Not authorized to view this property', 403));
   }
@@ -150,12 +147,15 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
   }
 
   const subscription = await Subscription.findById(user.subscription);
+  if (subscription.status !== 'active') {
+    return next(new ErrorResponse('Your subscription is not active', 403));
+  }
   if (subscription.listingsUsed >= subscription.listingLimit) {
     return next(new ErrorResponse('Listing limit reached for your subscription', 403));
   }
 
   req.body.owner = req.user.id;
-  req.body.status = 'pending'; // New properties are always pending
+  req.body.status = 'pending';
 
   if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
     return next(new ErrorResponse('Invalid user role for creating property', 403));
@@ -171,8 +171,8 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       req.body.agency = agent.agency;
       const agency = await Agency.findById(agent.agency).populate('user');
       const agencySubscription = await Subscription.findOne({ user: agency.user });
-      if (agencySubscription && agencySubscription.listingsUsed >= agencySubscription.listingLimit) {
-        return next(new ErrorResponse('Agency listing limit reached', 403));
+      if (agencySubscription && (agencySubscription.status !== 'active' || agencySubscription.listingsUsed >= agencySubscription.listingLimit)) {
+        return next(new ErrorResponse('Agency subscription is not active or listing limit reached', 403));
       }
     }
   }
@@ -211,14 +211,12 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
 
   const property = await Property.create(req.body);
 
-  // Increment listingsUsed for user subscription
   subscription.listingsUsed += 1;
 
-  // Handle premium and featured properties
-  if (req.body.isPremium && subscription.plan === 'elite') {
+  if (req.body.isPremium && subscription.plan === 'premium') {
     property.isPremium = true;
   }
-  if (req.body.featured && subscription.plan === 'platinum') {
+  if (req.body.featured && subscription.plan === 'enterprise') {
     const maxFeatured = Math.floor(subscription.listingLimit * 0.25);
     if (subscription.featuredListings.length < maxFeatured) {
       property.featured = true;
@@ -226,7 +224,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Increment listingsUsed for agency subscription if applicable
   if (req.user.role === 'agent' && req.body.agency) {
     const agency = await Agency.findById(req.body.agency).populate('user');
     const agencySubscription = await Subscription.findOne({ user: agency.user });
@@ -238,7 +235,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
 
   await Promise.all([property.save(), subscription.save()]);
 
-  // Notify admins of new property
   await notifyNewProperty(property);
 
   res.status(201).json({ success: true, data: property });
@@ -258,37 +254,29 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is property owner or admin
   if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
   }
 
-  // Handle status updates
   if (req.body.status) {
     if (req.user.role === 'admin') {
-      // Admins can set any status, but not for inactive properties (handled in approveProperty)
       if (!['pending', 'approved', 'rejected', 'active', 'inactive'].includes(req.body.status)) {
         return next(new ErrorResponse('Invalid status', 400));
       }
     } else {
-      // Owners can only set active or inactive
       if (!['active', 'inactive'].includes(req.body.status)) {
         return next(new ErrorResponse('Invalid status for owner', 400));
       }
-      // If owner sets to active, change to pending for admin approval
       if (req.body.status === 'active') {
         req.body.status = 'pending';
-        // Notify admins
         await notifyNewProperty(property);
       }
-      // If owner sets to inactive, set directly to inactive
       if (req.body.status === 'inactive') {
         req.body.status = 'inactive';
       }
     }
   }
 
-  // Update contact details if provided
   if (req.body.contactDetails && req.user.role === 'agent') {
     req.body.contactDetails.isRestricted = true;
   }
@@ -307,10 +295,7 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 exports.searchProperties = asyncHandler(async (req, res, next) => {
   const { category, q, type, maxPrice } = req.query;
 
-  const filter = {};
-
-  // Always filter by approved status for public searches
-  filter.status = 'approved';
+  const filter = { status: 'approved' };
 
   if (category) {
     filter.category = category;
@@ -333,12 +318,7 @@ exports.searchProperties = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     count,
-    searchParams: {
-      category,
-      q,
-      type,
-      maxPrice,
-    },
+    searchParams: { category, q, type, maxPrice },
   });
 });
 
@@ -356,12 +336,10 @@ exports.deleteProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is property owner or admin
   if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to delete this property`, 401));
   }
 
-  // Delete associated images from Cloudinary
   if (property.images && property.images.length > 0) {
     for (const image of property.images) {
       if (image.publicId) {
@@ -414,10 +392,7 @@ exports.getPropertiesByCategory = asyncHandler(async (req, res, next) => {
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
 
-  const filter = {
-    category: categorySlug,
-    status: 'approved',
-  };
+  const filter = { category: categorySlug, status: 'approved' };
 
   const total = await Property.countDocuments(filter);
 
@@ -471,7 +446,6 @@ exports.uploadPropertyImages = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is property owner or admin
   if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
   }
@@ -492,10 +466,7 @@ exports.uploadPropertyImages = asyncHandler(async (req, res, next) => {
 
   await property.save();
 
-  res.status(200).json({
-    success: true,
-    data: property.images,
-  });
+  res.status(200).json({ success: true, data: property.images });
 });
 
 // @desc    Delete property image
@@ -514,7 +485,6 @@ exports.deletePropertyImage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
   }
 
-  // Make sure user is property owner or admin
   if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
   }
@@ -532,10 +502,7 @@ exports.deletePropertyImage = asyncHandler(async (req, res, next) => {
   property.images.splice(imageIndex, 1);
   await property.save();
 
-  res.status(200).json({
-    success: true,
-    data: property.images,
-  });
+  res.status(200).json({ success: true, data: property.images });
 });
 
 // @desc    Get Cloudinary signature for direct uploads
@@ -543,12 +510,7 @@ exports.deletePropertyImage = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
   const timestamp = Math.round(Date.now() / 1000);
-  const params = {
-    timestamp,
-    folder: 'property-images',
-    upload_preset: 'mauritius',
-  };
-
+  const params = { timestamp, folder: 'property-images', upload_preset: 'mauritius' };
   const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET);
 
   res.status(200).json({

@@ -14,6 +14,7 @@ const NotificationSchema = new mongoose.Schema({
       'property_pending',
       'new_property',
       'property_status_updated',
+      'subscription_updated',
     ],
     required: true,
   },

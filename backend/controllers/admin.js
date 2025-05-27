@@ -233,7 +233,6 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid property ID format', 400));
   }
 
-  // Allow pending, approved, rejected statuses
   if (!['pending', 'approved', 'rejected'].includes(status)) {
     return next(new ErrorResponse('Invalid status', 400));
   }
@@ -244,7 +243,6 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
   }
 
-  // Prevent admins from changing status of inactive properties
   if (property.status === 'inactive') {
     return next(new ErrorResponse('Cannot change status of inactive property', 403));
   }
@@ -255,14 +253,12 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   ).populate('owner', 'email firstName lastName');
 
-  // Create notification for property owner
   await Notification.create({
     user: updatedProperty.owner._id,
     type: `property_${status}`,
     message: `Your property "${updatedProperty.title}" has been ${status}.`,
   });
 
-  // Notify all admins of the status change
   const admins = await User.find({ role: 'admin' });
   for (const admin of admins) {
     await Notification.create({
@@ -272,7 +268,6 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Create log
   await Log.create({
     user: req.user.id,
     action: `Property ${status}`,
@@ -295,30 +290,47 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid subscription ID format', 400));
   }
 
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to update subscriptions', 403));
+  }
+
+  const updates = {};
+  if (plan && ['basic', 'premium', 'enterprise'].includes(plan)) {
+    updates.plan = plan;
+  }
+  if (listingLimit !== undefined && !isNaN(listingLimit) && listingLimit >= 0) {
+    updates.listingLimit = parseInt(listingLimit);
+  }
+  if (status && ['active', 'inactive', 'cancelled'].includes(status)) {
+    updates.status = status;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return next(new ErrorResponse('No valid updates provided', 400));
+  }
+
   const subscription = await Subscription.findByIdAndUpdate(
     id,
-    { plan, listingLimit, status },
+    updates,
     { new: true, runValidators: true }
-  ).populate('user', 'email');
+  ).populate('user', 'firstName lastName email');
 
   if (!subscription) {
     return next(new ErrorResponse(`Subscription not found with id of ${id}`, 404));
   }
 
-  // Create notification for user
   await Notification.create({
     user: subscription.user._id,
     type: 'subscription_updated',
-    message: `Your subscription has been updated to the ${plan} plan.`,
+    message: `Your ${subscription.plan} subscription has been updated.`,
   });
 
-  // Create log
   await Log.create({
     user: req.user.id,
     action: 'Subscription updated',
     resource: 'Subscription',
     resourceId: id,
-    details: `Subscription for user ${subscription.user.email} updated to ${plan}`,
+    details: `Subscription for user ${subscription.user.email} updated by admin`,
   });
 
   res.status(200).json({ success: true, data: subscription });
@@ -328,9 +340,14 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
 // @route   GET /api/admin/subscriptions
 // @access  Private/Admin
 exports.getSubscriptions = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to access subscriptions', 403));
+  }
+
   const subscriptions = await Subscription.find()
     .populate('user', 'firstName lastName email')
-    .sort('-createdAt');
+    .select('user plan listingLimit listingsUsed status startDate endDate');
+
   res.status(200).json({
     success: true,
     count: subscriptions.length,
