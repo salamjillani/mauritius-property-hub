@@ -1,4 +1,3 @@
-// controllers/admin.js
 const asyncHandler = require('../middleware/asyncHandler');
 const ErrorResponse = require('../utils/errorResponse');
 const User = require('../models/User');
@@ -7,6 +6,7 @@ const Agency = require('../models/Agency');
 const Promoter = require('../models/Promoter');
 const Property = require('../models/Property');
 const Subscription = require('../models/Subscription');
+const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const Log = require('../models/Log');
 
@@ -54,9 +54,18 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid user ID format', 400));
   }
 
+  const { firstName, lastName, email, role, phone } = req.body;
+
+  const fieldsToUpdate = {};
+  if (firstName) fieldsToUpdate.firstName = firstName;
+  if (lastName) fieldsToUpdate.lastName = lastName;
+  if (email) fieldsToUpdate.email = email;
+  if (role) fieldsToUpdate.role = role;
+  if (phone) fieldsToUpdate.phone = phone;
+
   const user = await User.findByIdAndUpdate(
     id,
-    { ...req.body, role: req.body.role || 'individual' },
+    fieldsToUpdate,
     { new: true, runValidators: true }
   );
 
@@ -208,10 +217,27 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     id,
     { status },
     { new: true, runValidators: true }
-  );
+  ).populate('owner', 'email firstName lastName');
 
   if (!property) {
     return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
+  }
+
+  // Create notification for property owner
+  await Notification.create({
+    user: property.owner._id,
+    type: `property_${status}`,
+    message: `Your property "${property.title}" has been ${status}.`,
+  });
+
+  // Notify all admins of the status change
+  const admins = await User.find({ role: 'admin' });
+  for (const admin of admins) {
+    await Notification.create({
+      user: admin._id,
+      type: 'property_status_updated',
+      message: `Property "${property.title}" has been ${status} by ${req.user.email}.`,
+    });
   }
 
   // Create log
@@ -221,13 +247,6 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     resource: 'Property',
     resourceId: id,
     details: `Property ${property.title} was ${status} by admin`,
-  });
-
-  // Create notification for property owner
-  await Notification.create({
-    user: property.owner,
-    type: `property_${status}`,
-    message: `Your property "${property.title}" has been ${status}.`,
   });
 
   res.status(200).json({ success: true, data: property });
@@ -248,27 +267,43 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
     id,
     { plan, listingLimit, status },
     { new: true, runValidators: true }
-  );
+  ).populate('user', 'email');
 
   if (!subscription) {
     return next(new ErrorResponse(`Subscription not found with id of ${id}`, 404));
   }
 
+  // Create notification for user
+  await Notification.create({
+    user: subscription.user._id,
+    type: 'subscription_updated',
+    message: `Your subscription has been updated to the ${plan} plan.`,
+  });
+
+  // Create log
   await Log.create({
     user: req.user.id,
     action: 'Subscription updated',
     resource: 'Subscription',
     resourceId: id,
-    details: `Subscription for user ${subscription.user} updated to ${plan}`,
-  });
-
-  await Notification.create({
-    user: subscription.user,
-    type: 'subscription_updated',
-    message: `Your subscription has been updated to the ${plan} plan.`,
+    details: `Subscription for user ${subscription.user.email} updated to ${plan}`,
   });
 
   res.status(200).json({ success: true, data: subscription });
+});
+
+// @desc    Get all subscriptions
+// @route   GET /api/admin/subscriptions
+// @access  Private/Admin
+exports.getSubscriptions = asyncHandler(async (req, res, next) => {
+  const subscriptions = await Subscription.find()
+    .populate('user', 'firstName lastName email')
+    .sort('-createdAt');
+  res.status(200).json({
+    success: true,
+    count: subscriptions.length,
+    data: subscriptions,
+  });
 });
 
 // @desc    Get system logs
@@ -284,4 +319,18 @@ exports.getLogs = asyncHandler(async (req, res, next) => {
     count: logs.length,
     data: logs,
   });
+});
+
+// @desc    Notify admins of new property submission
+// @route   POST /api/admin/notify-new-property
+// @access  Private (Called internally)
+exports.notifyNewProperty = asyncHandler(async (property) => {
+  const admins = await User.find({ role: 'admin' });
+  for (const admin of admins) {
+    await Notification.create({
+      user: admin._id,
+      type: 'new_property',
+      message: `New property "${property.title}" submitted by ${property.owner.email} awaits approval.`,
+    });
+  }
 });

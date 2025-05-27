@@ -1,4 +1,3 @@
-// pages/properties/Properties.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -9,12 +8,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { Search, Filter } from 'lucide-react';
 
@@ -49,6 +48,7 @@ interface Property {
   address?: Address;
   subscription?: Subscription;
   images?: PropertyImage[];
+  status: string;
 }
 
 interface Filters {
@@ -83,10 +83,12 @@ const Properties = () => {
       try {
         // Create query params, filtering out empty values
         const queryParams = new URLSearchParams();
+        // Always fetch approved properties
+        queryParams.set('status', 'approved');
         Object.entries(filters).forEach(([key, value]) => {
           if (value && value !== '' && !(Array.isArray(value) && value.length === 0)) {
             if (Array.isArray(value)) {
-              value.forEach(v => queryParams.append(key, v));
+              value.forEach((v) => queryParams.append(key, v));
             } else {
               queryParams.set(key, value.toString());
             }
@@ -98,17 +100,17 @@ const Properties = () => {
             Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
           },
         });
-        
+
         if (!response.ok) throw new Error('Failed to fetch properties');
-        
+
         const data = await response.json();
         setProperties(data.data || []);
       } catch (error) {
         console.error('Error fetching properties:', error);
-        toast({ 
-          title: 'Error', 
-          description: 'Failed to load properties', 
-          variant: 'destructive' 
+        toast({
+          title: 'Error',
+          description: 'Failed to load properties',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -158,16 +160,16 @@ const Properties = () => {
               value={filters.maxPrice}
               onChange={handleFilterChange}
             />
-            <Select 
-              value={filters.category} 
+            <Select
+              value={filters.category}
               onValueChange={(value) => handleSelectChange('category', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sale">For Sale</SelectItem>
-                <SelectItem value="rent">For Rent</SelectItem>
+                <SelectItem value="for-sale">For Sale</SelectItem>
+                <SelectItem value="for-rent">For Rent</SelectItem>
                 <SelectItem value="offices">Offices</SelectItem>
                 <SelectItem value="land">Land</SelectItem>
               </SelectContent>
@@ -202,22 +204,22 @@ const Properties = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <MapContainer 
-                center={[-20.348404, 57.552152]} 
-                zoom={10} 
+              <MapContainer
+                center={[-20.348404, 57.552152]}
+                zoom={10}
                 style={{ height: '500px', width: '100%' }}
                 className="rounded-lg shadow-md"
               >
-                <TileLayer 
+                <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 {properties.map((property) => (
                   <Marker
                     key={property._id}
                     position={[
-                      property.address?.latitude || -20.348404, 
-                      property.address?.longitude || 57.552152
+                      property.address?.latitude || -20.348404,
+                      property.address?.longitude || 57.552152,
                     ]}
                   >
                     <Popup>
@@ -229,7 +231,7 @@ const Properties = () => {
                         <p className="text-teal-600 font-bold mb-3">
                           {property.price} {activeCurrency}
                         </p>
-                        <Button 
+                        <Button
                           onClick={() => navigate(`/properties/${property._id}`)}
                           size="sm"
                         >
@@ -241,7 +243,7 @@ const Properties = () => {
                 ))}
               </MapContainer>
             </div>
-            
+
             <div className="space-y-4">
               {properties.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -276,7 +278,7 @@ const Properties = () => {
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="mt-4">
                       <h3 className="text-lg font-bold mb-2">{property.title}</h3>
                       <p className="text-gray-600 mb-2">
@@ -285,7 +287,7 @@ const Properties = () => {
                       <p className="text-teal-600 font-bold text-xl mb-4">
                         {property.price} {activeCurrency}
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => navigate(`/properties/${property._id}`)}
                         className="w-full"
                       >

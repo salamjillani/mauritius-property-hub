@@ -6,45 +6,47 @@ const PropertySchema = new Schema({
     type: String,
     required: [true, 'Please add a title'],
     trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
+    maxlength: [100, 'Title cannot be more than 100 characters'],
   },
   description: {
     type: String,
     required: [true, 'Please add a description'],
-    maxlength: [5000, 'Description cannot be more than 5000 characters']
+    maxlength: [5000, 'Description cannot be more than 5000 characters'],
   },
   address: {
     street: {
       type: String,
-      required: false
+      required: false,
     },
     city: {
       type: String,
-      required: [true, 'City is required']
+      required: [true, 'City is required'],
     },
     state: String,
     zipCode: String,
     country: {
       type: String,
-      default: 'Mauritius'
-    }
+      default: 'Mauritius',
+    },
+    latitude: Number,
+    longitude: Number,
   },
   location: {
     type: {
       type: String,
       enum: ['Point'],
-      required: true
+      required: true,
     },
     coordinates: {
       type: [Number],
       required: true,
-      index: '2dsphere'
-    }
+      index: '2dsphere',
+    },
   },
   price: {
     type: Number,
     required: [true, 'Please add a price'],
-    min: [0, 'Price cannot be negative']
+    min: [0, 'Price cannot be negative'],
   },
   currency: {
     type: String,
@@ -62,33 +64,18 @@ const PropertySchema = new Schema({
         }
         return v === '';
       },
-      message: 'Rental period must be "day" or "month" for rentals, empty for others'
-    }
+      message: 'Rental period must be "day" or "month" for rentals, empty for others',
+    },
   },
   type: {
     type: String,
     required: [true, 'Please add a property type'],
-    enum: [
-      'Apartment',
-      'House',
-      'Villa',
-      'Office',
-      'Land',
-      'Commercial',
-      'Building',
-      'Other'
-    ]
+    enum: ['Apartment', 'House', 'Villa', 'Office', 'Land', 'Commercial', 'Building', 'Other'],
   },
   category: {
     type: String,
     required: [true, 'Please add a category'],
-    enum: [
-      'for-sale',
-      'for-rent',
-      'offices',
-      'office-rent',
-      'land'
-    ]
+    enum: ['for-sale', 'for-rent', 'offices', 'office-rent', 'land'],
   },
   virtualTour: { type: String },
   isFeatured: {
@@ -97,124 +84,124 @@ const PropertySchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'pending', 'sold', 'rented'],
-    default: 'pending'
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
   featured: {
     type: Boolean,
-    default: false
+    default: false,
   },
   isPremium: {
     type: Boolean,
-    default: false
+    default: false,
   },
   verified: {
     type: Boolean,
-    default: false
+    default: false,
   },
   size: {
     type: Number,
     required: [true, 'Please add property size in square meters'],
-    min: [0, 'Size cannot be negative']
+    min: [0, 'Size cannot be negative'],
   },
   bedrooms: {
     type: Number,
     default: 0,
-    min: [0, 'Bedrooms cannot be negative']
+    min: [0, 'Bedrooms cannot be negative'],
   },
   bathrooms: {
     type: Number,
     default: 0,
-    min: [0, 'Bathrooms cannot be negative']
+    min: [0, 'Bathrooms cannot be negative'],
   },
   amenities: [{
     type: String,
-    trim: true
+    trim: true,
   }],
   images: [
     {
       url: {
         type: String,
-        required: true
+        required: true,
       },
       publicId: {
-        type: String
+        type: String,
       },
       caption: {
         type: String,
-        default: ''
+        default: '',
       },
       isMain: {
         type: Boolean,
-        default: false
-      }
-    }
+        default: false,
+      },
+    },
   ],
   virtualTourUrl: {
     type: String,
-    trim: true
+    trim: true,
   },
   videoUrl: {
     type: String,
-    trim: true
+    trim: true,
   },
   floorPlanUrl: {
     type: String,
-    trim: true
+    trim: true,
   },
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   agent: {
     type: Schema.Types.ObjectId,
     ref: 'Agent',
-    required: false
+    required: false,
   },
   agency: {
     type: Schema.Types.ObjectId,
     ref: 'Agency',
-    required: false
+    required: false,
   },
   availableDates: [{
     from: Date,
-    to: Date
+    to: Date,
   }],
   contactDetails: {
     phone: {
       type: String,
-      trim: true
+      trim: true,
     },
     email: {
       type: String,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
+      match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address'],
     },
     isRestricted: {
       type: Boolean,
-      default: true // Contact details are hidden for non-logged-in users by default
-    }
+      default: true,
+    },
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 }, {
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
-  timestamps: true // Automatically manage createdAt and updatedAt
+  timestamps: true,
 });
 
 // Text index for search functionality
 PropertySchema.index({
   title: 'text',
   description: 'text',
-  'address.city': 'text'
+  'address.city': 'text',
 });
 
 // Virtual for reviews
@@ -222,14 +209,14 @@ PropertySchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',
   foreignField: 'property',
-  justOne: false
+  justOne: false,
 });
 
 // Pre-save hook to ensure only one main image
 PropertySchema.pre('save', function (next) {
-  const mainImages = this.images.filter(img => img.isMain);
+  const mainImages = this.images.filter((img) => img.isMain);
   if (mainImages.length > 1) {
-    mainImages.slice(1).forEach(img => (img.isMain = false));
+    mainImages.slice(1).forEach((img) => (img.isMain = false));
   }
   next();
 });
