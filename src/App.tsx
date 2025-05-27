@@ -13,28 +13,51 @@ import Offices from "./pages/properties/Offices";
 import Land from "./pages/properties/Land";
 import Properties from "./pages/properties/Properties";
 import PropertyDetails from "./pages/properties/PropertyDetails";
+import AddProperty from "./pages/properties/AddProperty";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminSubscriptions from "./pages/admin/Subscriptions";
-import AdminLogin from "./pages/admin/AdminLogin"; // New import
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminUsers from "./pages/admin/Users";
+import AdminProperties from "./pages/admin/Properties";
+import AdminAgents from "./pages/admin/Agents";
+import AdminAgencies from "./pages/admin/Agencies";
+import AdminSettings from "./pages/admin/Settings";
+import AdminLogs from "./pages/admin/Logs";
 import AgentPage from "./pages/AgentPage";
 import AllAgentsPage from "./pages/AllAgentsPage";
 import AgencyPage from "./pages/AgencyPage";
+import AllAgenciesPage from "./pages/AllAgenciesPage";
 import PromoterPage from "./pages/PromoterPage";
 import ProjectDetails from "./pages/ProjectDetails";
-import AdminUsers from "./pages/admin/Users";
-import AdminProperties from "./pages/admin/Properties";
 import Favorites from "./pages/Favorites";
-import AllAgenciesPage from "./pages/AllAgenciesPage";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Protected admin route component
+// Protected route for authenticated users
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+// Protected admin route
 const AdminRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/admin/login" />;
+  const token = localStorage.getItem('token');
+  if (!token || !user || user.role !== 'admin') {
+    return <Navigate to="/admin/login" replace />;
   }
   return children;
 };
@@ -46,12 +69,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/favorites" element={<Favorites />} />
           <Route path="/properties" element={<Properties />} />
           <Route path="/properties/for-sale" element={<PropertiesForSale />} />
           <Route path="/properties/for-rent" element={<PropertiesForRent />} />
@@ -63,15 +84,121 @@ const App = () => (
           <Route path="/properties/land/:id" element={<PropertyDetails />} />
           <Route path="/properties/:id" element={<PropertyDetails />} />
           <Route path="/agents" element={<AllAgentsPage />} />
-          <Route path="/agencies" element={<ErrorBoundary><AllAgenciesPage /></ErrorBoundary>} />
+          <Route
+            path="/agencies"
+            element={
+              <ErrorBoundary>
+                <AllAgenciesPage />
+              </ErrorBoundary>
+            }
+          />
           <Route path="/agent/:id" element={<AgentPage />} />
           <Route path="/agency/:id" element={<AgencyPage />} />
           <Route path="/promoters/:id" element={<PromoterPage />} />
           <Route path="/projects/:id" element={<ProjectDetails />} />
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          <Route path="/admin/properties" element={<AdminRoute><AdminProperties /></AdminRoute>} />
-          <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
+
+          {/* Protected User Routes */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/properties/add"
+            element={
+              <ProtectedRoute>
+                <AddProperty />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/properties"
+            element={
+              <AdminRoute>
+                <AdminProperties />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/subscriptions"
+            element={
+              <AdminRoute>
+                <AdminSubscriptions />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/agents"
+            element={
+              <AdminRoute>
+                <AdminAgents />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/agencies"
+            element={
+              <AdminRoute>
+                <AdminAgencies />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <AdminRoute>
+                <AdminSettings />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/logs"
+            element={
+              <AdminRoute>
+                <AdminLogs />
+              </AdminRoute>
+            }
+          />
+
+          {/* Catch-All Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

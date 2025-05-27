@@ -8,6 +8,7 @@ const Promoter = require('../models/Promoter');
 const Property = require('../models/Property');
 const Subscription = require('../models/Subscription');
 const mongoose = require('mongoose');
+const Log = require('../models/Log');
 
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/dashboard
@@ -63,6 +64,14 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`User not found with id of ${id}`, 404));
   }
 
+  await Log.create({
+    user: req.user.id,
+    action: 'User updated',
+    resource: 'User',
+    resourceId: id,
+    details: `User ${user.email} was updated by admin`,
+  });
+
   res.status(200).json({ success: true, data: user });
 });
 
@@ -81,6 +90,15 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
   }
 
   await User.deleteOne({ _id: id });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'User deleted',
+    resource: 'User',
+    resourceId: id,
+    details: `User ${user.email} was deleted by admin`,
+  });
+
   res.status(200).json({ success: true, data: {} });
 });
 
@@ -196,6 +214,22 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
   }
 
+  // Create log
+  await Log.create({
+    user: req.user.id,
+    action: `Property ${status}`,
+    resource: 'Property',
+    resourceId: id,
+    details: `Property ${property.title} was ${status} by admin`,
+  });
+
+  // Create notification for property owner
+  await Notification.create({
+    user: property.owner,
+    type: `property_${status}`,
+    message: `Your property "${property.title}" has been ${status}.`,
+  });
+
   res.status(200).json({ success: true, data: property });
 });
 
@@ -220,6 +254,20 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Subscription not found with id of ${id}`, 404));
   }
 
+  await Log.create({
+    user: req.user.id,
+    action: 'Subscription updated',
+    resource: 'Subscription',
+    resourceId: id,
+    details: `Subscription for user ${subscription.user} updated to ${plan}`,
+  });
+
+  await Notification.create({
+    user: subscription.user,
+    type: 'subscription_updated',
+    message: `Your subscription has been updated to the ${plan} plan.`,
+  });
+
   res.status(200).json({ success: true, data: subscription });
 });
 
@@ -227,9 +275,13 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
 // @route   GET /api/admin/logs
 // @access  Private/Admin
 exports.getLogs = asyncHandler(async (req, res, next) => {
-  // Placeholder: Implement actual logging mechanism
+  const logs = await Log.find()
+    .populate('user', 'firstName lastName email')
+    .sort('-createdAt')
+    .limit(50);
   res.status(200).json({
     success: true,
-    data: [],
+    count: logs.length,
+    data: logs,
   });
 });

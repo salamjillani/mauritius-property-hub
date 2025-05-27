@@ -1,89 +1,70 @@
+// pages/admin/Dashboard.tsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import { Loader2, Users, Home, DollarSign } from 'lucide-react';
 
-const AdminDashboard = () => {
+const Dashboard = () => {
   const [stats, setStats] = useState({
-    totalListings: 0,
     totalUsers: 0,
+    totalProperties: 0,
     totalSubscriptions: 0,
-    recentActivity: []
+    recentActivity: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication required');
-        }
-
-        const [usersRes, propertiesRes, subscriptionsRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          fetch(`${import.meta.env.VITE_API_URL}/api/subscriptions`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-        ]);
-
-        if (!usersRes.ok || !propertiesRes.ok || !subscriptionsRes.ok) {
-          throw new Error('Failed to fetch stats');
-        }
-
-        const [usersData, propertiesData, subscriptionsData] = await Promise.all([
-          usersRes.json(),
-          propertiesRes.json(),
-          subscriptionsRes.json()
-        ]);
-
-        setStats({
-          totalUsers: usersData.data.length,
-          totalListings: propertiesData.count,
-          totalSubscriptions: subscriptionsData.data.length,
-          recentActivity: [] // Add logic for recent activity if needed
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/dashboard`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
         });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+
+        const data = await response.json();
+        setStats(data.data);
       } catch (error) {
-        toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });
+        console.error('Error fetching dashboard data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load dashboard data',
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, [toast]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-        <Footer />
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-slate-800 mb-8">Admin Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <AdminLayout>
+      <div className="p-6">
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Total Users</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" /> Total Users
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{stats.totalUsers}</p>
@@ -91,30 +72,41 @@ const AdminDashboard = () => {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Total Listings</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Home className="h-5 w-5" /> Total Properties
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{stats.totalListings}</p>
+              <p className="text-2xl font-bold">{stats.totalProperties}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Total Subscriptions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" /> Total Subscriptions
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{stats.totalSubscriptions}</p>
             </CardContent>
           </Card>
         </div>
-        <div className="space-y-4">
-          <Button onClick={() => navigate('/admin/users')}>Manage Users</Button>
-          <Button onClick={() => navigate('/admin/properties')}>Manage Listings</Button>
-          <Button onClick={() => navigate('/admin/subscriptions')}>Manage Subscriptions</Button>
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
+          <div className="bg-white rounded-lg shadow p-4">
+            {stats.recentActivity.map((activity) => (
+              <div key={activity._id} className="border-b py-2">
+                <p>
+                  <span className="font-bold">{activity.owner?.firstName} {activity.owner?.lastName}</span> added a new property: {activity.title}
+                </p>
+                <p className="text-sm text-gray-500">{new Date(activity.createdAt).toLocaleDateString()}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
-export default AdminDashboard;
+export default Dashboard;

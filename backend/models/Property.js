@@ -46,6 +46,11 @@ const PropertySchema = new Schema({
     required: [true, 'Please add a price'],
     min: [0, 'Price cannot be negative']
   },
+  currency: {
+    type: String,
+    enum: ['USD', 'EUR', 'MUR'],
+    default: 'MUR',
+  },
   rentalPeriod: {
     type: String,
     enum: ['', 'day', 'month'],
@@ -84,6 +89,11 @@ const PropertySchema = new Schema({
       'office-rent',
       'land'
     ]
+  },
+  virtualTour: { type: String },
+  isFeatured: {
+    type: Boolean,
+    default: false,
   },
   status: {
     type: String,
