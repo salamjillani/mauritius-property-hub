@@ -1,18 +1,19 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const UserSchema = new Schema({
+const UserSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: [true, 'Please add a first name'],
-    trim: true
+    trim: true,
+    maxlength: [50, 'First name cannot be more than 50 characters']
   },
   lastName: {
     type: String,
     required: [true, 'Please add a last name'],
-    trim: true
+    trim: true,
+    maxlength: [50, 'Last name cannot be more than 50 characters']
   },
   email: {
     type: String,
@@ -31,7 +32,10 @@ const UserSchema = new Schema({
     enum: ['individual', 'agent', 'agency', 'promoter', 'admin'],
     default: 'individual'
   },
-  phone: String,
+  phone: {
+    type: String,
+    maxlength: [20, 'Phone number cannot be longer than 20 characters']
+  },
   avatarUrl: {
     type: String,
     default: 'default-avatar.jpg'
@@ -39,10 +43,11 @@ const UserSchema = new Schema({
   contactDetails: {
     phone: String,
     email: String,
-    isRestricted: {
-      type: Boolean,
-      default: true
-    }
+    isRestricted: { type: Boolean, default: false }
+  },
+  subscription: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
   },
   createdAt: {
     type: Date,

@@ -21,7 +21,8 @@ const propertyRoutes = require('./routes/properties');
 const agencyRoutes = require('./routes/agencies');
 const agentRoutes = require('./routes/agents');
 const inquiryRoutes = require('./routes/inquiries');
-const favoriteRoutes = require('./routes/favorites'); // Added favorites route
+const favoriteRoutes = require('./routes/favorites');
+const admin = require('./routes/admin');
 
 const app = express();
 
@@ -47,12 +48,13 @@ app.use('/public', express.static(path.join(__dirname, 'public'))); // Updated t
 
 // Mount routers
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', admin);
 app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/inquiries', inquiryRoutes);
-app.use('/api/favorites', favoriteRoutes); // Added favorites route
+app.use('/api/favorites', favoriteRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

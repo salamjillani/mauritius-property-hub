@@ -1,197 +1,120 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import AdminLayout from "@/components/admin/AdminLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { 
-  Building, 
-  User, 
-  Users, 
-  Home, 
-  Calendar, 
-  TrendingUp,
-  CheckCircle,
-  Clock
-} from "lucide-react";
-
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  description: string;
-  icon: React.ReactNode;
-}
-
-const StatCard = ({ title, value, description, icon }: StatCardProps) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <div className="h-4 w-4 text-muted-foreground">{icon}</div>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      <p className="text-xs text-muted-foreground mt-1">{description}</p>
-    </CardContent>
-  </Card>
-);
-
-const Dashboard = () => {
+const AdminDashboard = () => {
   const [stats, setStats] = useState({
-    users: 0,
-    agents: 0,
-    agencies: 0,
-    properties: 0,
-    activeListings: 0,
-    pendingListings: 0,
-    featuredListings: 0,
-    totalViews: 0,
+    totalListings: 0,
+    totalUsers: 0,
+    totalSubscriptions: 0,
+    recentActivity: []
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchStats = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem('token');
         if (!token) {
-          navigate("/login");
-          return;
+          throw new Error('Authentication required');
         }
 
-        // We could fetch actual stats from an API endpoint, but for now using mock data
-        // In a real app, you'd make an API call like:
-        // const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stats`, {
-        //   headers: { Authorization: `Bearer ${token}` },
-        // });
-        // const data = await response.json();
-        // setStats(data);
-        
-        // Mock data for demonstration
+        const [usersRes, propertiesRes, subscriptionsRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          fetch(`${import.meta.env.VITE_API_URL}/api/subscriptions`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        if (!usersRes.ok || !propertiesRes.ok || !subscriptionsRes.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+
+        const [usersData, propertiesData, subscriptionsData] = await Promise.all([
+          usersRes.json(),
+          propertiesRes.json(),
+          subscriptionsRes.json()
+        ]);
+
         setStats({
-          users: 128,
-          agents: 42,
-          agencies: 15,
-          properties: 234,
-          activeListings: 187,
-          pendingListings: 47,
-          featuredListings: 24,
-          totalViews: 4521,
+          totalUsers: usersData.data.length,
+          totalListings: propertiesData.count,
+          totalSubscriptions: subscriptionsData.data.length,
+          recentActivity: [] // Add logic for recent activity if needed
         });
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
-          variant: "destructive",
-        });
+        toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, [navigate, toast]);
+    fetchStats();
+  }, [toast]);
 
   if (isLoading) {
     return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-screen">
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
-      </AdminLayout>
+        <Footer />
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Users"
-            value={stats.users}
-            description="All registered users"
-            icon={<User size={20} />}
-          />
-          <StatCard
-            title="Agents"
-            value={stats.agents}
-            description="Registered real estate agents"
-            icon={<Users size={20} />}
-          />
-          <StatCard
-            title="Agencies"
-            value={stats.agencies}
-            description="Registered real estate agencies"
-            icon={<Building size={20} />}
-          />
-          <StatCard
-            title="Total Properties"
-            value={stats.properties}
-            description="Total number of listings"
-            icon={<Home size={20} />}
-          />
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Active Listings"
-            value={stats.activeListings}
-            description="Currently active property listings"
-            icon={<CheckCircle size={20} />}
-          />
-          <StatCard
-            title="Pending Listings"
-            value={stats.pendingListings}
-            description="Listings awaiting approval"
-            icon={<Clock size={20} />}
-          />
-          <StatCard
-            title="Featured Listings"
-            value={stats.featuredListings}
-            description="Premium featured properties"
-            icon={<TrendingUp size={20} />}
-          />
-          <StatCard
-            title="Total Views"
-            value={stats.totalViews}
-            description="Last 30 days"
-            icon={<Calendar size={20} />}
-          />
-        </div>
-        
-        {/* In a real app, you'd add charts, recent activity, etc. */}
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Navbar />
+      <main className="flex-grow container mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold text-slate-800 mb-8">Admin Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest actions in the system</CardDescription>
+              <CardTitle>Total Users</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-sm">No recent activity to display</p>
+              <p className="text-2xl font-bold">{stats.totalUsers}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>System Overview</CardTitle>
-              <CardDescription>Key metrics and statistics</CardDescription>
+              <CardTitle>Total Listings</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-sm">System running normally</p>
+              <p className="text-2xl font-bold">{stats.totalListings}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Total Subscriptions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{stats.totalSubscriptions}</p>
             </CardContent>
           </Card>
         </div>
-      </div>
-    </AdminLayout>
+        <div className="space-y-4">
+          <Button onClick={() => navigate('/admin/users')}>Manage Users</Button>
+          <Button onClick={() => navigate('/admin/properties')}>Manage Listings</Button>
+          <Button onClick={() => navigate('/admin/subscriptions')}>Manage Subscriptions</Button>
+        </div>
+      </main>
+      <Footer />
+    </div>
   );
 };
 
-export default Dashboard;
+export default AdminDashboard;

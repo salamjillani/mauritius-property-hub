@@ -98,6 +98,10 @@ const PropertySchema = new Schema({
     type: Boolean,
     default: false
   },
+  verified: {
+    type: Boolean,
+    default: false
+  },
   size: {
     type: Number,
     required: [true, 'Please add property size in square meters'],

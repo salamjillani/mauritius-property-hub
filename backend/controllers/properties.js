@@ -5,6 +5,7 @@ const Agent = require('../models/Agent');
 const Agency = require('../models/Agency');
 const mongoose = require('mongoose');
 const cloudinary = require('cloudinary').v2;
+const Subscription = require('../models/Subscription');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -141,11 +142,20 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @desc    Create new property
 // @route   POST /api/properties
 // @access  Private
+// Add to existing imports
 exports.createProperty = asyncHandler(async (req, res, next) => {
-  // Add user to req.body
+  const user = await User.findById(req.user.id).populate('subscription');
+  if (!user.subscription) {
+    return next(new ErrorResponse('No active subscription found', 403));
+  }
+
+  const subscription = await Subscription.findById(user.subscription);
+  if (subscription.listingsUsed >= subscription.listingLimit) {
+    return next(new ErrorResponse('Listing limit reached for your subscription', 403));
+  }
+
   req.body.owner = req.user.id;
 
-  // Validate user role
   if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
     return next(new ErrorResponse('Invalid user role for creating property', 403));
   }
@@ -158,17 +168,20 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     req.body.agent = agent._id;
     if (agent.agency) {
       req.body.agency = agent.agency;
+      const agency = await Agency.findById(agent.agency).populate('user');
+      const agencySubscription = await Subscription.findOne({ user: agency.user });
+      if (agencySubscription && agencySubscription.listingsUsed >= agencySubscription.listingLimit) {
+        return next(new ErrorResponse('Agency listing limit reached', 403));
+      }
     }
   }
 
-  // If user is an agency, set the agency field and assign a linked agent
   if (req.user.role === 'agency') {
     const agency = await Agency.findOne({ user: req.user.id }).populate('agents');
     if (!agency) {
       return next(new ErrorResponse('Agency profile not found for this user', 400));
     }
     req.body.agency = agency._id;
-    // If no agent is specified, assign the first approved agent from the agency
     if (!req.body.agent && agency.agents && agency.agents.length > 0) {
       const approvedAgent = agency.agents.find(agent => agent.approvalStatus === 'approved');
       if (approvedAgent) {
@@ -177,7 +190,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // If user is a promoter, set the agent field if they have an agent profile
   if (req.user.role === 'promoter') {
     const agent = await Agent.findOne({ user: req.user.id });
     if (agent) {
@@ -188,7 +200,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Set contact details if provided
   if (req.user.role === 'agent' && req.user.contactDetails) {
     req.body.contactDetails = {
       phone: req.user.contactDetails.phone,
@@ -198,11 +209,20 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
   }
 
   const property = await Property.create(req.body);
+  subscription.listingsUsed += 1;
+  if (req.body.isPremium && subscription.plan === 'elite') {
+    property.isPremium = true;
+  }
+  if (req.body.featured && subscription.plan === 'platinum') {
+    const maxFeatured = Math.floor(subscription.listingLimit * 0.25);
+    if (subscription.featuredListings.length < maxFeatured) {
+      property.featured = true;
+      subscription.featuredListings.push(property._id);
+    }
+  }
+  await Promise.all([property.save(), subscription.save()]);
 
-  res.status(200).json({
-    success: true,
-    data: property
-  });
+  res.status(200).json({ success: true, data: property });
 });
 
 // @desc    Update property

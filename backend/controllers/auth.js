@@ -5,7 +5,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 exports.register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, accountType } = req.body;
 
-  if (!['individual', 'agent', 'agency', 'promoter', 'admin'].includes(accountType)) {
+  if (!['individual', 'agent', 'agency', 'promoter'].includes(accountType)) {
     return next(new ErrorResponse('Invalid account type', 400));
   }
 
@@ -15,6 +15,30 @@ exports.register = asyncHandler(async (req, res, next) => {
     email,
     password,
     role: accountType
+  });
+
+  sendTokenResponse(user, 201, res);
+});
+
+exports.adminRegister = asyncHandler(async (req, res, next) => {
+  const { firstName, lastName, email, password, adminSecret } = req.body;
+
+  // Optional: Require a secret key for admin registration
+  if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+    return next(new ErrorResponse('Invalid admin secret', 403));
+  }
+
+  const existingAdmin = await User.findOne({ email, role: 'admin' });
+  if (existingAdmin) {
+    return next(new ErrorResponse('Admin with this email already exists', 400));
+  }
+
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    password,
+    role: 'admin'
   });
 
   sendTokenResponse(user, 201, res);
@@ -31,6 +55,22 @@ exports.login = asyncHandler(async (req, res, next) => {
 
   if (!user || !(await user.matchPassword(password))) {
     return next(new ErrorResponse('Invalid credentials', 401));
+  }
+
+  sendTokenResponse(user, 200, res);
+});
+
+exports.adminLogin = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(new ErrorResponse('Please provide an email and password', 400));
+  }
+
+  const user = await User.findOne({ email, role: 'admin' }).select('+password');
+
+  if (!user || !(await user.matchPassword(password))) {
+    return next(new ErrorResponse('Invalid admin credentials', 401));
   }
 
   sendTokenResponse(user, 200, res);
