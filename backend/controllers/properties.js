@@ -28,9 +28,12 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
   const removeFields = ['select', 'sort', 'page', 'limit'];
   removeFields.forEach((param) => delete reqQuery[param]);
 
-  // Exclude pending properties from public listings unless user is admin
-  if (!req.user || req.user.role !== 'admin') {
-    reqQuery.status = 'approved';
+  // Allow owners to see all their properties, including pending/inactive
+  if (!reqQuery.owner || (req.user && reqQuery.owner !== req.user.id)) {
+    // For non-owners or non-authenticated users, show only approved properties
+    if (!req.user || req.user.role !== 'admin') {
+      reqQuery.status = 'approved';
+    }
   }
 
   let queryStr = JSON.stringify(reqQuery);
@@ -125,9 +128,9 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
   }
 
-  // Restrict pending properties to admins or owners
-  if (property.status === 'pending' && (!req.user || (req.user.role !== 'admin' && property.owner._id.toString() !== req.user.id))) {
-    return next(new ErrorResponse('Not authorized to view pending property', 403));
+  // Restrict pending or inactive properties to admins or owners
+  if (['pending', 'inactive'].includes(property.status) && (!req.user || (req.user.role !== 'admin' && property.owner._id.toString() !== req.user.id))) {
+    return next(new ErrorResponse('Not authorized to view this property', 403));
   }
 
   if (property.agent && !property.agent._id) {
@@ -152,7 +155,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
   }
 
   req.body.owner = req.user.id;
-  req.body.status = 'pending'; // Set default status to pending
+  req.body.status = 'pending'; // New properties are always pending
 
   if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
     return next(new ErrorResponse('Invalid user role for creating property', 403));
@@ -258,6 +261,31 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
   // Make sure user is property owner or admin
   if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
+  }
+
+  // Handle status updates
+  if (req.body.status) {
+    if (req.user.role === 'admin') {
+      // Admins can set any status, but not for inactive properties (handled in approveProperty)
+      if (!['pending', 'approved', 'rejected', 'active', 'inactive'].includes(req.body.status)) {
+        return next(new ErrorResponse('Invalid status', 400));
+      }
+    } else {
+      // Owners can only set active or inactive
+      if (!['active', 'inactive'].includes(req.body.status)) {
+        return next(new ErrorResponse('Invalid status for owner', 400));
+      }
+      // If owner sets to active, change to pending for admin approval
+      if (req.body.status === 'active') {
+        req.body.status = 'pending';
+        // Notify admins
+        await notifyNewProperty(property);
+      }
+      // If owner sets to inactive, set directly to inactive
+      if (req.body.status === 'inactive') {
+        req.body.status = 'inactive';
+      }
+    }
   }
 
   // Update contact details if provided

@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ListingsTab = ({ userId }) => {
   const [listings, setListings] = useState([]);
@@ -42,6 +49,43 @@ const ListingsTab = ({ userId }) => {
     fetchListings();
   }, [userId, toast]);
 
+  const handleStatusChange = async (propertyId, status) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/properties/${propertyId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update property status");
+      }
+
+      const data = await response.json();
+      setListings(
+        listings.map((listing) =>
+          listing._id === propertyId ? data.data : listing
+        )
+      );
+      toast({
+        title: "Success",
+        description: `Property status updated to ${data.data.status}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update property status",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center">
@@ -76,7 +120,11 @@ const ListingsTab = ({ userId }) => {
                         ? "text-green-500"
                         : listing.status === "rejected"
                         ? "text-red-500"
-                        : "text-yellow-500"
+                        : listing.status === "pending"
+                        ? "text-yellow-500"
+                        : listing.status === "active"
+                        ? "text-blue-500"
+                        : "text-gray-500"
                     }`}
                   >
                     {listing.status}
@@ -89,11 +137,29 @@ const ListingsTab = ({ userId }) => {
                   alt={listing.title}
                   className="w-full h-40 object-cover rounded-md mb-4"
                 />
-                <p className="text-sm text-gray-600 line-clamp-2">{listing.description}</p>
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {listing.description}
+                </p>
                 <p className="text-sm text-gray-500 mt-2">
                   {listing.address?.city}, {listing.address?.country || "Mauritius"}
                 </p>
-                <p className="text-lg font-bold mt-2">MUR {listing.price.toLocaleString()}</p>
+                <p className="text-lg font-bold mt-4">
+                  MUR {listing.price.toLocaleString()}
+                </p>
+                <div className="mt-4">
+                  <Select
+                    onValueChange={(value) => handleStatusChange(listing._id, value)}
+                    defaultValue={listing.status}
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Change Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Link to={`/properties/${listing._id}`} className="mt-4 block">
                   <Button variant="outline" className="w-full">
                     View Details

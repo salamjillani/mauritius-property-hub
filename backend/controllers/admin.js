@@ -10,6 +10,30 @@ const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const Log = require('../models/Log');
 
+
+// @desc    Get all properties for admin
+// @route   GET /api/admin/properties
+// @access  Private/Admin
+exports.getAdminProperties = asyncHandler(async (req, res, next) => {
+  const properties = await Property.find()
+    .populate('owner', 'email firstName lastName')
+    .populate({
+      path: 'agent',
+      select: 'user title isPremium',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName email',
+      },
+    })
+    .populate('agency', 'name logoUrl');
+
+  res.status(200).json({
+    success: true,
+    count: properties.length,
+    data: properties,
+  });
+});
+
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/dashboard
 // @access  Private/Admin
@@ -209,25 +233,33 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid property ID format', 400));
   }
 
-  if (!['approved', 'rejected'].includes(status)) {
+  // Allow pending, approved, rejected statuses
+  if (!['pending', 'approved', 'rejected'].includes(status)) {
     return next(new ErrorResponse('Invalid status', 400));
   }
 
-  const property = await Property.findByIdAndUpdate(
-    id,
-    { status },
-    { new: true, runValidators: true }
-  ).populate('owner', 'email firstName lastName');
+  const property = await Property.findById(id).populate('owner', 'email firstName lastName');
 
   if (!property) {
     return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
   }
 
+  // Prevent admins from changing status of inactive properties
+  if (property.status === 'inactive') {
+    return next(new ErrorResponse('Cannot change status of inactive property', 403));
+  }
+
+  const updatedProperty = await Property.findByIdAndUpdate(
+    id,
+    { status },
+    { new: true, runValidators: true }
+  ).populate('owner', 'email firstName lastName');
+
   // Create notification for property owner
   await Notification.create({
-    user: property.owner._id,
+    user: updatedProperty.owner._id,
     type: `property_${status}`,
-    message: `Your property "${property.title}" has been ${status}.`,
+    message: `Your property "${updatedProperty.title}" has been ${status}.`,
   });
 
   // Notify all admins of the status change
@@ -236,7 +268,7 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     await Notification.create({
       user: admin._id,
       type: 'property_status_updated',
-      message: `Property "${property.title}" has been ${status} by ${req.user.email}.`,
+      message: `Property "${updatedProperty.title}" has been ${status} by ${req.user.email}.`,
     });
   }
 
@@ -246,10 +278,10 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     action: `Property ${status}`,
     resource: 'Property',
     resourceId: id,
-    details: `Property ${property.title} was ${status} by admin`,
+    details: `Property ${updatedProperty.title} was ${status} by admin`,
   });
 
-  res.status(200).json({ success: true, data: property });
+  res.status(200).json({ success: true, data: updatedProperty });
 });
 
 // @desc    Update subscription

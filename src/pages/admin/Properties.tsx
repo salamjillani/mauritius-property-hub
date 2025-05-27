@@ -63,7 +63,8 @@ const AdminProperties = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to update property status");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update property status");
       }
 
       const data = await response.json();
@@ -77,7 +78,7 @@ const AdminProperties = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update property status",
+        description: error.message || "Failed to update property status",
         variant: "destructive",
       });
     }
@@ -123,7 +124,11 @@ const AdminProperties = () => {
                           ? "text-green-500"
                           : property.status === "rejected"
                           ? "text-red-500"
-                          : "text-yellow-500"
+                          : property.status === "pending"
+                          ? "text-yellow-500"
+                          : property.status === "active"
+                          ? "text-blue-500"
+                          : "text-gray-500"
                       }`}
                     >
                       {property.status}
@@ -140,6 +145,7 @@ const AdminProperties = () => {
                     <Select
                       onValueChange={(value) => handleStatusChange(property._id, value)}
                       defaultValue={property.status}
+                      disabled={property.status === "inactive"}
                     >
                       <SelectTrigger className="w-40">
                         <SelectValue placeholder="Change Status" />

@@ -84,7 +84,7 @@ const PropertySchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'active', 'inactive'],
     default: 'pending',
   },
   featured: {
