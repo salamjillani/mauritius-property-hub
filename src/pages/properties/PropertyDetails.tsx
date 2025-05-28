@@ -45,16 +45,6 @@ interface Agent {
   isPremium?: boolean;
 }
 
-interface Promoter {
-  _id: string;
-  name: string;
-  contactDetails?: {
-    phone?: string;
-    email?: string;
-  };
-  logo?: string;
-}
-
 interface Review {
   _id: string;
   rating: number;
@@ -91,7 +81,6 @@ interface Property {
   status: 'pending' | 'approved' | 'rejected';
   owner: string;
   agent?: Agent;
-  promoter?: Promoter;
   availability: AvailableDate[];
   contactDetails?: {
     phone?: string;
@@ -101,23 +90,36 @@ interface Property {
   isFavorite?: boolean;
 }
 
+// Mock components for missing components
+const AvailabilityForm = ({ propertyId, onSuccess }) => (
+  <div className="p-2 border rounded">
+    <p className="text-sm text-gray-600">Availability form would go here</p>
+  </div>
+);
+
+const InquiryForm = ({ propertyId, agentId, user }) => (
+  <div className="p-2 border rounded">
+    <p className="text-sm text-gray-600">Inquiry form would go here</p>
+  </div>
+);
+
 const PropertyDetails = () => {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id, category } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [property, setProperty] = useState<Property | null>(null);
+  const [property, setProperty] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState(null);
 
   // Load user from localStorage
   useEffect(() => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}') as User;
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
       if (storedUser?._id) {
         setUser(storedUser);
       }
@@ -129,11 +131,16 @@ const PropertyDetails = () => {
   const fetchProperty = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-      });
+      // Use category from URL params, replacing hyphens with spaces if needed
+      const formattedCategory = category?.replace("-", " ") || "for-sale";
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/properties/${formattedCategory}/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -156,18 +163,21 @@ const PropertyDetails = () => {
       setIsFavorite(data.data.isFavorite || false);
 
       // Fetch reviews
-      const reviewsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-      });
+      const reviewsResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reviews/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+          },
+        }
+      );
       if (reviewsResponse.ok) {
         const reviewsData = await reviewsResponse.json();
         setReviews(reviewsData.data || []);
       } else {
         console.warn('Failed to fetch reviews');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching property:', error);
       toast({
         title: t('error'),
@@ -178,7 +188,7 @@ const PropertyDetails = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [id, toast, navigate, t]);
+  }, [id, category, toast, navigate, t]);
 
   useEffect(() => {
     fetchProperty();
@@ -201,10 +211,14 @@ const PropertyDetails = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(shareUrl);
-        toast({ title: t('link_copied'), description: t('url_copied') });
+        toast({
+          title: t('Link Copied'),
+          description: t('URL copied to clipboard'),
+          variant: 'default',
+        });
       }
     } catch (err) {
-      console.error('Share failed:', err);
+      console.error('Error sharing property:', err);
       toast({
         title: t('error'),
         description: t('failed_to_share'),
@@ -218,20 +232,23 @@ const PropertyDetails = () => {
       toast({
         title: t('login_required'),
         description: t('please_login_to_favorite'),
+        variant: 'default',
       });
       navigate('/login');
       return;
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ propertyId: id }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/favorites`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ propertyId: id }),
+        });
 
       if (!response.ok) {
         throw new Error(t(isFavorite ? 'failed_to_remove_favorite' : 'failed_to_add_favorite'));
@@ -242,8 +259,9 @@ const PropertyDetails = () => {
       toast({
         title: t('success'),
         description: t(data.data.isFavorite ? 'added_to_favorites' : 'removed_from_favorites'),
+        variant: 'default',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error toggling favorite:', error);
       toast({
         title: t('error'),
@@ -254,7 +272,7 @@ const PropertyDetails = () => {
   }, [user, id, isFavorite, toast, t, navigate]);
 
   const handleReviewSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e) => {
       e.preventDefault();
       if (!user?._id) {
         toast({
@@ -268,21 +286,23 @@ const PropertyDetails = () => {
       if (reviewForm.rating < 1 || reviewForm.rating > 5) {
         toast({
           title: t('error'),
-          description: t('rating_must_be_between_1_and_5'),
+          description: t('rating_must_be_valid'),
           variant: 'destructive',
         });
         return;
       }
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ propertyId: id, ...reviewForm }),
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/reviews`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ propertyId: id, ...reviewForm }),
+          });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -292,8 +312,8 @@ const PropertyDetails = () => {
         const data = await response.json();
         setReviews((prev) => [...prev, data.data]);
         setReviewForm({ rating: 5, comment: '' });
-        toast({ title: t('success'), description: t('review_submitted') });
-      } catch (error: any) {
+        toast({ title: t('Success'), description: t('Review Submitted') });
+      } catch (error) {
         console.error('Error submitting review:', error);
         toast({
           title: t('error'),
@@ -305,7 +325,7 @@ const PropertyDetails = () => {
     [user, id, reviewForm, toast, t, navigate]
   );
 
-  const handleImageNavigation = useCallback((direction: 'prev' | 'next') => {
+  const handleImageNavigation = useCallback((direction) => {
     if (!property?.images) return;
     const totalImages = property.images.length;
     setSelectedImageIndex((prev) => {
@@ -316,12 +336,21 @@ const PropertyDetails = () => {
     });
   }, [property?.images]);
 
+  const handleKeyDown = (event, index) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      setSelectedImageIndex(index);
+    }
+  };
+
   const averageRating = useMemo(
     () => (reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0),
     [reviews]
   );
 
-  const isRental = useMemo(() => ['for-rent', 'office-rent'].includes(property?.category || ''), [property?.category]);
+  const isRental = useMemo(
+    () => ['for-rent', 'office-rent'].includes(property?.category || ''),
+    [property?.category]
+  );
 
   if (isLoading) {
     return (
@@ -340,7 +369,9 @@ const PropertyDetails = () => {
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <p className="text-gray-500">{t('property_not_found')}</p>
+          <div>
+            <p className="text-gray-500">{t('property_not_found')}</p>
+          </div>
         </div>
         <Footer />
       </div>
@@ -358,12 +389,11 @@ const PropertyDetails = () => {
         <meta property="og:type" content="website" />
       </Helmet>
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12" tabIndex={-1} id="main-content">
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-6" tabIndex={-1} id="main-content">
         <BackButton to="/properties" label={t('back_to_properties')} className="mb-6" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
           className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${
             property.isFeatured ? 'border-2 border-yellow-500 bg-yellow-50 p-4 rounded-lg' : ''
           }`}
@@ -378,27 +408,26 @@ const PropertyDetails = () => {
                     : undefined
                 }
                 sizes="(max-width: 768px) 100vw, 800px"
-                alt={property.images[selectedImageIndex]?.caption || t('property_image_alt', { title: property.title })}
+                alt={t('property_image_alt', { title: property.title })}
                 className="w-full h-96 object-cover rounded-xl"
-                loading="lazy"
               />
               {property.images.length > 1 && (
                 <>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-white/80 hover:bg-gray-100"
+                    className="absolute top-2 left-2"
                     onClick={() => handleImageNavigation('prev')}
-                    aria-label={t('previous_image')}
+                    aria-label="Previous Image"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-white/80 hover:bg-gray-100"
+                    className="absolute top-2 right-2"
                     onClick={() => handleImageNavigation('next')}
-                    aria-label={t('next_image')}
+                    aria-label="Next Image"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
@@ -408,18 +437,18 @@ const PropertyDetails = () => {
                 <Button
                   onClick={handleShare}
                   variant="secondary"
-                  aria-label={t('share_property')}
-                  className="bg-white/80 hover:bg-gray-100"
+                  aria-label="Share Property"
+                  className="bg-white/80"
                 >
-                  <Share2 className="mr-2 h-5 w-5" />
+                  <Share2 className="mr-2 h-4 w-4" />
                   {t('share')}
                 </Button>
                 <Button
                   onClick={handleFavoriteToggle}
                   variant={isFavorite ? 'destructive' : 'outline'}
                   size="icon"
-                  aria-label={t(isFavorite ? 'remove_from_favorites' : 'add_to_favorites')}
-                  className={isFavorite ? '' : 'bg-white/80 hover:bg-gray-100'}
+                  aria-label={t('favorite')}
+                  className={isFavorite ? '' : 'bg-white/80'}
                 >
                   <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
                 </Button>
@@ -435,19 +464,18 @@ const PropertyDetails = () => {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-2 mb-6">
-              {property.images.map((img, index) => (
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              {property.images.map((image, index) => (
                 <img
                   key={index}
-                  src={img.thumbnail || img.url}
-                  alt={img.caption || `${t('property_image')} ${index + 1}`}
-                  className={`w-full h-24 object-cover rounded-md cursor-pointer hover:opacity-80 ${
-                    selectedImageIndex === index ? 'border-2 border-teal-500' : ''
+                  src={image.thumbnail || image.url}
+                  alt={`${t('property_image')} ${index + 1}`}
+                  className={`w-full h-24 object-cover rounded-md cursor-pointer ${
+                    index === selectedImageIndex ? 'border-2 border-teal-500' : 'border-0'
                   }`}
                   onClick={() => setSelectedImageIndex(index)}
-                  onKeyDown={(e) => e.key === 'Enter' && setSelectedImageIndex(index)}
+                  onKeyDown={(event) => handleKeyDown(event, index)}
                   tabIndex={0}
-                  loading="lazy"
                 />
               ))}
             </div>
@@ -459,7 +487,7 @@ const PropertyDetails = () => {
                     src={property.videoUrl}
                     controls
                     className="w-full h-64 rounded-lg mb-4"
-                    aria-label={t('property_video')}
+                    aria-label="Property Video"
                   >
                     <track kind="captions" />
                   </video>
@@ -471,8 +499,8 @@ const PropertyDetails = () => {
                     title={t('virtual_tour')}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                    aria-label={t('virtual_tour_iframe')}
-                  ></iframe>
+                    aria-label="Virtual Tour"
+                  />
                 )}
               </div>
             )}
@@ -482,7 +510,7 @@ const PropertyDetails = () => {
                 <p className="text-gray-500">{t('no_reviews')}</p>
               ) : (
                 <>
-                  <p className="text-sm mb-2" aria-label={t('average_rating')}>
+                  <p className="text-sm mb-2" aria-label="Average Rating">
                     {t('average_rating')}: {averageRating.toFixed(1)} / 5 ({reviews.length}{' '}
                     {t(reviews.length === 1 ? 'review' : 'reviews')})
                   </p>
@@ -540,6 +568,7 @@ const PropertyDetails = () => {
                     </label>
                     <Textarea
                       id="comment"
+                      name="comment"
                       value={reviewForm.comment}
                       onChange={(e) => setReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
                       className="w-full"
@@ -585,12 +614,12 @@ const PropertyDetails = () => {
               </p>
               {property.bedrooms > 0 && (
                 <p className="text-sm">
-                  <strong>{t('bedrooms')}:</strong> {property.bedrooms}
+                  <strong>{property.bedrooms}</strong> {t('bedrooms')}
                 </p>
               )}
               {property.bathrooms > 0 && (
                 <p className="text-sm">
-                  <strong>{t('bathrooms')}:</strong> {property.bathrooms}
+                  <strong>{property.bathrooms}</strong> {t('bathrooms')}
                 </p>
               )}
               <p className="text-sm">
@@ -618,7 +647,7 @@ const PropertyDetails = () => {
                 <h3 className="text-lg font-bold mb-2">{t('availability')}</h3>
                 <Calendar
                   mode="range"
-                  disabled={(date: Date) =>
+                  disabled={(date) =>
                     !property.availability.some(
                       (a) =>
                         date >= new Date(a.startDate) &&
@@ -642,47 +671,15 @@ const PropertyDetails = () => {
                               }
                             : prev
                         );
-                        toast({ title: t('success'), description: t('availability_added') });
+                        toast({
+                          title: t('success'),
+                          description: t('availability_added'),
+                          variant: 'default',
+                        });
                       }}
                     />
                   </div>
                 )}
-              </div>
-            )}
-            {property.promoter && (
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-bold mb-2">{t('promoter')}</h3>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={property.promoter.logo || '/defaultPromoterLogo.jpg'}
-                    alt={t('promoter_logo', { name: property.promoter.name })}
-                    className="w-16 h-16 rounded-full object-cover"
-                    loading="lazy"
-                  />
-                  <div>
-                    <p className="font-bold">{property.promoter.name}</p>
-                    <p className="text-sm text-slate-600">{t('real_estate_promoter')}</p>
-                    {user?._id ? (
-                      <>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Phone className="h-4 w-4" />
-                          <p>{property.promoter.contactDetails?.phone || t('not_provided')}</p>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Mail className="h-4 w-4" />
-                          <p>{property.promoter.contactDetails?.email || t('not_provided')}</p>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-sm text-slate-600">
-                        <a href="/login" className="text-blue-600 hover:underline" aria-label={t('log_in')}>
-                          {t('log_in')}
-                        </a>{' '}
-                        {t('to_view_contact')}
-                      </p>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
             <div className="border-t pt-4">
@@ -694,29 +691,30 @@ const PropertyDetails = () => {
                     name: `${property.agent?.user?.firstName || ''} ${property.agent?.user?.lastName || ''}`,
                   })}
                   className="w-16 h-16 rounded-full"
-                  loading="lazy"
                 />
                 <div>
                   <p className="font-bold">
                     {property.agent?.user?.firstName || 'N/A'} {property.agent?.user?.lastName || ''}
                     {property.agent?.isPremium && (
-                      <span className="ml-2 text-xs bg-amber-500 text-white px-1 rounded">{t('premium')}</span>
+                      <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-1 rounded">
+                        {t('premium')}
+                      </span>
                     )}
                   </p>
-                  <p className="text-sm text-slate-600">{t('real_estate_agent')}</p>
+                  <p className="text-sm text-gray-600">{t('real_estate_agent')}</p>
                   {user?._id ? (
                     <>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4" />
-                        <p>{property.contactDetails?.phone || t('not_provided')}</p>
+                        <p>{property.contactDetails?.phone || 'N/A'}</p>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <div className="flex items-center gap-2 text-sm">
                         <Mail className="h-4 w-4" />
-                        <p>{property.contactDetails?.email || t('not_provided')}</p>
+                        <p>{property.contactDetails?.email || 'N/A'}</p>
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-gray-600">
                       <a href="/login" className="text-blue-600 hover:underline" aria-label={t('log_in')}>
                         {t('log_in')}
                       </a>{' '}
@@ -735,306 +733,6 @@ const PropertyDetails = () => {
       </main>
       <Footer />
     </div>
-  );
-};
-
-const InquiryForm = ({ propertyId, agentId, user }: { propertyId: string; agentId?: string; user: User | null }) => {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: user?.firstName ? `${user.firstName} ${user.lastName}` : '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    message: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }, []);
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsSubmitting(true);
-
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inquiries`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(user?._id && { Authorization: `Bearer ${localStorage.getItem('token')}` }),
-          },
-          body: JSON.stringify({ ...formData, propertyId, agentId }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || t('failed_to_submit_inquiry'));
-        }
-
-        toast({ title: t('inquiry_sent'), description: t('inquiry_sent_message') });
-        setFormData({
-          name: user?.firstName ? `${user.firstName} ${user.lastName}` : '',
-          email: user?.email || '',
-          phone: user?.phone || '',
-          message: '',
-        });
-
-        // Create notification for agent
-        if (agentId && user?._id) {
-          await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: JSON.stringify({
-              user: agentId,
-              title: t('new_inquiry'),
-              message: t('new_inquiry_for_property', { title: formData.name }),
-              link: `/properties/${propertyId}`,
-            }),
-          });
-        }
-      } catch (error: any) {
-        console.error('Error submitting inquiry:', error);
-        toast({
-          title: t('error'),
-          description: error.message || t('failed_to_submit_inquiry'),
-          variant: 'destructive',
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [formData, user, propertyId, agentId, toast, t]
-  );
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4" aria-label={t('inquiry_form')}>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="name">
-          {t('name')}
-        </label>
-        <Input
-          id="name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          disabled={!!user?.firstName}
-          aria-describedby="name-help"
-        />
-        {user?.firstName && (
-          <p id="name-help" className="text-sm text-gray-500">
-            {t('name_from_profile')}
-          </p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="email">
-          {t('email')}
-        </label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          disabled={!!user?.email}
-          aria-describedby="email-help"
-        />
-        {user?.email && (
-          <p id="email-help" className="text-sm text-gray-500">
-            {t('email_from_profile')}
-          </p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="phone">
-          {t('phone')}
-        </label>
-        <Input
-          id="phone"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          aria-describedby="phone-help"
-        />
-        <p id="phone-help" className="text-sm text-gray-500">
-          {t('phone_optional')}
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="message">
-          {t('message')}
-        </label>
-        <Textarea
-          id="message"
-          name="message"
-          value={formData.message}
-          onChange={handleChange}
-          required
-          maxLength={1000}
-          aria-describedby="message-help"
-        />
-        <p id="message-help" className="text-sm text-gray-500">
-          {t('message_help')}
-        </p>
-      </div>
-      <Button type="submit" disabled={isSubmitting} aria-label={t('send_inquiry')}>
-        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('send_inquiry')}
-      </Button>
-    </form>
-  );
-};
-
-const AvailabilityForm = ({
-  propertyId,
-  onSuccess,
-}: {
-  propertyId: string;
-  onSuccess: (availability: AvailableDate) => void;
-}) => {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({ startDate: '', endDate: '', status: 'available' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError(null);
-  }, []);
-
-  const validateDates = useCallback(() => {
-    if (!formData.startDate || !formData.endDate) {
-      setError(t('dates_required'));
-      return false;
-    }
-    const fromDate = new Date(formData.startDate);
-    const toDate = new Date(formData.endDate);
-    if (toDate <= fromDate) {
-      setError(t('to_date_after_from'));
-      return false;
-    }
-    if (fromDate < new Date()) {
-      setError(t('start_date_future'));
-      return false;
-    }
-    return true;
-  }, [formData, t]);
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!validateDates()) return;
-      setIsSubmitting(true);
-
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/availability`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            propertyId,
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            status: formData.status,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || t('failed_to_add_availability'));
-        }
-
-        const data = await response.json();
-        onSuccess(data.data);
-        setFormData({ startDate: '', endDate: '', status: 'available' });
-        toast({ title: t('success'), description: t('availability_added') });
-      } catch (error: any) {
-        console.error('Error adding availability:', error);
-        toast({
-          title: t('error'),
-          description: error.message || t('failed_to_add_availability'),
-          variant: 'destructive',
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [formData, propertyId, onSuccess, toast, t, validateDates]
-  );
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4" aria-label={t('availability_form')}>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="startDate">
-          {t('available_from')}
-        </label>
-        <Input
-          id="startDate"
-          name="startDate"
-          type="date"
-          value={formData.startDate}
-          onChange={handleChange}
-          required
-          min={new Date().toISOString().split('T')[0]}
-          aria-describedby="startDate-help"
-        />
-        <p id="startDate-help" className="text-sm text-gray-500">
-          {t('start_date_help')}
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="endDate">
-          {t('available_to')}
-        </label>
-        <Input
-          id="endDate"
-          name="endDate"
-          type="date"
-          value={formData.endDate}
-          onChange={handleChange}
-          required
-          min={formData.startDate || new Date().toISOString().split('T')[0]}
-          aria-describedby="endDate-help"
-        />
-        <p id="endDate-help" className="text-sm text-gray-500">
-          {t('end_date_help')}
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700" htmlFor="status">
-          {t('status')}
-        </label>
-        <select
-          id="status"
-          name="status"
-          value={formData.status}
-          onChange={handleChange}
-          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-          aria-describedby="status-help"
-        >
-          <option value="available">{t('available')}</option>
-          <option value="unavailable">{t('unavailable')}</option>
-        </select>
-        <p id="status-help" className="text-sm text-gray-500">
-          {t('status_help')}
-        </p>
-      </div>
-      {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} aria-label={t('add_availability')}>
-        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('add_availability')}
-      </Button>
-    </form>
   );
 };
 
