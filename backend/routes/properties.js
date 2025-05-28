@@ -5,35 +5,57 @@ const {
   createProperty,
   updateProperty,
   deleteProperty,
+  searchProperties,
   getFeaturedProperties,
-  uploadPropertyImages,
   getPropertiesByCategory,
   getPropertyByCategory,
+  uploadPropertyImages,
+  deletePropertyImage,
   getCloudinarySignature,
-  searchProperties,
 } = require('../controllers/properties');
 
-const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 
-// Public routes
-router.get('/', getProperties);
-router.get('/featured', getFeaturedProperties);
-router.get('/category/:categorySlug', getPropertiesByCategory);
-router.get('/search', searchProperties);
-router.get('/:category/:id', getPropertyByCategory);
-router.get('/:id', getProperty);
+const router = express.Router();
 
-// Protected routes
-router.post('/', protect, authorize('agent', 'agency', 'promoter', 'admin'), createProperty);
-router.get('/cloudinary-signature', protect, getCloudinarySignature);
+// CRITICAL: Place specific routes BEFORE parameterized routes
+// This prevents route conflicts where specific paths are treated as parameters
+
+// Cloudinary signature route - MUST come first
+router.route('/cloudinary-signature').get(protect, getCloudinarySignature);
+
+// Search route
+router.route('/search').get(searchProperties);
+
+// Featured properties route
+router.route('/featured').get(getFeaturedProperties);
+
+// Category-based routes
+router.route('/category/:categorySlug').get(getPropertiesByCategory);
+
+// Main properties routes (base route)
+router
+  .route('/')
+  .get(getProperties)
+  .post(protect, authorize('agent', 'agency', 'promoter', 'admin'), createProperty);
+
+// Routes with ID parameter - MUST come after all specific routes
 router
   .route('/:id')
-  .put(protect, authorize('agent', 'agency', 'promoter', 'admin'), updateProperty)
-  .delete(protect, authorize('agent', 'agency', 'promoter', 'admin'), deleteProperty);
-router.route('/:id/images').post(protect, authorize('agent', 'agency', 'promoter', 'admin'), uploadPropertyImages);
+  .get(getProperty)
+  .put(protect, updateProperty)
+  .delete(protect, deleteProperty);
+
+// Image management routes (these use :id parameter)
+router
+  .route('/:id/images')
+  .post(protect, uploadPropertyImages);
+
 router
   .route('/:id/images/:imageId')
-  .delete(protect, authorize('agent', 'agency', 'promoter', 'admin'), require('../controllers/properties').deletePropertyImage);
+  .delete(protect, deletePropertyImage);
+
+// Category and ID route (this uses both :category and :id parameters)
+router.route('/:category/:id').get(getPropertyByCategory);
 
 module.exports = router;

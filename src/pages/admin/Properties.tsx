@@ -50,17 +50,47 @@ const AdminProperties = () => {
 
   const handleStatusChange = async (propertyId, status) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/admin/properties/${propertyId}/approve`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
+      let response;
+      
+      if (status === 'approved') {
+        // Use the approve endpoint
+        response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/properties/${propertyId}/approve`,
+          {
+            method: "POST", // Changed to POST
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } else if (status === 'rejected') {
+        // Use the reject endpoint
+        response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/properties/${propertyId}/reject`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ reason: "Rejected by admin" }), // Optional reason
+          }
+        );
+      } else {
+        // For other status changes, use the generic update endpoint
+        response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/properties/${propertyId}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status }),
+          }
+        );
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -68,14 +98,18 @@ const AdminProperties = () => {
       }
 
       const data = await response.json();
-      setProperties(
-        properties.map((p) => (p._id === propertyId ? data.data : p))
+      
+      // Update the property in the state
+      setProperties(prevProperties =>
+        prevProperties.map((p) => (p._id === propertyId ? data.data : p))
       );
+      
       toast({
         title: "Success",
         description: `Property status updated to ${status}`,
       });
     } catch (error) {
+      console.error('Status update error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update property status",
@@ -119,16 +153,16 @@ const AdminProperties = () => {
                   <CardTitle className="flex justify-between items-center">
                     <span>{property.title}</span>
                     <span
-                      className={`text-sm capitalize ${
+                      className={`text-sm capitalize px-2 py-1 rounded ${
                         property.status === "approved"
-                          ? "text-green-500"
+                          ? "bg-green-100 text-green-800"
                           : property.status === "rejected"
-                          ? "text-red-500"
+                          ? "bg-red-100 text-red-800"
                           : property.status === "pending"
-                          ? "text-yellow-500"
+                          ? "bg-yellow-100 text-yellow-800"
                           : property.status === "active"
-                          ? "text-blue-500"
-                          : "text-gray-500"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
                       }`}
                     >
                       {property.status}
@@ -141,10 +175,15 @@ const AdminProperties = () => {
                     {property.address?.city}, {property.address?.country || "Mauritius"}
                   </p>
                   <p className="text-sm text-gray-500 mt-2">Owner: {property.owner?.email}</p>
+                  {property.rejectionReason && (
+                    <p className="text-sm text-red-600 mt-2">
+                      Rejection Reason: {property.rejectionReason}
+                    </p>
+                  )}
                   <div className="flex items-center gap-4 mt-4">
                     <Select
                       onValueChange={(value) => handleStatusChange(property._id, value)}
-                      defaultValue={property.status}
+                      value={property.status}
                       disabled={property.status === "inactive"}
                     >
                       <SelectTrigger className="w-40">

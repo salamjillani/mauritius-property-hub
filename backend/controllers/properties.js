@@ -152,23 +152,13 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @route   POST /api/properties
 // @access  Private
 exports.createProperty = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id).populate('subscription');
+  const user = await User.findById(req.user.id);
   if (!user) {
     return next(new ErrorResponse('User not found', 404));
   }
 
-  if (!user.subscription) {
-    return next(new ErrorResponse('No active subscription found', 403));
-  }
-
-  const subscription = await Subscription.findById(user.subscription);
-  if (!subscription || subscription.status !== 'active') {
-    return next(new ErrorResponse('Your subscription is not active', 403));
-  }
-
-  if (subscription.listingsUsed >= subscription.listingLimit) {
-    return next(new ErrorResponse('Listing limit reached for your subscription', 403));
-  }
+  // SUBSCRIPTION RESTRICTIONS REMOVED FOR DEVELOPMENT
+  // Now allowing property creation without subscription checks
 
   if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
     return next(new ErrorResponse('Invalid user role for creating property', 403));
@@ -186,11 +176,6 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     req.body.agent = agent._id;
     if (agent.agency) {
       req.body.agency = agent.agency;
-      const agency = await Agency.findById(agent.agency).populate('user');
-      const agencySubscription = await Subscription.findOne({ user: agency.user });
-      if (agencySubscription && (agencySubscription.status !== 'active' || agencySubscription.listingsUsed >= agencySubscription.listingLimit)) {
-        return next(new ErrorResponse('Agency subscription is not active or listing limit reached', 403));
-      }
     }
   }
 
@@ -227,39 +212,48 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
     };
   }
 
-  // Validate isFeatured and isPremium
-  if (req.body.isFeatured && !['elite', 'platinum'].includes(subscription.plan)) {
-    return next(new ErrorResponse('Featured properties require Elite or Platinum subscription', 403));
-  }
-  if (req.body.isPremium && subscription.plan === 'basic') {
-    return next(new ErrorResponse('Premium properties require non-basic subscription', 403));
-  }
+  // Allow all premium features for development (no subscription validation)
+  // isFeatured and isPremium are now allowed for all users
 
   const property = await Property.create(req.body);
 
-  // Update subscription usage
-  subscription.listingsUsed += 1;
-  if (req.body.isFeatured && ['elite', 'platinum'].includes(subscription.plan)) {
-    const maxFeatured = Math.floor(subscription.listingLimit * 0.25);
-    if (subscription.featuredListings.length >= maxFeatured) {
-      return next(new ErrorResponse('Featured listing limit reached', 403));
+  // Optional: Update subscription usage if subscription exists
+  try {
+    const subscription = await Subscription.findOne({ user: req.user.id });
+    if (subscription) {
+      subscription.listingsUsed = (subscription.listingsUsed || 0) + 1;
+      if (req.body.isFeatured) {
+        if (!subscription.featuredListings) {
+          subscription.featuredListings = [];
+        }
+        subscription.featuredListings.push(property._id);
+      }
+      await subscription.save();
     }
-    subscription.featuredListings.push(property._id);
+
+    // Update agency subscription if applicable
+    if (req.user.role === 'agent' && req.body.agency) {
+      const agency = await Agency.findById(req.body.agency).populate('user');
+      if (agency && agency.user) {
+        const agencySubscription = await Subscription.findOne({ user: agency.user });
+        if (agencySubscription) {
+          agencySubscription.listingsUsed = (agencySubscription.listingsUsed || 0) + 1;
+          await agencySubscription.save();
+        }
+      }
+    }
+  } catch (subscriptionError) {
+    // Log error but don't fail property creation
+    console.log('Subscription update failed:', subscriptionError.message);
   }
 
-  // Update agency subscription if applicable
-  if (req.user.role === 'agent' && req.body.agency) {
-    const agency = await Agency.findById(req.body.agency).populate('user');
-    const agencySubscription = await Subscription.findOne({ user: agency.user });
-    if (agencySubscription) {
-      agencySubscription.listingsUsed += 1;
-      await agencySubscription.save();
-    }
+  // Notify admin of new property
+  try {
+    await notifyNewProperty(property);
+  } catch (notificationError) {
+    // Log error but don't fail property creation
+    console.log('Notification failed:', notificationError.message);
   }
-
-  await Promise.all([property.save(), subscription.save()]);
-
-  await notifyNewProperty(property);
 
   res.status(201).json({ success: true, data: property });
 });
@@ -281,10 +275,8 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 403));
   }
 
-  const subscription = await Subscription.findById(req.user.subscriptionId);
-  if (!subscription) {
-    return next(new ErrorResponse('No active subscription found', 403));
-  }
+  // SUBSCRIPTION RESTRICTIONS REMOVED FOR DEVELOPMENT
+  // Allow all premium features without subscription validation
 
   // Handle status updates
   if (req.body.status) {
@@ -298,17 +290,13 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
       }
       if (req.body.status === 'active') {
         req.body.status = 'pending';
-        await notifyNewProperty(property);
+        try {
+          await notifyNewProperty(property);
+        } catch (notificationError) {
+          console.log('Notification failed:', notificationError.message);
+        }
       }
     }
-  }
-
-  // Validate isFeatured and isPremium
-  if (req.body.isFeatured && !['elite', 'platinum'].includes(subscription.plan)) {
-    return next(new ErrorResponse('Featured properties require Elite or Platinum subscription', 403));
-  }
-  if (req.body.isPremium && subscription.plan === 'basic') {
-    return next(new ErrorResponse('Premium properties require non-basic subscription', 403));
   }
 
   // Update contact details for agents
@@ -411,14 +399,20 @@ exports.deleteProperty = asyncHandler(async (req, res, next) => {
 
   await Property.deleteOne({ _id: req.params.id });
 
-  // Update subscription usage
-  const subscription = await Subscription.findById(req.user.subscription);
-  if (subscription) {
-    subscription.listingsUsed = Math.max(0, subscription.listingsUsed - 1);
-    subscription.featuredListings = subscription.featuredListings.filter(
-      (id) => id.toString() !== req.params.id
-    );
-    await subscription.save();
+  // Optional: Update subscription usage if subscription exists
+  try {
+    const subscription = await Subscription.findOne({ user: req.user.id });
+    if (subscription) {
+      subscription.listingsUsed = Math.max(0, (subscription.listingsUsed || 0) - 1);
+      if (subscription.featuredListings) {
+        subscription.featuredListings = subscription.featuredListings.filter(
+          (id) => id.toString() !== req.params.id
+        );
+      }
+      await subscription.save();
+    }
+  } catch (subscriptionError) {
+    console.log('Subscription update failed:', subscriptionError.message);
   }
 
   res.status(200).json({ success: true, data: {} });
@@ -626,13 +620,24 @@ exports.deletePropertyImage = asyncHandler(async (req, res, next) => {
 // @desc    Get Cloudinary signature for direct uploads
 // @route   GET /api/properties/cloudinary-signature
 // @access  Private
+// @desc    Get Cloudinary signature for direct uploads
+// @route   GET /api/properties/cloudinary-signature
+// @access  Private
 exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
   const timestamp = Math.round(Date.now() / 1000);
+  
+  // Parameters for signature - only include what's needed
   const params = {
     timestamp,
     folder: `properties/${req.user.id}`,
-    upload_preset: 'real_estate',
   };
+  
+  // Only add upload_preset if it exists in environment
+  if (process.env.CLOUDINARY_UPLOAD_PRESET) {
+    params.upload_preset = process.env.CLOUDINARY_UPLOAD_PRESET;
+  }
+  
+  // Generate signature
   const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET);
 
   res.status(200).json({
@@ -643,7 +648,7 @@ exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
       apiKey: process.env.CLOUDINARY_API_KEY,
       folder: params.folder,
-      uploadPreset: params.upload_preset,
+      uploadPreset: params.upload_preset || null, // Include only if exists
     },
   });
 });
