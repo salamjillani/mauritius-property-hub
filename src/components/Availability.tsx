@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from 'react-calendar';
+import { Loader2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 const AvailabilityForm = ({ propertyId }) => {
   const [formData, setFormData] = useState({
@@ -50,18 +51,18 @@ const AvailabilityForm = ({ propertyId }) => {
         <h3 className="text-lg font-bold mb-2">Add availability</h3>
         <label className="block text-sm font-medium text-gray-700">Date range</label>
         <Calendar
-          mode="range"rangeMode
+          selectRange
           value={[formData.startDate, formData.endDate]}
           onChange={(dates) => setFormData({
             ...formData,
-            startDate: dates[0],
-            endDate: dates[1]
+            startDate: Array.isArray(dates) ? dates[0] : dates,
+            endDate: Array.isArray(dates) ? dates[1] : dates
           })}
         />
       </div>
       <Select
         value={formData.status}
-        onChange={(value) => setFormData({ ...formData, status: value })}
+        onValueChange={(value) => setFormData({ ...formData, status: value })}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select status" />

@@ -10,30 +10,6 @@ const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const Log = require('../models/Log');
 
-
-// @desc    Get all properties for admin
-// @route   GET /api/admin/properties
-// @access  Private/Admin
-exports.getAdminProperties = asyncHandler(async (req, res, next) => {
-  const properties = await Property.find()
-    .populate('owner', 'email firstName lastName')
-    .populate({
-      path: 'agent',
-      select: 'user title isPremium',
-      populate: {
-        path: 'user',
-        select: 'firstName lastName email',
-      },
-    })
-    .populate('agency', 'name logoUrl');
-
-  res.status(200).json({
-    success: true,
-    count: properties.length,
-    data: properties,
-  });
-});
-
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/dashboard
 // @access  Private/Admin
@@ -147,6 +123,107 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Update agent
+// @route   PUT /api/admin/agents/:id
+// @access  Private/Admin
+exports.updateAgent = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid agent ID format', 400));
+  }
+
+  const { title, isPremium, status } = req.body;
+
+  const fieldsToUpdate = {};
+  if (title) fieldsToUpdate.title = title;
+  if (isPremium !== undefined) fieldsToUpdate.isPremium = isPremium;
+  if (status) fieldsToUpdate.status = status;
+
+  const agent = await Agent.findByIdAndUpdate(
+    id,
+    fieldsToUpdate,
+    { new: true, runValidators: true }
+  ).populate('user', 'firstName lastName email');
+
+  if (!agent) {
+    return next(new ErrorResponse(`Agent not found with id of ${id}`, 404));
+  }
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Agent updated',
+    resource: 'Agent',
+    resourceId: id,
+    details: `Agent ${agent.title} was updated by admin`,
+  });
+
+  res.status(200).json({ success: true, data: agent });
+});
+
+// @desc    Delete agent
+// @route   DELETE /api/admin/agents/:id
+// @access  Private/Admin
+exports.deleteAgent = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid agent ID format', 400));
+  }
+
+  const agent = await Agent.findById(id);
+  if (!agent) {
+    return next(new ErrorResponse(`Agent not found with id of ${id}`, 404));
+  }
+
+  await Agent.deleteOne({ _id: id });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Agent deleted',
+    resource: 'Agent',
+    resourceId: id,
+    details: `Agent ${agent.title} was deleted by admin`,
+  });
+
+  res.status(200).json({ success: true, data: {} });
+});
+
+// @desc    Approve agent
+// @route   POST /api/admin/agents/:id/approve
+// @access  Private/Admin
+exports.approveAgent = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid agent ID format', 400));
+  }
+
+  const agent = await Agent.findByIdAndUpdate(
+    id,
+    { status: 'approved' },
+    { new: true, runValidators: true }
+  ).populate('user', 'firstName lastName email');
+
+  if (!agent) {
+    return next(new ErrorResponse(`Agent not found with id of ${id}`, 404));
+  }
+
+  await Notification.create({
+    user: agent.user._id,
+    type: 'agent_approved',
+    message: `Your agent profile has been approved.`,
+  });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Agent approved',
+    resource: 'Agent',
+    resourceId: id,
+    details: `Agent ${agent.title} was approved by admin`,
+  });
+
+  res.status(200).json({ success: true, data: agent });
+});
+
 // @desc    Get all agencies
 // @route   GET /api/admin/agencies
 // @access  Private/Admin
@@ -156,6 +233,82 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
     success: true,
     count: agencies.length,
     data: agencies,
+  });
+});
+
+// @desc    Update agency
+// @route   PUT /api/admin/agencies/:id
+// @access  Private/Admin
+exports.updateAgency = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid agency ID format', 400));
+  }
+
+  const { name, logoUrl, status } = req.body;
+
+  const fieldsToUpdate = {};
+  if (name) fieldsToUpdate.name = name;
+  if (logoUrl) fieldsToUpdate.logoUrl = logoUrl;
+  if (status) fieldsToUpdate.status = status;
+
+  const agency = await Agency.findByIdAndUpdate(
+    id,
+    fieldsToUpdate,
+    { new: true, runValidators: true }
+  ).populate('user', 'firstName lastName email');
+
+  if (!agency) {
+    return next(new ErrorResponse(`Agency not found with id of ${id}`, 404));
+  }
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Agency updated',
+    resource: 'Agency',
+    resourceId: id,
+    details: `Agency ${agency.name} was updated by admin`,
+  });
+
+  res.status(200).json({ success: true, data: agency });
+});
+
+// @desc    Delete agency
+// @route   DELETE /api/admin/agencies/:id
+// @access  Private/Admin
+exports.deleteAgency = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid agency ID format', 400));
+  }
+
+  const agency = await Agency.findById(id);
+  if (!agency) {
+    return next(new ErrorResponse(`Agency not found with id of ${id}`, 404));
+  }
+
+  await Agency.deleteOne({ _id: id });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Agency deleted',
+    resource: 'Agency',
+    resourceId: id,
+    details: `Agency ${agency.name} was deleted by admin`,
+  });
+
+  res.status(200).json({ success: true, data: {} });
+});
+
+// @desc    Get all developers (renamed from promoters)
+// @route   GET /api/admin/developers
+// @access  Private/Admin
+exports.getDevelopers = asyncHandler(async (req, res, next) => {
+  const developers = await Promoter.find().populate('user', 'firstName lastName email');
+  res.status(200).json({
+    success: true,
+    count: developers.length,
+    data: developers,
   });
 });
 
@@ -222,19 +375,37 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Approve or reject property
-// @route   PUT /api/admin/properties/:id/approve
+// @desc    Get all properties for admin
+// @route   GET /api/admin/properties
+// @access  Private/Admin
+exports.getAdminProperties = asyncHandler(async (req, res, next) => {
+  const properties = await Property.find()
+    .populate('owner', 'email firstName lastName')
+    .populate({
+      path: 'agent',
+      select: 'user title isPremium',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName email',
+      },
+    })
+    .populate('agency', 'name logoUrl');
+
+  res.status(200).json({
+    success: true,
+    count: properties.length,
+    data: properties,
+  });
+});
+
+// @desc    Approve property
+// @route   POST /api/admin/properties/:id/approve
 // @access  Private/Admin
 exports.approveProperty = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { status } = req.body;
-
+  
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorResponse('Invalid property ID format', 400));
-  }
-
-  if (!['pending', 'approved', 'rejected'].includes(status)) {
-    return next(new ErrorResponse('Invalid status', 400));
   }
 
   const property = await Property.findById(id).populate('owner', 'email firstName lastName');
@@ -249,14 +420,14 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
 
   const updatedProperty = await Property.findByIdAndUpdate(
     id,
-    { status },
+    { status: 'approved' },
     { new: true, runValidators: true }
   ).populate('owner', 'email firstName lastName');
 
   await Notification.create({
     user: updatedProperty.owner._id,
-    type: `property_${status}`,
-    message: `Your property "${updatedProperty.title}" has been ${status}.`,
+    type: 'property_approved',
+    message: `Your property "${updatedProperty.title}" has been approved.`,
   });
 
   const admins = await User.find({ role: 'admin' });
@@ -264,19 +435,139 @@ exports.approveProperty = asyncHandler(async (req, res, next) => {
     await Notification.create({
       user: admin._id,
       type: 'property_status_updated',
-      message: `Property "${updatedProperty.title}" has been ${status} by ${req.user.email}.`,
+      message: `Property "${updatedProperty.title}" has been approved by ${req.user.email}.`,
     });
   }
 
   await Log.create({
     user: req.user.id,
-    action: `Property ${status}`,
+    action: 'Property approved',
     resource: 'Property',
     resourceId: id,
-    details: `Property ${updatedProperty.title} was ${status} by admin`,
+    details: `Property ${updatedProperty.title} was approved by admin`,
   });
 
   res.status(200).json({ success: true, data: updatedProperty });
+});
+
+// @desc    Reject property
+// @route   POST /api/admin/properties/:id/reject
+// @access  Private/Admin
+exports.rejectProperty = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid property ID format', 400));
+  }
+
+  const property = await Property.findById(id).populate('owner', 'email firstName lastName');
+
+  if (!property) {
+    return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
+  }
+
+  if (property.status === 'inactive') {
+    return next(new ErrorResponse('Cannot change status of inactive property', 403));
+  }
+
+  const updatedProperty = await Property.findByIdAndUpdate(
+    id,
+    { status: 'rejected', rejectionReason: reason },
+    { new: true, runValidators: true }
+  ).populate('owner', 'email firstName lastName');
+
+  await Notification.create({
+    user: updatedProperty.owner._id,
+    type: 'property_rejected',
+    message: `Your property "${updatedProperty.title}" has been rejected. ${reason ? `Reason: ${reason}` : ''}`,
+  });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Property rejected',
+    resource: 'Property',
+    resourceId: id,
+    details: `Property ${updatedProperty.title} was rejected by admin`,
+  });
+
+  res.status(200).json({ success: true, data: updatedProperty });
+});
+
+// @desc    Update property
+// @route   PUT /api/admin/properties/:id
+// @access  Private/Admin
+exports.updateProperty = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid property ID format', 400));
+  }
+
+  const property = await Property.findByIdAndUpdate(
+    id,
+    req.body,
+    { new: true, runValidators: true }
+  ).populate('owner', 'firstName lastName email');
+
+  if (!property) {
+    return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
+  }
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Property updated',
+    resource: 'Property',
+    resourceId: id,
+    details: `Property ${property.title} was updated by admin`,
+  });
+
+  res.status(200).json({ success: true, data: property });
+});
+
+// @desc    Delete property
+// @route   DELETE /api/admin/properties/:id
+// @access  Private/Admin
+exports.deleteProperty = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid property ID format', 400));
+  }
+
+  const property = await Property.findById(id);
+  if (!property) {
+    return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
+  }
+
+  await Property.deleteOne({ _id: id });
+
+  await Log.create({
+    user: req.user.id,
+    action: 'Property deleted',
+    resource: 'Property',
+    resourceId: id,
+    details: `Property ${property.title} was deleted by admin`,
+  });
+
+  res.status(200).json({ success: true, data: {} });
+});
+
+// @desc    Get all subscriptions
+// @route   GET /api/admin/subscriptions
+// @access  Private/Admin
+exports.getSubscriptions = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to access subscriptions', 403));
+  }
+
+  const subscriptions = await Subscription.find()
+    .populate('user', 'firstName lastName email')
+    .select('user plan listingLimit listingsUsed status startDate endDate');
+
+  res.status(200).json({
+    success: true,
+    count: subscriptions.length,
+    data: subscriptions,
+  });
 });
 
 // @desc    Update subscription
@@ -336,22 +627,32 @@ exports.updateSubscription = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: subscription });
 });
 
-// @desc    Get all subscriptions
-// @route   GET /api/admin/subscriptions
-// @access  Private/Admin
-exports.getSubscriptions = asyncHandler(async (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return next(new ErrorResponse('Not authorized to access subscriptions', 403));
+// @desc    Notify admins of new property submission
+// @route   POST /api/admin/notify-new-property
+// @access  Private (Called internally)
+exports.notifyNewProperty = asyncHandler(async (property) => {
+  const admins = await User.find({ role: 'admin' });
+  for (const admin of admins) {
+    await Notification.create({
+      user: admin._id,
+      type: 'new_property',
+      message: `New property "${property.title}" submitted by ${property.owner.email} awaits approval.`,
+    });
   }
+});
 
-  const subscriptions = await Subscription.find()
+// @desc    Get audit logs (renamed from getLogs)
+// @route   GET /api/admin/audit-logs
+// @access  Private/Admin
+exports.getAuditLogs = asyncHandler(async (req, res, next) => {
+  const logs = await Log.find()
     .populate('user', 'firstName lastName email')
-    .select('user plan listingLimit listingsUsed status startDate endDate');
-
+    .sort('-createdAt')
+    .limit(50);
   res.status(200).json({
     success: true,
-    count: subscriptions.length,
-    data: subscriptions,
+    count: logs.length,
+    data: logs,
   });
 });
 
@@ -370,16 +671,97 @@ exports.getLogs = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Notify admins of new property submission
-// @route   POST /api/admin/notify-new-property
-// @access  Private (Called internally)
-exports.notifyNewProperty = asyncHandler(async (property) => {
-  const admins = await User.find({ role: 'admin' });
-  for (const admin of admins) {
-    await Notification.create({
-      user: admin._id,
-      type: 'new_property',
-      message: `New property "${property.title}" submitted by ${property.owner.email} awaits approval.`,
-    });
+// @desc    Create sub-admin
+// @route   POST /api/admin/sub-admins
+// @access  Private/Admin
+exports.createSubAdmin = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to create sub-admins', 403));
   }
+
+  const { firstName, lastName, email, password } = req.body;
+
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return next(new ErrorResponse('User already exists', 400));
+  }
+
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    password,
+    role: 'sub-admin',
+  });
+
+  res.status(201).json({ success: true, data: user });
+});
+
+// @desc    Get all sub-admins
+// @route   GET /api/admin/sub-admins
+// @access  Private/Admin
+exports.getSubAdmins = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to access sub-admins', 403));
+  }
+
+  const subAdmins = await User.find({ role: 'sub-admin' }).select('-password');
+
+  res.status(200).json({
+    success: true,
+    count: subAdmins.length,
+    data: subAdmins,
+  });
+});
+
+// @desc    Update sub-admin
+// @route   PUT /api/admin/sub-admins/:id
+// @access  Private/Admin
+exports.updateSubAdmin = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to update sub-admins', 403));
+  }
+
+  const { id } = req.params;
+  const { firstName, lastName, email } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid sub-admin ID format', 400));
+  }
+
+  const user = await User.findById(id);
+  if (!user || user.role !== 'sub-admin') {
+    return next(new ErrorResponse(`Sub-admin not found with id of ${id}`, 404));
+  }
+
+  user.firstName = firstName || user.firstName;
+  user.lastName = lastName || user.lastName;
+  user.email = email || user.email;
+  await user.save();
+
+  res.status(200).json({ success: true, data: user });
+});
+
+// @desc    Delete sub-admin
+// @route   DELETE /api/admin/sub-admins/:id
+// @access  Private/Admin
+exports.deleteSubAdmin = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return next(new ErrorResponse('Not authorized to delete sub-admins', 403));
+  }
+
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorResponse('Invalid sub-admin ID format', 400));
+  }
+
+  const user = await User.findById(id);
+  if (!user || user.role !== 'sub-admin') {
+    return next(new ErrorResponse(`Sub-admin not found with id of ${id}`, 404));
+  }
+
+  await User.deleteOne({ _id: id });
+
+  res.status(200).json({ success: true, data: {} });
 });

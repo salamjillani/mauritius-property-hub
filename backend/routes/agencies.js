@@ -8,6 +8,8 @@ const {
   uploadAgencyLogo,
   getPremiumAgencies,
   getAgencyCloudinarySignature,
+  getMyAgency,
+  upgradePlan,
 } = require('../controllers/agencies');
 
 const router = express.Router();
@@ -20,7 +22,7 @@ router.route('/')
 
 router.get('/premium', getPremiumAgencies);
 
-router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature); // New route
+router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature);
 
 router.route('/:id')
   .get(getAgency)
@@ -29,5 +31,9 @@ router.route('/:id')
 
 router.route('/:id/logo')
   .post(protect, authorize('agency', 'admin'), uploadAgencyLogo);
+
+
+router.route('/my-agency').get(protect, getMyAgency);
+router.route('/upgrade-plan').post(protect, upgradePlan);
 
 module.exports = router;

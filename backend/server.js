@@ -24,6 +24,17 @@ const favoriteRoutes = require('./routes/favorites');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const availabilityRoutes = require('./routes/availability');
+const promoterRoutes = require('./routes/promoters');
+const projectRoutes = require('./routes/projects');
+const reviewRoutes = require('./routes/reviews');
+const verificationRoutes = require('./routes/verifications');
+const advertisementRoutes = require('./routes/advertisements');
+const newsletterRoutes = require('./routes/newsletter');
+const supportRoutes = require('./routes/support');
+const contentRoutes = require('./routes/content');
+const locationsRoutes = require('./routes/locations');
+
+
 
 const app = express();
 
@@ -64,6 +75,16 @@ app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/verifications', verificationRoutes);
+app.use('/api/projects', projectRoutes );
+app.use('/api/promoters', promoterRoutes);
+app.use('/api/advertisements', advertisementRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/locations', locationsRoutes);
+
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

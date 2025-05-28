@@ -1,35 +1,16 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const PromoterSchema = new Schema({
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    unique: true
-  },
-  companyName: {
+const PromoterSchema = new mongoose.Schema({
+  name: {
     type: String,
-    required: [true, 'Please add a company name'],
-    unique: true,
+    required: [true, 'Please add a promoter name'],
     trim: true,
-    maxlength: [100, 'Company name cannot be more than 100 characters']
+    maxlength: [100, 'Name cannot be more than 100 characters'],
   },
   description: {
     type: String,
-    required: [true, 'Please add a description']
+    maxlength: [1000, 'Description cannot be more than 1000 characters'],
   },
-  logoUrl: {
-    type: String,
-    default: 'default-promoter-logo.png'
-  },
-  contactDetails: {
-    email: String,
-    phone: String,
-    website: String
-  },
-  specialties: [String],
-  establishedYear: Number,
   address: {
     street: String,
     city: String,
@@ -37,40 +18,29 @@ const PromoterSchema = new Schema({
     zipCode: String,
     country: {
       type: String,
-      default: 'Mauritius'
-    }
+      default: 'Mauritius',
+    },
   },
-  social: {
-    facebook: String,
-    twitter: String,
-    linkedin: String,
-    instagram: String
+  contactDetails: {
+    phone: String,
+    email: {
+      type: String,
+      match: [/^\S+@\S+\.\S+$/, 'Please add a valid email'],
+    },
+    website: String,
   },
-  isPremium: {
-    type: Boolean,
-    default: false
+  logo: {
+    type: String,
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'pending'],
+    default: 'pending',
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
-}, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-PromoterSchema.virtual('projects', {
-  ref: 'Project',
-  localField: '_id',
-  foreignField: 'promoter',
-  justOne: false
-});
-
-PromoterSchema.virtual('projectsCount', {
-  ref: 'Project',
-  localField: '_id',
-  foreignField: 'promoter',
-  count: true
+    default: Date.now,
+  },
 });
 
 module.exports = mongoose.model('Promoter', PromoterSchema);

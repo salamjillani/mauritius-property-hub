@@ -1,26 +1,26 @@
-// models/Review.js
 const mongoose = require('mongoose');
 
 const ReviewSchema = new mongoose.Schema({
   user: {
-    type: mongoose.Schema.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
   property: {
-    type: mongoose.Schema.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Property',
     required: true,
   },
   rating: {
     type: Number,
+    required: true,
     min: 1,
     max: 5,
-    required: true,
   },
   comment: {
     type: String,
     trim: true,
+    maxlength: 500,
   },
   createdAt: {
     type: Date,

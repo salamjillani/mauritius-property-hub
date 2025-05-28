@@ -15,8 +15,7 @@ export const getCloudinarySignature = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Cloudinary signature error response:", errorData);
-      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
     }
 
     return await response.json();
@@ -43,8 +42,7 @@ export const getAgentCloudinarySignature = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Agent Cloudinary signature error response:", errorData);
-      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
     }
 
     return await response.json();
@@ -71,8 +69,7 @@ export const getAgencyCloudinarySignature = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Agency Cloudinary signature error response:", errorData);
-      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
     }
 
     return await response.json();
@@ -99,13 +96,39 @@ export const getPromoterCloudinarySignature = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Promoter Cloudinary signature error response:", errorData);
-      throw new Error(`Failed to get upload signature: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
     console.error("Error getting promoter Cloudinary signature:", error);
+    throw error;
+  }
+};
+
+export const getVerificationCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/verifications/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting verification Cloudinary signature:", error);
     throw error;
   }
 };
@@ -157,6 +180,10 @@ export const uploadAgencyLogoToCloudinary = async (file, folder = "agency-logos"
 
 export const uploadPromoterLogoToCloudinary = async (file, folder = "promoter-logos") => {
   return uploadToCloudinaryWithSignature(file, getPromoterCloudinarySignature, folder);
+};
+
+export const uploadVerificationDocumentToCloudinary = async (file, folder = "verification-documents") => {
+  return uploadToCloudinaryWithSignature(file, getVerificationCloudinarySignature, folder);
 };
 
 export const uploadMultipleImages = async (files, folder = "property-images") => {

@@ -27,10 +27,10 @@ const UserSchema = new mongoose.Schema({
     minlength: 8,
     select: false
   },
-  role: {
+role: {
     type: String,
-    enum: ['individual', 'agent', 'agency', 'promoter', 'admin'],
-    default: 'individual'
+    enum: ['user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'],
+    default: 'user',
   },
   phone: {
     type: String,
@@ -45,18 +45,23 @@ const UserSchema = new mongoose.Schema({
     email: String,
     isRestricted: { type: Boolean, default: false }
   },
+  agency: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Agency',
+  },
   subscription: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subscription'
   },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Encrypt password
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
@@ -64,15 +69,13 @@ UserSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Sign JWT
-UserSchema.methods.getSignedJwtToken = function() {
+UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
-// Match password
-UserSchema.methods.matchPassword = async function(enteredPassword) {
+UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

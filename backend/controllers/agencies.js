@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const path = require('path');
+const mongoose = require('mongoose');
 const cloudinary = require('../config/cloudinary');
 
 // @desc    Get all agencies
@@ -85,6 +86,47 @@ exports.getAgency = asyncHandler(async (req, res, next) => {
       new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404)
     );
   }
+
+  res.status(200).json({ success: true, data: agency });
+});
+
+// @desc    Get current user's agency
+// @route   GET /api/agencies/my-agency
+// @access  Private
+exports.getMyAgency = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id).populate('agency');
+  if (!user || !user.agency) {
+    return next(new ErrorResponse('No agency associated with this user', 404));
+  }
+
+  const agency = await Agency.findById(user.agency._id).populate('subscription');
+  res.status(200).json({ success: true, data: agency });
+});
+
+// @desc    Upgrade agency plan
+// @route   POST /api/agencies/upgrade-plan
+// @access  Private
+exports.upgradePlan = asyncHandler(async (req, res, next) => {
+  const { plan } = req.body;
+  const validPlans = ['basic', 'premium', 'enterprise'];
+
+  if (!validPlans.includes(plan)) {
+    return next(new ErrorResponse('Invalid plan type', 400));
+  }
+
+  const user = await User.findById(req.user.id).populate('agency');
+  if (!user || !user.agency) {
+    return next(new ErrorResponse('No agency associated with this user', 404));
+  }
+
+  const agency = await Agency.findById(user.agency._id).populate('subscription');
+  if (!agency.subscription) {
+    return next(new ErrorResponse('No subscription found for this agency', 404));
+  }
+
+  agency.subscription.plan = plan;
+  agency.subscription.listingLimit = plan === 'basic' ? 10 : plan === 'premium' ? 50 : 100;
+  await agency.subscription.save();
 
   res.status(200).json({ success: true, data: agency });
 });

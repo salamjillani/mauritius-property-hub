@@ -1,7 +1,5 @@
-// routes/properties.js - Update with new search route
-
 const express = require('express');
-const { 
+const {
   getProperties,
   getProperty,
   createProperty,
@@ -10,33 +8,32 @@ const {
   getFeaturedProperties,
   uploadPropertyImages,
   getPropertiesByCategory,
+  getPropertyByCategory,
   getCloudinarySignature,
-  searchProperties 
+  searchProperties,
 } = require('../controllers/properties');
 
 const router = express.Router();
-
 const { protect, authorize } = require('../middleware/auth');
 
-router.route('/')
-  .get(getProperties)
-  .post(protect, createProperty);
-
+// Public routes
+router.get('/', getProperties);
 router.get('/featured', getFeaturedProperties);
 router.get('/category/:categorySlug', getPropertiesByCategory);
-
-// Add new search route
 router.get('/search', searchProperties);
+router.get('/:category/:id', getPropertyByCategory);
+router.get('/:id', getProperty);
 
-// Cloudinary signature route
+// Protected routes
+router.post('/', protect, authorize('agent', 'agency', 'promoter', 'admin'), createProperty);
 router.get('/cloudinary-signature', protect, getCloudinarySignature);
-
-router.route('/:id')
-  .get(getProperty)
-  .put(protect, updateProperty)
-  .delete(protect, deleteProperty);
-
-router.route('/:id/images')
-  .post(protect, uploadPropertyImages);
+router
+  .route('/:id')
+  .put(protect, authorize('agent', 'agency', 'promoter', 'admin'), updateProperty)
+  .delete(protect, authorize('agent', 'agency', 'promoter', 'admin'), deleteProperty);
+router.route('/:id/images').post(protect, authorize('agent', 'agency', 'promoter', 'admin'), uploadPropertyImages);
+router
+  .route('/:id/images/:imageId')
+  .delete(protect, authorize('agent', 'agency', 'promoter', 'admin'), require('../controllers/properties').deletePropertyImage);
 
 module.exports = router;
