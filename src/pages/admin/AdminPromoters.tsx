@@ -1,134 +1,130 @@
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { Building2, Trash2, Pencil } from 'lucide-react';
-
-interface Promoter {
-  _id: string;
-  name: string;
-  status: string;
-  address: { city: string; country: string };
-}
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminPromoters = () => {
-  const { t } = useTranslation();
   const { toast } = useToast();
-  const [promoters, setPromoters] = useState<Promoter[]>([]);
+  const [promoters, setPromoters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPromoters = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/v1/admin/promoters`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(t('failed_to_fetch_promoters'));
-        }
-
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/promoters?approvalStatus=approved`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Failed to fetch promoters");
         const data = await response.json();
-        setPromoters(data.data || []);
+        setPromoters(data.data);
       } catch (error) {
         toast({
-          title: t('error'),
-          description: error.message || t('failed_to_load_promoters'),
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load promoters",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchPromoters();
-  }, [toast, t]);
+  }, [toast]);
 
-  const handleDelete = async (id: string) => {
+  const handleApprove = async (promoterId) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/v1/admin/promoters/${id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(t('failed_to_delete_promoter'));
-      }
-
-      setPromoters(promoters.filter((prom) => prom._id !== id));
-      toast({ title: t('success'), description: t('promoter_deleted') });
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/promoters/${promoterId}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to approve promoter");
+      setPromoters(promoters.filter((promoter) => promoter._id !== promoterId));
+      toast({
+        title: "Success",
+        description: "Promoter approved",
+      });
     } catch (error) {
       toast({
-        title: t('error'),
-        description: error.message || t('failed_to_delete_promoter'),
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to approve promoter",
+        variant: "destructive",
       });
     }
   };
 
+  const handleReject = async (promoterId, reason) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/promoters/${promoterId}/reject`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) throw new Error("Failed to reject promoter");
+      setPromoters(promoters.filter((promoter) => promoter._id !== promoterId));
+      toast({
+        title: "Success",
+        description: "Promoter rejected",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject promoter",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-          <Building2 className="h-8 w-8" />
-          {t('promoters')}
-        </h1>
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : promoters.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {t('no_promoters_found')}
-          </div>
+        <h1 className="text-3xl font-bold mb-8">Promoters</h1>
+        {promoters.length === 0 ? (
+          <p className="text-gray-500">No promoters available.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {promoters.map((promoter) => (
-              <div
-                key={promoter._id}
-                className="p-4 rounded-lg shadow bg-white flex justify-between items-center"
-              >
-                <div>
-                  <h3 className="text-lg font-bold">{promoter.name}</h3>
-                  <p className="text-gray-600">
-                    {promoter.address.city}, {promoter.address.country}
-                  </p>
-                  <p className="text-sm capitalize">{t(promoter.status)}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={t('edit_promoter', { name: promoter.name })}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleDelete(promoter._id)}
-                    aria-label={t('delete_promoter', { name: promoter.name })}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <Card key={promoter._id}>
+                <CardHeader>
+                  <CardTitle>{promoter.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p><strong>User:</strong> {promoter.user.firstName} {promoter.user.lastName}</p>
+                  <p><strong>Email:</strong> {promoter.user.email}</p>
+                  <p><strong>Status:</strong> {promoter.approvalStatus}</p>
+                  <div className="mt-4 flex space-x-2">
+                    <Button onClick={() => handleApprove(promoter._id)}>Approve</Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        const reason = prompt("Please provide a reason for rejection:");
+                        if (reason) handleReject(promoter._id, reason);
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

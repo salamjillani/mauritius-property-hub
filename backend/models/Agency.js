@@ -1,97 +1,51 @@
-
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const AgencySchema = new Schema({
+const AgencySchema = new mongoose.Schema({
   user: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.ObjectId,
     ref: 'User',
     required: true,
-    unique: true
+    unique: true,
   },
   name: {
     type: String,
     required: [true, 'Please add an agency name'],
-    unique: true,
     trim: true,
-    maxlength: [100, 'Name cannot be more than 100 characters']
-  },
-  description: {
-    type: String,
-    required: [true, 'Please add a description']
   },
   logoUrl: {
     type: String,
-    default: 'default-agency-logo.png'
+    default: 'default-logo.jpg',
   },
-  coverImageUrl: String,
-  establishedYear: Number,
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: {
-      type: String,
-      default: 'Mauritius'
-    }
-  },
-  location: {
-    // GeoJSON Point
-    type: {
-      type: String,
-      enum: ['Point']
-    },
-    coordinates: {
-      type: [Number],
-      index: '2dsphere'
-    }
-  },
-  contactDetails: {
-    email: String,
-    phone: String,
-    website: String
-  },
-  social: {
-    facebook: String,
-    twitter: String,
-    linkedin: String,
-    instagram: String
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
   isPremium: {
     type: Boolean,
-    default: false
+    default: false,
   },
+  subscription: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Subscription',
+  },
+  agents: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Agent',
+    },
+  ],
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+  },
+});
+
+AgencySchema.pre('save', async function (next) {
+  if (this.isModified('approvalStatus') && this.approvalStatus === 'approved') {
+    await mongoose.model('User').findByIdAndUpdate(this.user, { approvalStatus: 'approved' });
   }
-}, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Reverse populate with agents
-AgencySchema.virtual('agents', {
-  ref: 'Agent',
-  localField: '_id',
-  foreignField: 'agency',
-  justOne: false
-});
-
-// Reverse populate with properties
-AgencySchema.virtual('properties', {
-  ref: 'Property',
-  localField: '_id',
-  foreignField: 'agency',
-  justOne: false
-});
-
-AgencySchema.virtual('listingsCount', {
-  ref: 'Property',
-  localField: '_id',
-  foreignField: 'agency',
-  count: true
+  next();
 });
 
 module.exports = mongoose.model('Agency', AgencySchema);

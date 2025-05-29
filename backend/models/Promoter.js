@@ -1,46 +1,37 @@
 const mongoose = require('mongoose');
 
 const PromoterSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true,
+  },
   name: {
     type: String,
     required: [true, 'Please add a promoter name'],
     trim: true,
-    maxlength: [100, 'Name cannot be more than 100 characters'],
   },
-  description: {
+  logoUrl: {
     type: String,
-    maxlength: [1000, 'Description cannot be more than 1000 characters'],
+    default: 'default-logo.jpg',
   },
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: {
-      type: String,
-      default: 'Mauritius',
-    },
-  },
-  contactDetails: {
-    phone: String,
-    email: {
-      type: String,
-      match: [/^\S+@\S+\.\S+$/, 'Please add a valid email'],
-    },
-    website: String,
-  },
-  logo: {
+  approvalStatus: {
     type: String,
-  },
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'pending'],
+    enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
+});
+
+PromoterSchema.pre('save', async function (next) {
+  if (this.isModified('approvalStatus') && this.approvalStatus === 'approved') {
+    await mongoose.model('User').findByIdAndUpdate(this.user, { approvalStatus: 'approved' });
+  }
+  next();
 });
 
 module.exports = mongoose.model('Promoter', PromoterSchema);

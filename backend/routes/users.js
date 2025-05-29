@@ -1,27 +1,35 @@
-
+// backend/routes/userRoutes.js
 const express = require('express');
-const { 
+const {
   getUsers,
   getUser,
+  getMe,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
 } = require('../controllers/users');
 
 const router = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
 
+// Routes requiring authentication
 router.use(protect);
-router.use(authorize('admin'));
 
-router.route('/')
-  .get(getUsers)
-  .post(createUser);
+// Current user profile - MUST come before /:id route
+router.route('/getMe').get(getMe);
 
-router.route('/:id')
-  .get(getUser)
-  .put(updateUser)
-  .delete(deleteUser);
+// Admin-only routes
+router
+  .route('/')
+  .get(authorize('admin'), getUsers)
+  .post(authorize('admin'), createUser);
+
+// Parameterized routes should come AFTER specific routes
+router
+  .route('/:id')
+  .get(authorize('admin'), getUser)
+  .put(authorize('admin'), updateUser)
+  .delete(authorize('admin'), deleteUser);
 
 module.exports = router;

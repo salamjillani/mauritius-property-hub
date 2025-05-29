@@ -1,33 +1,22 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import PropertyCard from "@/components/PropertyCard";
 
-const ListingsTab = ({ userId }) => {
+const ListingsTab = ({ userId, user }) => {
   const [listings, setListings] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/properties?owner=${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?owner=${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch listings");
@@ -38,135 +27,34 @@ const ListingsTab = ({ userId }) => {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load listings",
+          description: "Failed to load your listings",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchListings();
   }, [userId, toast]);
 
-  const handleStatusChange = async (propertyId, status) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/properties/${propertyId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update property status");
-      }
-
-      const data = await response.json();
-      setListings(
-        listings.map((listing) =>
-          listing._id === propertyId ? data.data : listing
-        )
-      );
-      toast({
-        title: "Success",
-        description: `Property status updated to ${data.data.status}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update property status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">My Listings</h2>
         <Link to="/properties/add">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Property
-          </Button>
+          <Button>Add New Listing</Button>
         </Link>
       </div>
+      {user && (
+        <p className="text-gray-600">
+          Listings Remaining: {user.listingLimit - listings.length} | Gold Cards Available: {user.goldCards}
+        </p>
+      )}
       {listings.length === 0 ? (
-        <p className="text-gray-500">No listings available.</p>
+        <p className="text-gray-500">You have no listings yet.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-            <Card key={listing._id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span className="truncate">{listing.title}</span>
-                  <span
-                    className={`text-sm capitalize ${
-                      listing.status === "approved"
-                        ? "text-green-500"
-                        : listing.status === "rejected"
-                        ? "text-red-500"
-                        : listing.status === "pending"
-                        ? "text-yellow-500"
-                        : listing.status === "active"
-                        ? "text-blue-500"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {listing.status}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <img
-                  src={listing.images?.[0]?.url || "/placeholder.jpg"}
-                  alt={listing.title}
-                  className="w-full h-40 object-cover rounded-md mb-4"
-                />
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {listing.description}
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  {listing.address?.city}, {listing.address?.country || "Mauritius"}
-                </p>
-                <p className="text-lg font-bold mt-4">
-                  MUR {listing.price.toLocaleString()}
-                </p>
-                <div className="mt-4">
-                  <Select
-                    onValueChange={(value) => handleStatusChange(listing._id, value)}
-                    defaultValue={listing.status}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Change Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Link to={`/properties/${listing._id}`} className="mt-4 block">
-                  <Button variant="outline" className="w-full">
-                    View Details
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <PropertyCard key={listing._id} property={listing} currency="MUR" />
           ))}
         </div>
       )}

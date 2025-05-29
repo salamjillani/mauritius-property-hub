@@ -9,80 +9,51 @@ const mongoose = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { notifyNewProperty } = require('./admin');
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// @desc    Get all properties
-// @route   GET /api/properties
-// @access  Public
 exports.getProperties = asyncHandler(async (req, res, next) => {
-  if (req.query.agent && !mongoose.Types.ObjectId.isValid(req.query.agent)) {
-    return next(new ErrorResponse('Invalid agent ID format', 400));
-  }
-
   const reqQuery = { ...req.query };
-  const removeFields = ['select', 'sort', 'page', 'limit', 'search'];
-  removeFields.forEach((param) => delete reqQuery[param]);
-
-  // Default to approved properties for non-admins
-  if (!reqQuery.owner || (req.user && reqQuery.owner !== req.user.id)) {
-    if (!req.user || req.user.role !== 'admin') {
-      reqQuery.status = 'approved';
-    }
-  }
+  const removeFields = ['select', 'sort', 'page', 'limit'];
+  removeFields.forEach(param => delete reqQuery[param]);
 
   let queryStr = JSON.stringify(reqQuery);
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, (match) => `$${match}`);
+  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
-  let query = Property.find(JSON.parse(queryStr)).setOptions({ isAuthenticated: !!req.user });
+  let query = Property.find(JSON.parse(queryStr)).sort({ isGoldCard: -1, createdAt: -1 });
 
-  // Text search
-  if (req.query.search) {
-    query = query.find({
-      $text: { $search: req.query.search },
-    });
-  }
-
-  // Select fields
   if (req.query.select) {
     const fields = req.query.select.split(',').join(' ');
     query = query.select(fields);
   }
 
-  // Sort results
   if (req.query.sort) {
     const sortBy = req.query.sort.split(',').join(' ');
     query = query.sort(sortBy);
   } else {
-    query = query.sort({ isFeatured: -1, isPremium: -1, createdAt: -1 });
+    query = query.sort('-isGoldCard -createdAt');
   }
 
-  // Pagination
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
   const total = await Property.countDocuments(JSON.parse(queryStr));
 
-  query = query.skip(startIndex).limit(limit);
-
-  // Populate related data
-  query = query.populate([
-    {
+  query = query.skip(startIndex).limit(limit)
+    .populate('owner', 'firstName lastName email')
+    .populate({
       path: 'agent',
       select: 'user title isPremium',
       populate: {
         path: 'user',
-        select: req.user ? 'firstName lastName email contactDetails avatarUrl' : 'firstName lastName',
+        select: 'firstName lastName email',
       },
-    },
-    { path: 'agency', select: 'name logoUrl' },
-    { path: 'owner', select: 'firstName lastName email' },
-  ]);
+    })
+    .populate('agency', 'name logoUrl');
 
   const properties = await query;
 
@@ -98,7 +69,6 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
     success: true,
     count: properties.length,
     pagination,
-    total,
     data: properties,
   });
 });
@@ -148,112 +118,33 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: property });
 });
 
-// @desc    Create new property
-// @route   POST /api/properties
-// @access  Private
 exports.createProperty = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
   if (!user) {
     return next(new ErrorResponse('User not found', 404));
   }
 
-  // SUBSCRIPTION RESTRICTIONS REMOVED FOR DEVELOPMENT
-  // Now allowing property creation without subscription checks
+  if (['agent', 'agency', 'promoter'].includes(user.role) && user.approvalStatus !== 'approved') {
+    return next(new ErrorResponse(`Your ${user.role} profile is not approved`, 403));
+  }
 
-  if (!['agent', 'agency', 'promoter', 'admin'].includes(req.user.role)) {
-    return next(new ErrorResponse('Invalid user role for creating property', 403));
+  if (user.listingLimit > 0) {
+    const currentListings = await Property.countDocuments({ owner: user._id });
+    if (currentListings >= user.listingLimit) {
+      return next(new ErrorResponse('Listing limit reached', 403));
+    }
   }
 
   req.body.owner = req.user.id;
-  req.body.status = 'pending';
+  req.body.isGoldCard = req.body.isGoldCard && user.goldCards > 0;
 
-  // Handle agent and agency assignments
-  if (req.user.role === 'agent') {
-    const agent = await Agent.findOne({ user: req.user.id });
-    if (!agent) {
-      return next(new ErrorResponse('Agent profile not found for this user', 400));
-    }
-    req.body.agent = agent._id;
-    if (agent.agency) {
-      req.body.agency = agent.agency;
-    }
+  if (req.body.isGoldCard) {
+    user.goldCards -= 1;
+    await user.save();
   }
-
-  if (req.user.role === 'agency') {
-    const agency = await Agency.findOne({ user: req.user.id }).populate('agents');
-    if (!agency) {
-      return next(new ErrorResponse('Agency profile not found for this user', 400));
-    }
-    req.body.agency = agency._id;
-    if (!req.body.agent && agency.agents?.length > 0) {
-      const approvedAgent = agency.agents.find((agent) => agent.approvalStatus === 'approved');
-      if (approvedAgent) {
-        req.body.agent = approvedAgent._id;
-      }
-    }
-  }
-
-  if (req.user.role === 'promoter') {
-    const agent = await Agent.findOne({ user: req.user.id });
-    if (agent) {
-      req.body.agent = agent._id;
-      if (agent.agency) {
-        req.body.agency = agent.agency;
-      }
-    }
-  }
-
-  // Set contact details for agents
-  if (req.user.role === 'agent' && req.user.contactDetails) {
-    req.body.contactDetails = {
-      phone: req.user.contactDetails.phone,
-      email: req.user.contactDetails.email,
-      isRestricted: true,
-    };
-  }
-
-  // Allow all premium features for development (no subscription validation)
-  // isFeatured and isPremium are now allowed for all users
 
   const property = await Property.create(req.body);
-
-  // Optional: Update subscription usage if subscription exists
-  try {
-    const subscription = await Subscription.findOne({ user: req.user.id });
-    if (subscription) {
-      subscription.listingsUsed = (subscription.listingsUsed || 0) + 1;
-      if (req.body.isFeatured) {
-        if (!subscription.featuredListings) {
-          subscription.featuredListings = [];
-        }
-        subscription.featuredListings.push(property._id);
-      }
-      await subscription.save();
-    }
-
-    // Update agency subscription if applicable
-    if (req.user.role === 'agent' && req.body.agency) {
-      const agency = await Agency.findById(req.body.agency).populate('user');
-      if (agency && agency.user) {
-        const agencySubscription = await Subscription.findOne({ user: agency.user });
-        if (agencySubscription) {
-          agencySubscription.listingsUsed = (agencySubscription.listingsUsed || 0) + 1;
-          await agencySubscription.save();
-        }
-      }
-    }
-  } catch (subscriptionError) {
-    // Log error but don't fail property creation
-    console.log('Subscription update failed:', subscriptionError.message);
-  }
-
-  // Notify admin of new property
-  try {
-    await notifyNewProperty(property);
-  } catch (notificationError) {
-    // Log error but don't fail property creation
-    console.log('Notification failed:', notificationError.message);
-  }
+  await notifyNewProperty(property);
 
   res.status(201).json({ success: true, data: property });
 });
@@ -452,27 +343,19 @@ exports.getPropertyByCategory = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: property });
 });
 
-// @desc    Get featured properties
-// @route   GET /api/properties/featured
-// @access  Public
 exports.getFeaturedProperties = asyncHandler(async (req, res, next) => {
-  const limit = parseInt(req.query.limit, 10) || 6;
-
-  const properties = await Property.find({ isFeatured: true, status: 'approved' })
-    .sort({ isPremium: -1, createdAt: -1 })
-    .limit(limit)
-    .setOptions({ isAuthenticated: !!req.user })
-    .populate([
-      {
-        path: 'agent',
-        select: 'user title isPremium',
-        populate: {
-          path: 'user',
-          select: req.user ? 'firstName lastName email contactDetails avatarUrl' : 'firstName lastName',
-        },
+  const properties = await Property.find({ isPremium: true })
+    .sort('-isGoldCard -createdAt')
+    .populate('owner', 'firstName lastName email')
+    .populate({
+      path: 'agent',
+      select: 'user title isPremium',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName email',
       },
-      { path: 'agency', select: 'name logoUrl' },
-    ]);
+    })
+    .populate('agency', 'name logoUrl');
 
   res.status(200).json({
     success: true,

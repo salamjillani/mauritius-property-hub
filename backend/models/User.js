@@ -1,3 +1,4 @@
+// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -5,62 +6,61 @@ const jwt = require('jsonwebtoken');
 const UserSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'Please add a first name'],
     trim: true,
-    maxlength: [50, 'First name cannot be more than 50 characters']
+    default: '',
   },
   lastName: {
     type: String,
-    required: [true, 'Please add a last name'],
     trim: true,
-    maxlength: [50, 'Last name cannot be more than 50 characters']
+    default: '',
   },
   email: {
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please add a valid email'],
   },
   password: {
     type: String,
     required: [true, 'Please add a password'],
-    minlength: 8,
-    select: false
+    minlength: 6,
+    select: false,
   },
-role: {
+  phone: {
+    type: String,
+    trim: true,
+  },
+  role: {
     type: String,
     enum: ['user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'],
     default: 'user',
   },
-  phone: {
-    type: String,
-    maxlength: [20, 'Phone number cannot be longer than 20 characters']
-  },
   avatarUrl: {
     type: String,
-    default: 'default-avatar.jpg'
+    default: '',
   },
-  contactDetails: {
-    phone: String,
-    email: String,
-    isRestricted: { type: Boolean, default: false }
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
-  agency: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Agency',
+  listingLimit: {
+    type: Number,
+    default: null, // null for unlimited
   },
-  subscription: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Subscription'
+  goldCards: {
+    type: Number,
+    default: 0,
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
+// Encrypt password
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
@@ -69,12 +69,14 @@ UserSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Sign JWT
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
+// Match password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

@@ -1,4 +1,4 @@
-
+// backend/controllers/userController.js
 const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -14,11 +14,31 @@ exports.getUsers = asyncHandler(async (req, res, next) => {
 // @route   GET /api/users/:id
 // @access  Private/Admin
 exports.getUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select('-password');
+
+  if (!user) {
+    return next(new ErrorResponse(`User not found with id of ${req.params.id}`, 404));
+  }
 
   res.status(200).json({
     success: true,
-    data: user
+    data: user,
+  });
+});
+
+// @desc    Get current user
+// @route   GET /api/users/me
+// @access  Private
+exports.getMe = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user._id).select('-password');
+
+  if (!user) {
+    return next(new ErrorResponse('User not found', 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: user,
   });
 });
 
@@ -29,7 +49,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, role } = req.body;
 
   // Validate role
-  if (!['agent', 'agency', 'promoter', 'admin'].includes(role)) {
+  if (!['user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'].includes(role)) {
     return next(new ErrorResponse('Invalid role', 400));
   }
 
@@ -38,12 +58,12 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     lastName,
     email,
     password,
-    role
+    role,
   });
 
   res.status(201).json({
     success: true,
-    data: user
+    data: user,
   });
 });
 
@@ -53,12 +73,16 @@ exports.createUser = asyncHandler(async (req, res, next) => {
 exports.updateUser = asyncHandler(async (req, res, next) => {
   const user = await User.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
-    runValidators: true
-  });
+    runValidators: true,
+  }).select('-password');
+
+  if (!user) {
+    return next(new ErrorResponse(`User not found with id of ${req.params.id}`, 404));
+  }
 
   res.status(200).json({
     success: true,
-    data: user
+    data: user,
   });
 });
 
@@ -66,10 +90,14 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 exports.deleteUser = asyncHandler(async (req, res, next) => {
-  await User.findByIdAndDelete(req.params.id);
+  const user = await User.findByIdAndDelete(req.params.id);
+
+  if (!user) {
+    return next(new ErrorResponse(`User not found with id of ${req.params.id}`, 404));
+  }
 
   res.status(200).json({
     success: true,
-    data: {}
+    data: {},
   });
 });

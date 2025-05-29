@@ -1,5 +1,4 @@
-// pages/properties/AddProperty.tsx
-import { useState } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
@@ -9,34 +8,117 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+
+// Define interfaces for type safety
+interface Address {
+  street: string;
+  city: string;
+  country: string;
+  zipCode: string;
+  latitude?: string;
+  longitude?: string;
+}
+
+interface Image {
+  url: string;
+  publicId?: string;
+  caption: string;
+  isMain: boolean;
+}
+
+interface FormData {
+  title: string;
+  description: string;
+  price: string;
+  currency: 'USD' | 'EUR' | 'MUR';
+  category: 'for-sale' | 'for-rent' | 'offices' | 'office-rent' | 'land';
+  type: string;
+  address: Address;
+  bedrooms: string;
+  bathrooms: string;
+  area: string;
+  amenities: string[];
+  images: Image[];
+  virtualTourUrl: string;
+  isPremium: boolean;
+  isGoldCard: boolean;
+}
+
+interface User {
+  _id: string;
+  role: 'individual' | 'agent' | 'agency' | 'promoter' | 'admin' | 'sub-admin';
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  listingLimit: number;
+  goldCards: number;
+}
 
 const AddProperty = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
     price: '',
     currency: 'MUR',
     category: 'for-sale',
     type: 'Apartment',
-    address: { street: '', city: '', zipCode: '', latitude: '', longitude: '' },
+    address: { street: '', city: '', country: '', zipCode: '', latitude: '', longitude: '' },
     bedrooms: '',
     bathrooms: '',
     area: '',
     amenities: [],
     images: [],
     virtualTourUrl: '',
-    isFeatured: false,
+    isPremium: false,
+    isGoldCard: false,
   });
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  // Fetch user data to check listing limits and gold cards
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to add a property.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        const data = await response.json();
+        setUser(data.data);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load user data.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    fetchUser();
+  }, [navigate, toast]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name.includes('address.')) {
-      const field = name.split('.')[1];
+      const field = name.split('.')[1] as keyof Address;
       setFormData((prev) => ({
         ...prev,
         address: { ...prev.address, [field]: value },
@@ -46,7 +128,7 @@ const AddProperty = () => {
     }
   };
 
-  const handleAmenityChange = (amenity) => {
+  const handleAmenityChange = (amenity: string) => {
     setFormData((prev) => ({
       ...prev,
       amenities: prev.amenities.includes(amenity)
@@ -55,13 +137,13 @@ const AddProperty = () => {
     }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
     const files = Array.from(e.target.files);
-    
+
     // Validate file size (max 5MB per file)
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const oversizedFiles = files.filter(file => file.size > maxSize);
-    
+    const oversizedFiles = files.filter((file) => file.size > maxSize);
     if (oversizedFiles.length > 0) {
       toast({
         title: 'Error',
@@ -73,8 +155,7 @@ const AddProperty = () => {
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
-    
+    const invalidFiles = files.filter((file) => !validTypes.includes(file.type));
     if (invalidFiles.length > 0) {
       toast({
         title: 'Error',
@@ -84,57 +165,67 @@ const AddProperty = () => {
       return;
     }
 
+    // Limit to 10 images
+    if (files.length > 10) {
+      toast({
+        title: 'Error',
+        description: 'You can upload a maximum of 10 images.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSelectedFiles(files);
-    
+
     // Create preview URLs for display
-    const imageUrls = files.map((file) => URL.createObjectURL(file));
+    const imageUrls = files.map((file, index) => ({
+      url: URL.createObjectURL(file),
+      caption: `Image ${index + 1}`,
+      isMain: index === 0,
+    }));
     setFormData((prev) => ({
       ...prev,
-      images: imageUrls.map((url, index) => ({ 
-        url, 
-        caption: `Image ${index + 1}`,
-        isMain: index === 0
-      })),
+      images: imageUrls,
     }));
   };
 
-  const uploadImagesToCloudinary = async (files) => {
-    const uploadedImages = [];
-    
+  const uploadImagesToCloudinary = async (files: File[]): Promise<Image[]> => {
+    const uploadedImages: Image[] = [];
+    const token = localStorage.getItem('token');
+
     try {
       // Get Cloudinary signature
       const signatureResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/properties/cloudinary-signature`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!signatureResponse.ok) {
         const errorData = await signatureResponse.json();
         throw new Error(errorData.message || 'Failed to get upload signature');
       }
-      
+
       const { data: signatureData } = await signatureResponse.json();
-      
+
       // Upload each file to Cloudinary
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
-        
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('api_key', signatureData.apiKey);
-        formData.append('timestamp', signatureData.timestamp);
+        formData.append('timestamp', signatureData.timestamp.toString());
         formData.append('signature', signatureData.signature);
-        formData.append('folder', signatureData.folder);
-        
-        // Only append upload_preset if it exists
+        formData.append('folder', 'signatureData.folder');
+
         if (signatureData.uploadPreset) {
           formData.append('upload_preset', signatureData.uploadPreset);
         }
-        
+
         const uploadResponse = await fetch(
           `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
           {
@@ -142,19 +233,17 @@ const AddProperty = () => {
             body: formData,
           }
         );
-        
+
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
-          console.error('Cloudinary upload error:', errorText);
-          throw new Error(`Failed to upload image ${i + 1}: ${uploadResponse.status} ${uploadResponse.statusText}`);
+          throw new Error(`Failed to upload image ${i + 1}: ${errorText}`);
         }
-        
+
         const uploadResult = await uploadResponse.json();
-        
         if (uploadResult.error) {
           throw new Error(`Cloudinary error for image ${i + 1}: ${uploadResult.error.message}`);
         }
-        
+
         uploadedImages.push({
           url: uploadResult.secure_url,
           publicId: uploadResult.public_id,
@@ -162,57 +251,91 @@ const AddProperty = () => {
           isMain: i === 0,
         });
       }
-      
-      setUploadProgress(0);
+
       return uploadedImages;
-      
-    } catch (error) {
+    } finally {
       setUploadProgress(0);
-      console.error('Upload error:', error);
-      throw error;
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
+    if (!user) return;
+
+    // Validate listing limit
+    const token = localStorage.getItem('token');
     try {
+      const listingsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?owner=${user._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!listingsResponse.ok) {
+        throw new Error('Failed to check listing limit');
+      }
+      const listingsData = await listingsResponse.json();
+      const currentListings = listingsData.count;
+
+      if (user.listingLimit > 0 && currentListings >= user.listingLimit) {
+        toast({
+          title: 'Error',
+          description: 'You have reached your listing limit. Please contact support to increase your limit.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate gold card usage
+      if (formData.isGoldCard && user.goldCards <= 0) {
+        toast({
+          title: 'Error',
+          description: 'You have no gold cards available.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsLoading(true);
+
       let finalFormData = { ...formData };
-      
+
       // Upload images to Cloudinary if any files are selected
       if (selectedFiles.length > 0) {
-        toast({ title: 'Info', description: 'Uploading images...' });
-        const uploadedImages = await uploadImagesToCloudinary(selectedFiles);
-        finalFormData.images = uploadedImages;
+        toast({ title: 'Uploading Images', description: 'Please wait while images are being uploaded...' });
+        finalFormData.images = await uploadImagesToCloudinary(selectedFiles);
       } else {
         finalFormData.images = [];
       }
 
       // Convert numeric fields
-      if (finalFormData.price) finalFormData.price = Number(finalFormData.price);
-      if (finalFormData.bedrooms) finalFormData.bedrooms = Number(finalFormData.bedrooms);
-      if (finalFormData.bathrooms) finalFormData.bathrooms = Number(finalFormData.bathrooms);
-      if (finalFormData.area) finalFormData.area = Number(finalFormData.area);
-      
-      // Set up coordinates if latitude and longitude are provided
+      finalFormData.price = finalFormData.price ? Number(finalFormData.price) : 0;
+      finalFormData.bedrooms = finalFormData.bedrooms ? Number(formData.bedrooms) : undefined;
+      finalFormData.bathrooms = finalFormData.bathrooms ? Number(formData.bathrooms) : undefined;
+      finalFormData.area = finalFormData.area ? Number(formData.area) : undefined;
+
+      // Set up location if coordinates are provided
       if (finalFormData.address.latitude && finalFormData.address.longitude) {
         finalFormData.location = {
           type: 'Point',
-          coordinates: [Number(finalFormData.address.longitude), Number(finalFormData.address.latitude)]
+          coordinates: [Number(finalFormData.address.longitude), Number(finalFormData.address.latitude)],
         };
       }
 
-      // Remove the preview URLs from address
+      // Remove coordinates from address
       const { latitude, longitude, ...addressWithoutCoords } = finalFormData.address;
-      finalFormData.address = addressWithoutCoords;
+      finalFormData.address = {
+        ...addressWithoutCoords,
+        country: addressWithoutCoords.country || 'Mauritius', // Default country
+      };
 
-      console.log('Submitting property data:', finalFormData);
+      // Map area to size for backend compatibility
+      finalFormData.size = finalFormData.area;
+      delete finalFormData.area;
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(finalFormData),
@@ -220,18 +343,15 @@ const AddProperty = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Property creation error:', errorData);
-        throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+        throw new Error(errorData.message || 'Failed to create property');
       }
 
-      const result = await response.json();
-      console.log('Property created successfully:', result);
-
-      toast({ title: 'Success', description: 'Property added successfully' });
-      navigate('/properties');
-      
-    } catch (error) {
-      console.error('Error adding property:', error);
+      toast({
+        title: 'Success',
+        description: 'Property added successfully. It is pending admin approval.',
+      });
+      navigate('/profile');
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to add property',
@@ -239,7 +359,6 @@ const AddProperty = () => {
       });
     } finally {
       setIsLoading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -248,7 +367,13 @@ const AddProperty = () => {
       <Navbar />
       <main className="flex-grow container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Add New Property</h1>
-        
+
+        {user && (
+          <p className="text-gray-600 mb-4">
+            Listings Remaining: {user.listingLimit - (user.listingLimit > 0 ? /* Assume currentListings fetched */ 0 : 0)} | Gold Cards Available: {user.goldCards}
+          </p>
+        )}
+
         {uploadProgress > 0 && (
           <div className="mb-4 p-4 bg-blue-50 rounded-lg">
             <div className="flex justify-between items-center mb-2">
@@ -256,178 +381,242 @@ const AddProperty = () => {
               <span className="text-sm">{uploadProgress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>
           </div>
         )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            name="title"
-            placeholder="Title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            maxLength={100}
-          />
-          <Textarea
-            name="description"
-            placeholder="Description"
-            value={formData.description}
-            onChange={handleChange}
-            required
-            maxLength={5000}
-            rows={4}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="price"
-              type="number"
-              placeholder="Price"
-              value={formData.price}
-              onChange={handleChange}
-              required
-              min="0"
-            />
-            <Select
-              value={formData.currency}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, currency: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-                <SelectItem value="MUR">MUR</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="for-sale">For Sale</SelectItem>
-                <SelectItem value="for-rent">For Rent</SelectItem>
-                <SelectItem value="offices">Offices</SelectItem>
-                <SelectItem value="office-rent">Office Rent</SelectItem>
-                <SelectItem value="land">Land</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={formData.type}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Apartment">Apartment</SelectItem>
-                <SelectItem value="House">House</SelectItem>
-                <SelectItem value="Villa">Villa</SelectItem>
-                <SelectItem value="Penthouse">Penthouse</SelectItem>
-                <SelectItem value="Duplex">Duplex</SelectItem>
-                <SelectItem value="Land">Land</SelectItem>
-                <SelectItem value="Office">Office</SelectItem>
-                <SelectItem value="Commercial">Commercial</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Input
-            name="address.street"
-            placeholder="Street Address"
-            value={formData.address.street}
-            onChange={handleChange}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="address.city"
-              placeholder="City"
-              value={formData.address.city}
-              onChange={handleChange}
-              required
-            />
-            <Input
-              name="address.zipCode"
-              placeholder="Zip Code"
-              value={formData.address.zipCode}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="address.latitude"
-              type="number"
-              step="any"
-              placeholder="Latitude (optional)"
-              value={formData.address.latitude}
-              onChange={handleChange}
-            />
-            <Input
-              name="address.longitude"
-              type="number"
-              step="any"
-              placeholder="Longitude (optional)"
-              value={formData.address.longitude}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Input
-              name="bedrooms"
-              type="number"
-              placeholder="Bedrooms"
-              value={formData.bedrooms}
-              onChange={handleChange}
-              min="0"
-            />
-            <Input
-              name="bathrooms"
-              type="number"
-              step="0.5"
-              placeholder="Bathrooms"
-              value={formData.bathrooms}
-              onChange={handleChange}
-              min="0"
-            />
-            <Input
-              name="area"
-              type="number"
-              placeholder="Area (sqm)"
-              value={formData.area}
-              onChange={handleChange}
-              required
-              min="0"
-            />
-          </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Amenities</h3>
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              name="title"
+              placeholder="Property Title"
+              value={formData.title}
+              onChange={handleChange}
+              required
+              maxLength={100}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="Describe the property"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              maxLength={5000}
+              rows={4}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="price">Price</Label>
+              <Input
+                id="price"
+                name="price"
+                type="number"
+                placeholder="Price"
+                value={formData.price}
+                onChange={handleChange}
+                required
+                min="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="currency">Currency</Label>
+              <Select
+                value={formData.currency}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, currency: value as FormData['currency'] }))}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="MUR">MUR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value as FormData['category'] }))}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="for-sale">For Sale</SelectItem>
+                  <SelectItem value="for-rent">For Rent</SelectItem>
+                  <SelectItem value="offices">Offices</SelectItem>
+                  <SelectItem value="office-rent">Office Rent</SelectItem>
+                  <SelectItem value="land">Land</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Apartment">Apartment</SelectItem>
+                  <SelectItem value="House">House</SelectItem>
+                  <SelectItem value="Villa">Villa</SelectItem>
+                  <SelectItem value="Penthouse">Penthouse</SelectItem>
+                  <SelectItem value="Duplex">Duplex</SelectItem>
+                  <SelectItem value="Land">Land</SelectItem>
+                  <SelectItem value="Office">Office</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="address.street">Street Address</Label>
+            <Input
+              id="address.street"
+              name="address.street"
+              placeholder="Street Address"
+              value={formData.address.street}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="address.city">City</Label>
+              <Input
+                id="address.city"
+                name="address.city"
+                placeholder="City"
+                value={formData.address.city}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="address.zipCode">Zip Code</Label>
+              <Input
+                id="address.zipCode"
+                name="address.zipCode"
+                placeholder="Zip Code"
+                value={formData.address.zipCode}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="address.latitude">Latitude (Optional)</Label>
+              <Input
+                id="address.latitude"
+                name="address.latitude"
+                type="number"
+                step="any"
+                placeholder="Latitude"
+                value={formData.address.latitude}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="address.longitude">Longitude (Optional)</Label>
+              <Input
+                id="address.longitude"
+                name="address.longitude"
+                type="number"
+                step="any"
+                placeholder="Longitude"
+                value={formData.address.longitude}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="bedrooms">Bedrooms</Label>
+              <Input
+                id="bedrooms"
+                name="bedrooms"
+                type="number"
+                placeholder="Bedrooms"
+                value={formData.bedrooms}
+                onChange={handleChange}
+                min="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bathrooms">Bathrooms</Label>
+              <Input
+                id="bathrooms"
+                name="bathrooms"
+                type="number"
+                step="0.5"
+                placeholder="Bathrooms"
+                value={formData.bathrooms}
+                onChange={handleChange}
+                min="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="area">Area (sqm)</Label>
+              <Input
+                id="area"
+                name="area"
+                type="number"
+                placeholder="Area"
+                value={formData.area}
+                onChange={handleChange}
+                required
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Amenities</Label>
             <div className="grid grid-cols-3 gap-2">
               {['Pool', 'Gym', 'Parking', 'Balcony', 'Garden', 'Security'].map((amenity) => (
                 <div key={amenity} className="flex items-center gap-2">
                   <Checkbox
+                    id={`amenity-${amenity}`}
                     checked={formData.amenities.includes(amenity)}
                     onCheckedChange={() => handleAmenityChange(amenity)}
                   />
-                  <span className="text-sm">{amenity}</span>
+                  <Label htmlFor={`amenity-${amenity}`}>{amenity}</Label>
                 </div>
               ))}
             </div>
           </div>
+
           <div>
-            <h3 className="text-lg font-semibold mb-2">Images</h3>
-            <Input 
-              type="file" 
-              multiple 
+            <Label htmlFor="images">Images</Label>
+            <Input
+              id="images"
+              type="file"
+              multiple
               accept="image/jpeg,image/jpg,image/png,image/webp"
               onChange={handleImageUpload}
               disabled={isLoading}
@@ -454,25 +643,41 @@ const AddProperty = () => {
               </div>
             )}
           </div>
-          <Input
-            name="virtualTourUrl"
-            placeholder="Virtual Tour URL (optional)"
-            value={formData.virtualTourUrl}
-            onChange={handleChange}
-            type="url"
-          />
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={formData.isFeatured}
-              onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isFeatured: checked === true }))}
+
+          <div>
+            <Label htmlFor="virtualTourUrl">Virtual Tour URL (Optional)</Label>
+            <Input
+              id="virtualTourUrl"
+              name="virtualTourUrl"
+              placeholder="Virtual Tour URL"
+              value={formData.virtualTourUrl}
+              onChange={handleChange}
+              type="url"
             />
-            <span className="text-sm">Feature this property</span>
           </div>
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full"
-          >
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="isPremium"
+                checked={formData.isPremium}
+                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isPremium: checked === true }))}
+              />
+              <Label htmlFor="isPremium">Premium Listing</Label>
+            </div>
+            {user && user.goldCards > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="isGoldCard"
+                  checked={formData.isGoldCard}
+                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isGoldCard: checked === true }))}
+                />
+                <Label htmlFor="isGoldCard">Gold Card Listing (Available: {user.goldCards})</Label>
+              </div>
+            )}
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? 'Adding Property...' : 'Add Property'}
           </Button>
         </form>

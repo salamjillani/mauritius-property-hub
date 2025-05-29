@@ -11,7 +11,6 @@ import Profile from './pages/Profile';
 import Properties from './pages/properties/Properties';
 import PropertyDetails from './pages/properties/PropertyDetails';
 import AddProperty from './pages/properties/AddProperty';
-
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminSubscriptions from './pages/admin/Subscriptions';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -22,11 +21,11 @@ import AdminAgencies from './pages/admin/Agencies';
 import AdminPromoters from './pages/admin/AdminPromoters';
 import AdminSettings from './pages/admin/Settings';
 import AdminLogs from './pages/admin/Logs';
+import AdminRequests from './pages/admin/AdminRequests';
 import AgentPage from './pages/AgentPage';
 import AllAgentsPage from './pages/AllAgentsPage';
 import AgencyPage from './pages/AgencyPage';
 import AllAgenciesPage from './pages/AllAgenciesPage';
-
 import ProjectDetails from './pages/ProjectDetails';
 import Favorites from './pages/Favorites';
 import Notifications from './pages/Notifications';
@@ -36,27 +35,32 @@ import MapView from './pages/MapView';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Type for API errors with response property
+// Type for API errors
 interface ApiError extends Error {
   response?: {
     status: number;
   };
 }
 
-// Configure QueryClient with improved options
+// Type for user stored in localStorage
+interface User {
+  _id: string;
+  role: 'individual' | 'agent' | 'agency' | 'promoter' | 'admin' | 'sub-admin';
+  [key: string]: any;
+}
+
+// Configure QueryClient
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error) => {
-        // Type guard to check if error has response property
+      retry: (failureCount: number, error: unknown) => {
         const apiError = error as ApiError;
-        // Retry up to 3 times for non-401/403 errors
         if (apiError?.response?.status === 401 || apiError?.response?.status === 403) return false;
         return failureCount < 3;
       },
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime in v4+)
+      gcTime: 10 * 60 * 1000, // 10 minutes
     },
     mutations: {
       retry: false,
@@ -67,26 +71,56 @@ const queryClient = new QueryClient({
 // Protected Route with token validation
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
+
   if (!token) {
     return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
   }
-  // Optional: Add token validation (e.g., decode JWT or API check)
-  return children;
+
+  // Optional: Validate token with API (uncomment to enable)
+  /*
+  useEffect(() => {
+    const validateToken = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-token`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    };
+    validateToken();
+  }, [token]);
+  */
+
+  return <>{children}</>;
 };
 
 // Admin Route with role validation
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
-  let user;
+  let user: User | null = null;
+
   try {
-    user = JSON.parse(localStorage.getItem('user') || '{}');
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      user = JSON.parse(storedUser) as User;
+    }
   } catch {
-    user = {};
+    user = null;
   }
-  if (!token || !user?.role || user.role !== 'admin') {
+
+  if (!token || !user?.role || !['admin', 'sub-admin'].includes(user.role)) {
     return <Navigate to="/admin/login" replace />;
   }
-  return children;
+
+  return <>{children}</>;
 };
 
 // Focus management for accessibility
@@ -126,7 +160,6 @@ const App = () => (
               <Route path="/agencies" element={<AllAgenciesPage />} />
               <Route path="/agent/:id" element={<AgentPage />} />
               <Route path="/agency/:id" element={<AgencyPage />} />
-       
               <Route path="/projects/:id" element={<ProjectDetails />} />
               <Route path="/map" element={<MapView />} />
 
@@ -155,7 +188,6 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-             
               <Route
                 path="/properties/:id/verify"
                 element={
@@ -223,14 +255,22 @@ const App = () => (
                   </AdminRoute>
                 }
               />
-           <Route
-  path="/admin/promoters"
-  element={
-    <AdminRoute>
-      <AdminPromoters />
-    </AdminRoute>
-  }
-/>
+              <Route
+                path="/admin/promoters"
+                element={
+                  <AdminRoute>
+                    <AdminPromoters />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/requests"
+                element={
+                  <AdminRoute>
+                    <AdminRequests />
+                  </AdminRoute>
+                }
+              />
               <Route
                 path="/admin/settings"
                 element={

@@ -6,9 +6,6 @@ const path = require('path');
 const mongoose = require('mongoose');
 const cloudinary = require('../config/cloudinary');
 
-// @desc    Get all agencies
-// @route   GET /api/agencies
-// @access  Public
 exports.getAgencies = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
   const removeFields = ['select', 'sort', 'page', 'limit'];
@@ -17,7 +14,7 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
   let queryStr = JSON.stringify(reqQuery);
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
-  let query = Agency.find(JSON.parse(queryStr));
+  let query = Agency.find({ ...JSON.parse(queryStr), approvalStatus: 'approved' });
 
   if (req.query.select) {
     const fields = req.query.select.split(',').join(' ');
@@ -35,7 +32,7 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Agency.countDocuments(JSON.parse(queryStr));
+  const total = await Agency.countDocuments({ ...JSON.parse(queryStr), approvalStatus: 'approved' });
 
   query = query.skip(startIndex).limit(limit);
 
@@ -49,17 +46,11 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
 
   const pagination = {};
   if (endIndex < total) {
-    pagination.next = {
-      page: page + 1,
-      limit
-    };
+    pagination.next = { page: page + 1, limit };
   }
 
   if (startIndex > 0) {
-    pagination.prev = {
-      page: page - 1,
-      limit
-    };
+    pagination.prev = { page: page - 1, limit };
   }
 
   res.status(200).json({
@@ -70,11 +61,8 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get single agency
-// @route   GET /api/agencies/:id
-// @access  Public
 exports.getAgency = asyncHandler(async (req, res, next) => {
-  const agency = await Agency.findById(req.params.id)
+  const agency = await Agency.findOne({ _id: req.params.id, approvalStatus: 'approved' })
     .populate([
       { path: 'user', select: 'firstName lastName email' },
       { path: 'agents' },
@@ -218,13 +206,10 @@ exports.deleteAgency = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: {} });
 });
 
-// @desc    Get premium agencies
-// @route   GET /api/agencies/premium
-// @access  Public
 exports.getPremiumAgencies = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 4;
 
-  const agencies = await Agency.find({ isPremium: true })
+  const agencies = await Agency.find({ isPremium: true, approvalStatus: 'approved' })
     .sort('-createdAt')
     .limit(limit)
     .populate([

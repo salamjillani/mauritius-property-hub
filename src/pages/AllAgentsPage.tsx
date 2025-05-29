@@ -17,7 +17,7 @@ const AllAgentsPage = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents?approvalStatus=approved`);
         if (!response.ok) {
           throw new Error("Failed to fetch agents");
         }
@@ -37,7 +37,7 @@ const AllAgentsPage = () => {
     fetchAgents();
   }, [toast]);
 
-  const handleAgentClick = (id: string) => {
+  const handleAgentClick = (id) => {
     navigate(`/agent/${id}`);
   };
 
@@ -114,7 +114,7 @@ const AllAgentsPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {agents.map((agent: any) => (
+          {agents.map((agent) => (
             <motion.div
               key={agent._id}
               className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"

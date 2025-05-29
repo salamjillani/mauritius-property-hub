@@ -1,3 +1,4 @@
+// frontend/src/components/admin/AdminLayout.jsx
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogOut, Home, Users, Building, Building2, MapPin, Settings, FileText, DollarSign } from 'lucide-react';
@@ -14,7 +15,7 @@ const AdminLayout = ({ children }) => {
     navigate('/admin/login');
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="min-h-screen flex">
@@ -80,6 +81,16 @@ const AdminLayout = ({ children }) => {
             aria-label={t('navigate_to_properties')}
           >
             <MapPin className="h-5 w-5" /> {t('properties')}
+          </Button>
+          <Button
+            variant="ghost"
+            className={`w-full flex items-center gap-2 text-white hover:bg-gray-700 ${
+              isActive('/admin/requests') ? 'bg-gray-700' : ''
+            }`}
+            onClick={() => navigate('/admin/requests')}
+            aria-label={t('navigate_to_requests')}
+          >
+            <FileText className="h-5 w-5" /> {t('Requests')}
           </Button>
           <Button
             variant="ghost"

@@ -21,7 +21,7 @@ const AllAgenciesPage = () => {
   const { data: agencies = [], isLoading, error } = useQuery<Agency[]>({
     queryKey: ["agencies"],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies?approvalStatus=approved`);
       if (!response.ok) throw new Error("Failed to fetch agencies");
       const data = await response.json();
       return data.data || [];

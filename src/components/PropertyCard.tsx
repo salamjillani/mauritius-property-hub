@@ -61,9 +61,11 @@ const PropertyCard = ({
 
   return (
     <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl rounded-xl cursor-pointer ${
-      variant === 'featured' 
-        ? (property.isPremium ? "ring-2 ring-amber-400 shadow-md transform hover:-translate-y-2" : "transform hover:-translate-y-1")
-        : ""
+      property.isGoldCard
+        ? "ring-2 ring-amber-400 bg-amber-50/50 scale-105"
+        : variant === 'featured' 
+          ? (property.isPremium ? "ring-2 ring-amber-400 shadow-md transform hover:-translate-y-2" : "transform hover:-translate-y-1")
+          : ""
     }`}>
       <Link to={`/properties/${property.category || ""}/${property._id}`} className="block">
         {/* Image container with tag, favorite button, and agency logo/name */}
@@ -79,10 +81,10 @@ const PropertyCard = ({
             {property.type || "Property"}
           </div>
           
-          {/* Premium badge if applicable */}
-          {property.isPremium && (
+          {/* Premium or Gold badge */}
+          {(property.isPremium || property.isGoldCard) && (
             <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
-              Premium
+              {property.isGoldCard ? "Gold" : "Premium"}
             </div>
           )}
           

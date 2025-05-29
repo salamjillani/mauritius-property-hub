@@ -1,169 +1,121 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const AgentLinkRequests = ({ user }) => {
+  const [agencyId, setAgencyId] = useState("");
+  const [linkRequests, setLinkRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const [requests, setRequests] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchRequests = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/linking-requests`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch linking requests");
-      const data = await response.json();
-      setRequests(data.data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load linking requests",
-        variant: "destructive",
-      });
-    }
-  };
 
   useEffect(() => {
-    if (user?.role === "agency") {
-      fetchRequests();
-    }
+    const fetchLinkRequests = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents?user=${user._id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch agent data");
+        }
+
+        const data = await response.json();
+        setLinkRequests(data.data[0]?.linkingRequests || []);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load link requests",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLinkRequests();
   }, [user, toast]);
 
-  const handleApprove = async (agentId, requestId) => {
-    setIsLoading(true);
+  const handleRequestLink = async (e) => {
+    e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/${agentId}/approve/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/${user._id}/link`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ agencyId }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to approve request");
+        throw new Error(errorData.message || "Failed to request agency link");
       }
 
+      const data = await response.json();
+      setLinkRequests(data.data.linkingRequests);
+      setAgencyId("");
       toast({
         title: "Success",
-        description: "Agent link request approved successfully",
+        description: "Agency link request submitted",
       });
-
-      await fetchRequests();
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to approve request",
+        description: error.message || "Failed to request agency link",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleReject = async (agentId, requestId) => {
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/${agentId}/reject/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to reject request");
-      }
-
-      toast({
-        title: "Success",
-        description: "Agent link request rejected successfully",
-      });
-
-      await fetchRequests();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (user?.role !== "agency") {
-    return null;
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-bold mb-4">Agent Link Requests</h2>
-      {requests.length === 0 ? (
-        <p className="text-gray-500">No pending link requests</p>
-      ) : (
-        <div className="space-y-4">
-          {requests.map((agent) => (
-            <div
-              key={agent._id}
-              className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex justify-between items-center"
-            >
-              <div>
-                <p className="font-medium">
-                  {agent.user?.firstName} {agent.user?.lastName}
-                </p>
-                <p className="text-sm text-gray-600">{agent.user?.email}</p>
-                {agent.linkingRequests.map((req) => (
-                  <p key={req._id} className="text-sm text-gray-600">
-                    Requested on: {new Date(req.requestedAt).toLocaleDateString()}
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Agency Link Requests</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleRequestLink} className="space-y-4 mb-6">
+          <div>
+            <Label htmlFor="agencyId">Agency ID</Label>
+            <Input
+              id="agencyId"
+              value={agencyId}
+              onChange={(e) => setAgencyId(e.target.value)}
+              placeholder="Enter agency ID"
+            />
+          </div>
+          <Button type="submit">Request Link</Button>
+        </form>
+        {linkRequests.length === 0 ? (
+          <p className="text-gray-500">No pending link requests.</p>
+        ) : (
+          <div className="space-y-4">
+            {linkRequests.map((request) => (
+              <div key={request._id} className="border p-4 rounded-lg">
+                <p><strong>Agency:</strong> {request.agency?.name || 'Unknown'}</p>
+                <p><strong>Status:</strong> {request.status}</p>
+                {request.status === 'pending' && (
+                  <p className="text-yellow-600">
+                    Waiting for agency approval. Ensure the agency is approved before linking.
                   </p>
-                ))}
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleApprove(agent._id, agent.linkingRequests[0]._id)}
-                  disabled={isLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    "Approve"
-                  )}
-                </Button>
-                <Button
-                  onClick={() => handleReject(agent._id, agent.linkingRequests[0]._id)}
-                  disabled={isLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    "Reject"
-                  )}
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

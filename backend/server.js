@@ -33,6 +33,8 @@ const newsletterRoutes = require('./routes/newsletter');
 const supportRoutes = require('./routes/support');
 const contentRoutes = require('./routes/content');
 const locationsRoutes = require('./routes/locations');
+const registrationRequestsRoutes = require('./routes/registrationRoutes');
+const registration = require('./routes/registrationRoutes');
 
 
 
@@ -84,6 +86,9 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/locations', locationsRoutes);
+app.use('/api/registration-requests', registration);
+app.use('/api/registration-requests', registrationRequestsRoutes);
+
 
 
 // Serve frontend in production
