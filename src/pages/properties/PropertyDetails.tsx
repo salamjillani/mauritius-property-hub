@@ -128,67 +128,72 @@ const PropertyDetails = () => {
     }
   }, []);
 
-  const fetchProperty = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Use category from URL params, replacing hyphens with spaces if needed
-      const formattedCategory = category?.replace("-", " ") || "for-sale";
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/properties/${formattedCategory}/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: t('error'),
-            description: t('session_expired'),
-            variant: 'destructive',
-          });
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || t('failed_to_fetch_property'));
+const fetchProperty = useCallback(async () => {
+  setIsLoading(true);
+  try {
+    // Keep the category as-is from URL params (it should already be hyphenated)
+    // Don't convert hyphens to spaces - the backend expects hyphenated format
+    const categoryParam = category || 'for-sale';
+    
+    // Make sure the category is properly formatted (hyphenated, not spaced)
+    const formattedCategory = categoryParam.replace(/\s+/g, '-').toLowerCase();
+    
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/properties/${formattedCategory}/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
       }
+    );
 
-      const data = await response.json();
-      setProperty(data.data);
-      setIsFavorite(data.data.isFavorite || false);
-
-      // Fetch reviews
-      const reviewsResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/reviews/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-          },
-        }
-      );
-      if (reviewsResponse.ok) {
-        const reviewsData = await reviewsResponse.json();
-        setReviews(reviewsData.data || []);
-      } else {
-        console.warn('Failed to fetch reviews');
+    if (!response.ok) {
+      if (response.status === 401) {
+        toast({
+          title: t('error'),
+          description: t('session_expired'),
+          variant: 'destructive',
+        });
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching property:', error);
-      toast({
-        title: t('error'),
-        description: error.message || t('failed_to_load_property'),
-        variant: 'destructive',
-      });
-      navigate('/properties');
-    } finally {
-      setIsLoading(false);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || t('failed_to_fetch_property'));
     }
-  }, [id, category, toast, navigate, t]);
+
+    const data = await response.json();
+    setProperty(data.data);
+    setIsFavorite(data.data.isFavorite || false);
+
+    // Fetch reviews
+    const reviewsResponse = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/reviews/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      }
+    );
+    if (reviewsResponse.ok) {
+      const reviewsData = await reviewsResponse.json();
+      setReviews(reviewsData.data || []);
+    } else {
+      console.warn('Failed to fetch reviews');
+    }
+  } catch (error) {
+    console.error('Error fetching property:', error);
+    toast({
+      title: t('error'),
+      description: error.message || t('failed_to_load_property'),
+      variant: 'destructive',
+    });
+    navigate('/properties');
+  } finally {
+    setIsLoading(false);
+  }
+}, [id, category, toast, navigate, t]);
 
   useEffect(() => {
     fetchProperty();

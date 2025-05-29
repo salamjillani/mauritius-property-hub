@@ -22,6 +22,7 @@ const {
   notifyNewProperty,
   getSubscriptions,
   getAuditLogs,
+  getLogs, // Make sure this is imported
 } = require('../controllers/admin');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -85,7 +86,8 @@ router
   .route('/subscriptions/:id')
   .put(updateSubscription);
 
-// Audit Logs
+// Logs - Add both routes for flexibility
 router.get('/audit-logs', getAuditLogs);
+router.get('/logs', getLogs); // Add this line
 
 module.exports = router;
