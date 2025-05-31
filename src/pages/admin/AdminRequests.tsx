@@ -3,7 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -19,9 +25,12 @@ const AdminRequests = () => {
     const fetchRequests = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/requests?status=pending`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/requests?status=pending`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!response.ok) throw new Error("Failed to fetch requests");
         const data = await response.json();
         setRequests(data.data);
@@ -41,14 +50,22 @@ const AdminRequests = () => {
   const handleApprove = async (requestId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/requests/${requestId}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listingLimit, goldCards: parseInt(goldCards) }),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/admin/requests/${requestId}/approve`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            listingLimit: parseInt(listingLimit),
+            goldCards: parseInt(goldCards),
+          }),
+        }
+      );
       if (!response.ok) throw new Error("Failed to approve request");
       setRequests(requests.filter((request) => request._id !== requestId));
       toast({
@@ -67,14 +84,19 @@ const AdminRequests = () => {
   const handleReject = async (requestId, reason) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/requests/${requestId}/reject`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reason }),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/admin/requests/${requestId}/reject`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason }),
+        }
+      );
       if (!response.ok) throw new Error("Failed to reject request");
       setRequests(requests.filter((request) => request._id !== requestId));
       toast({
@@ -114,21 +136,42 @@ const AdminRequests = () => {
             {requests.map((request) => (
               <Card key={request._id}>
                 <CardHeader>
-                  <CardTitle>{request.user.firstName} {request.user.lastName} ({request.user.role})</CardTitle>
+                  <CardTitle>
+                    {request.user.firstName} {request.user.lastName} (
+                    {request.user.role})
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p><strong>Email:</strong> {request.user.email}</p>
-                  <p><strong>Gender:</strong> {request.gender}</p>
-                  <p><strong>Phone Number:</strong> {request.phoneNumber}</p>
-                  <p><strong>Company Name:</strong> {request.companyName || "N/A"}</p>
-                  <p><strong>Place of Birth:</strong> {request.placeOfBirth}</p>
-                  <p><strong>City:</strong> {request.city}</p>
-                  <p><strong>Country:</strong> {request.country}</p>
-                  <p><strong>Status:</strong> {request.status}</p>
+                  <p>
+                    <strong>Email:</strong> {request.user.email}
+                  </p>
+                  <p>
+                    <strong>Gender:</strong> {request.gender}
+                  </p>
+                  <p>
+                    <strong>Phone Number:</strong> {request.phoneNumber}
+                  </p>
+                  <p>
+                    <strong>Company Name:</strong>{" "}
+                    {request.companyName || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Place of Birth:</strong> {request.placeOfBirth}
+                  </p>
+                  <p>
+                    <strong>City:</strong> {request.city}
+                  </p>
+                  <p>
+                    <strong>Country:</strong> {request.country}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {request.status}
+                  </p>
                   <div className="mt-4">
-                    <Label htmlFor={`listingLimit-${request._id}`}>Listing Limit</Label>
+                    <Label htmlFor={`listingLimit-${request._id}`}>
+                      Listing Limit
+                    </Label>
                     <Select
-                      id={`listingLimit-${request._id}`}
                       value={listingLimit}
                       onValueChange={setListingLimit}
                     >
@@ -147,7 +190,9 @@ const AdminRequests = () => {
                     </Select>
                   </div>
                   <div className="mt-4">
-                    <Label htmlFor={`goldCards-${request._id}`}>Gold Cards</Label>
+                    <Label htmlFor={`goldCards-${request._id}`}>
+                      Gold Cards
+                    </Label>
                     <Input
                       id={`goldCards-${request._id}`}
                       type="number"
@@ -157,11 +202,15 @@ const AdminRequests = () => {
                     />
                   </div>
                   <div className="mt-4 flex space-x-2">
-                    <Button onClick={() => handleApprove(request._id)}>Approve</Button>
+                    <Button onClick={() => handleApprove(request._id)}>
+                      Approve
+                    </Button>
                     <Button
                       variant="destructive"
                       onClick={() => {
-                        const reason = prompt("Please provide a reason for rejection:");
+                        const reason = prompt(
+                          "Please provide a reason for rejection:"
+                        );
                         if (reason) handleReject(request._id, reason);
                       }}
                     >

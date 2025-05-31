@@ -18,6 +18,7 @@ const Profile = () => {
   const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     gender: "",
     firstName: "",
@@ -49,7 +50,6 @@ const Profile = () => {
         if (!data.success || !data.data) {
           throw new Error("Invalid response from server");
         }
-        console.log("Fetched user data:", data.data); // Debug log
         setUser(data.data);
         setFormData({
           gender: "",
@@ -83,6 +83,11 @@ const Profile = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    
+    if (isSubmitted) {
+      return;
+    }
+
     if (!formData.termsAccepted) {
       toast({
         title: "Error",
@@ -97,6 +102,7 @@ const Profile = () => {
       if (!token) {
         throw new Error("No authentication token found. Please log in.");
       }
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registration-requests`, {
         method: "POST",
         headers: {
@@ -105,26 +111,14 @@ const Profile = () => {
         },
         body: JSON.stringify(formData),
       });
+      
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to submit registration request: ${errorText}`);
+        throw new Error(responseData.error || `Failed to submit registration request: ${response.statusText}`);
       }
-      toast({
-        title: "Success",
-        description: "Registration request submitted successfully",
-      });
-      setFormData({
-        gender: "",
-        firstName: user?.firstName || "",
-        lastName: user?.lastName || "",
-        phoneNumber: user?.phone || "",
-        email: user?.email || "",
-        companyName: "",
-        placeOfBirth: "",
-        city: "",
-        country: "",
-        termsAccepted: false,
-      });
+
+      setIsSubmitted(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -161,7 +155,6 @@ const Profile = () => {
 
   const isRestrictedRole = ["agent", "agency", "promoter"].includes(user.role) && user.approvalStatus !== "approved";
   const isAdmin = ["admin", "sub-admin"].includes(user.role);
-  console.log("User role:", user.role, "Approval status:", user.approvalStatus, "isRestrictedRole:", isRestrictedRole); // Debug log
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -220,113 +213,125 @@ const Profile = () => {
             {["agent", "agency", "promoter"].includes(user.role) && user.approvalStatus !== "approved" ? (
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h2 className="text-xl font-bold mb-4">Listings</h2>
-                <p className="text-gray-600 mb-4">
-                  Thank you for your interest. At the moment, you are not yet eligible to act as an{" "}
-                  {user.role} based on your current status. Kindly complete the form below to apply
-                  for eligibility and approval. We look forward to welcoming you soon!
-                </p>
-                <h3 className="text-lg font-semibold mb-4">Please confirm your activity:</h3>
-                <form onSubmit={handleFormSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select
-                      onValueChange={(value) => handleFormChange("gender", value)}
-                      value={formData.gender}
-                    >
-                      <SelectTrigger id="gender">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
+                
+                {isSubmitted ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-green-800">Thank you!</h3>
+                    <p className="mt-2 text-green-700">
+                      We have received your request. Our team will contact you shortly.
+                      In the meantime, feel free to browse our website or contact us for urgent inquiries.
+                    </p>
                   </div>
-                  <div>
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => handleFormChange("firstName", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => handleFormChange("lastName", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phoneNumber">Phone Number</Label>
-                    <Input
-                      id="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={(e) => handleFormChange("phoneNumber", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => handleFormChange("email", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="companyName">Company Name</Label>
-                    <Input
-                      id="companyName"
-                      value={formData.companyName}
-                      onChange={(e) => handleFormChange("companyName", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="placeOfBirth">Place of Birth</Label>
-                    <Input
-                      id="placeOfBirth"
-                      value={formData.placeOfBirth}
-                      onChange={(e) => handleFormChange("placeOfBirth", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) => handleFormChange("city", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={formData.country}
-                      onChange={(e) => handleFormChange("country", e.target.value)}
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={formData.termsAccepted}
-                      onCheckedChange={(checked) => handleFormChange("termsAccepted", checked)}
-                    />
-                    <Label htmlFor="terms">
-                      I agree to the{" "}
-                      <a href="/terms" className="text-blue-600 hover:underline">
-                        Terms and Conditions
-                      </a>
-                    </Label>
-                  </div>
-                  <Button type="submit">Complete Registration Form</Button>
-                </form>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-4">
+                      Thank you for your interest. At the moment, you are not yet eligible to act as an{" "}
+                      {user.role} based on your current status. Kindly complete the form below to apply
+                      for eligibility and approval. We look forward to welcoming you soon!
+                    </p>
+                    <h3 className="text-lg font-semibold mb-4">Please confirm your activity:</h3>
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select
+                          onValueChange={(value) => handleFormChange("gender", value)}
+                          value={formData.gender}
+                        >
+                          <SelectTrigger id="gender">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          value={formData.firstName}
+                          onChange={(e) => handleFormChange("firstName", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          value={formData.lastName}
+                          onChange={(e) => handleFormChange("lastName", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phoneNumber">Phone Number</Label>
+                        <Input
+                          id="phoneNumber"
+                          value={formData.phoneNumber}
+                          onChange={(e) => handleFormChange("phoneNumber", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          value={formData.email}
+                          onChange={(e) => handleFormChange("email", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="companyName">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          value={formData.companyName}
+                          onChange={(e) => handleFormChange("companyName", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="placeOfBirth">Place of Birth</Label>
+                        <Input
+                          id="placeOfBirth"
+                          value={formData.placeOfBirth}
+                          onChange={(e) => handleFormChange("placeOfBirth", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={formData.city}
+                          onChange={(e) => handleFormChange("city", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="country">Country</Label>
+                        <Input
+                          id="country"
+                          value={formData.country}
+                          onChange={(e) => handleFormChange("country", e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="terms"
+                          checked={formData.termsAccepted}
+                          onCheckedChange={(checked) => handleFormChange("termsAccepted", checked)}
+                        />
+                        <Label htmlFor="terms">
+                          I agree to the{" "}
+                          <a href="/terms" className="text-blue-600 hover:underline">
+                            Terms and Conditions
+                          </a>
+                        </Label>
+                      </div>
+                      <Button type="submit">Complete Registration Form</Button>
+                    </form>
+                  </>
+                )}
               </div>
             ) : (
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h2 className="text-xl font-bold mb-4">Your Listings</h2>
                 <Button onClick={() => navigate("/properties/add")}>Add New Property</Button>
-                {/* Add logic to display user's listings */}
               </div>
             )}
           </TabsContent>

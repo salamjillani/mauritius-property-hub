@@ -829,9 +829,17 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('User not found', 404));
   }
 
-  const existingRequest = await RegistrationRequest.findOne({ user: req.user.id, status: 'pending' });
+   const existingRequest = await RegistrationRequest.findOne({ 
+    user: req.user.id, 
+    status: 'pending' 
+  });
+  
   if (existingRequest) {
-    return next(new ErrorResponse('You already have a pending registration request', 400));
+    return res.status(200).json({ 
+      success: true, 
+      message: 'You already have a pending registration request',
+      request: existingRequest
+    });
   }
 
   const request = await RegistrationRequest.create({
@@ -878,10 +886,15 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid request ID format', 400));
   }
 
-  const validListingLimits = [15, 50, 100, 200, 300, 400, 'unlimited'];
-  if (!validListingLimits.includes(listingLimit)) {
-    return next(new ErrorResponse('Invalid listing limit', 400));
-  }
+ const validListingLimits = [15, 50, 100, 200, 300, 400, 'unlimited'];
+// Convert string numbers to integers for comparison
+const parsedLimit = isNaN(parseInt(listingLimit)) 
+  ? listingLimit 
+  : parseInt(listingLimit);
+
+if (!validListingLimits.includes(parsedLimit)) {
+  return next(new ErrorResponse('Invalid listing limit', 400));
+}
 
   if (isNaN(goldCards) || goldCards < 0) {
     return next(new ErrorResponse('Invalid gold cards value', 400));
