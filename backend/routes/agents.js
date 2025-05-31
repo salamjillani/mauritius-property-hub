@@ -7,6 +7,7 @@ const {
   deleteAgent,
   uploadAgentPhoto,
   getPremiumAgents,
+  getMyAgentProfile,
   getAgentCloudinarySignature,
   requestLinkToAgency,
   approveAgentLink,
@@ -27,7 +28,7 @@ router.get('/premium', getPremiumAgents);
 router.get('/cloudinary-signature', protect, getAgentCloudinarySignature);
 
 router.get('/linking-requests', protect, authorize('agency', 'admin'), getLinkingRequests);
-
+router.get('/my-profile', protect, getMyAgentProfile);
 router.route('/:id')
   .get(getAgent)
   .put(protect, updateAgent)
@@ -36,13 +37,8 @@ router.route('/:id')
 router.route('/:id/photo')
   .post(protect, uploadAgentPhoto);
 
-router.route('/request-link')
-  .post(protect, authorize('agent', 'admin'), requestLinkToAgency);
-
-router.route('/:agentId/approve/:requestId')
-  .put(protect, authorize('agency', 'admin'), approveAgentLink);
-
-router.route('/:agentId/reject/:requestId')
-  .put(protect, authorize('agency', 'admin'), rejectAgentLink);
+router.post('/request-link', protect, requestLinkToAgency);
+router.put('/:agentId/approve/:requestId', protect, authorize('agency', 'admin'), approveAgentLink);
+router.put('/:agentId/reject/:requestId', protect, authorize('agency', 'admin'), rejectAgentLink);
 
 module.exports = router;

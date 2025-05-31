@@ -5,6 +5,7 @@ const {
   createAgency,
   updateAgency,
   deleteAgency,
+  getApprovedAgencies,
   uploadAgencyLogo,
   getPremiumAgencies,
   getAgencyCloudinarySignature,
@@ -24,16 +25,10 @@ router.get('/premium', getPremiumAgencies);
 
 router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature);
 
-router.route('/:id')
-  .get(getAgency)
-  .put(protect, authorize('agency', 'admin'), updateAgency)
-  .delete(protect, authorize('agency', 'admin'), deleteAgency);
-
-router.route('/:id/logo')
-  .post(protect, authorize('agency', 'admin'), uploadAgencyLogo);
-
-
-router.route('/my-agency').get(protect, getMyAgency);
+router.get('/approved', protect, getApprovedAgencies);
+router.get('/my-agency', protect, getMyAgency);
+router.put('/:id', protect, authorize('agency', 'admin'), updateAgency);
+router.post('/:id/logo', protect, authorize('agency', 'admin'), uploadAgencyLogo);
 router.route('/upgrade-plan').post(protect, upgradePlan);
 
 module.exports = router;

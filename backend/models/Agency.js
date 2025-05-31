@@ -16,6 +16,12 @@ const AgencySchema = new mongoose.Schema({
     type: String,
     default: 'default-logo.jpg',
   },
+  description: String,
+  establishedYear: Number,
+  website: String,
+  facebook: String,
+  twitter: String,
+  linkedin: String,
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],

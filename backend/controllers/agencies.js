@@ -78,16 +78,21 @@ exports.getAgency = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: agency });
 });
 
-// @desc    Get current user's agency
-// @route   GET /api/agencies/my-agency
-// @access  Private
 exports.getMyAgency = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id).populate('agency');
-  if (!user || !user.agency) {
+  const agency = await Agency.findOne({ user: req.user.id })
+    .populate('subscription')
+    .populate({
+      path: 'agents',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName email avatarUrl'
+      }
+    });
+
+  if (!agency) {
     return next(new ErrorResponse('No agency associated with this user', 404));
   }
 
-  const agency = await Agency.findById(user.agency._id).populate('subscription');
   res.status(200).json({ success: true, data: agency });
 });
 
@@ -145,28 +150,15 @@ exports.createAgency = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Update agency
-// @route   PUT /api/agencies/:id
-// @access  Private
 exports.updateAgency = asyncHandler(async (req, res, next) => {
   let agency = await Agency.findById(req.params.id);
 
   if (!agency) {
-    return next(
-      new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404)
-    );
+    return next(new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404));
   }
 
-  if (
-    agency.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to update this agency profile`,
-        401
-      )
-    );
+  if (agency.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this agency profile`, 401));
   }
 
   agency = await Agency.findByIdAndUpdate(req.params.id, req.body, {
@@ -225,28 +217,15 @@ exports.getPremiumAgencies = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Upload logo for agency
-// @route   POST /api/agencies/:id/logo
-// @access  Private
 exports.uploadAgencyLogo = asyncHandler(async (req, res, next) => {
   const agency = await Agency.findById(req.params.id);
 
   if (!agency) {
-    return next(
-      new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404)
-    );
+    return next(new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404));
   }
 
-  if (
-    agency.user.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to update this agency`,
-        401
-      )
-    );
+  if (agency.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this agency`, 401));
   }
 
   if (!req.body.cloudinaryUrl) {
@@ -254,11 +233,15 @@ exports.uploadAgencyLogo = asyncHandler(async (req, res, next) => {
   }
 
   await Agency.findByIdAndUpdate(req.params.id, { logoUrl: req.body.cloudinaryUrl });
+  res.status(200).json({ success: true, data: { logoUrl: req.body.cloudinaryUrl } });
+});
 
-  res.status(200).json({
-    success: true,
-    data: { logoUrl: req.body.cloudinaryUrl }
-  });
+exports.getApprovedAgencies = asyncHandler(async (req, res, next) => {
+  const agencies = await Agency.find({ approvalStatus: 'approved' })
+    .select('name logoUrl')
+    .sort('name');
+
+  res.status(200).json({ success: true, data: agencies });
 });
 
 // @desc    Get Cloudinary signature for agency logo upload

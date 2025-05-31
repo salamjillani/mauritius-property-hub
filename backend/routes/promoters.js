@@ -7,6 +7,7 @@ const {
   updatePromoter,
   deletePromoter,
   getPromoterProjects,
+  getMyPromoterProfile
 } = require('../controllers/promoters');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -19,7 +20,7 @@ router
   .route('/')
   .get(getPromoters)
   .post(createPromoter);
-
+router.get('/my-profile', protect, getMyPromoterProfile);
 router
   .route('/:id')
   .get(getPromoter)

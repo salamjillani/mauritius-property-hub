@@ -5,6 +5,7 @@ const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
+const Notification = require('../models/Notification');
 
 exports.getAgentCloudinarySignature = asyncHandler(async (req, res, next) => {
   const timestamp = Math.round(Date.now() / 1000);
@@ -28,6 +29,24 @@ exports.getAgentCloudinarySignature = asyncHandler(async (req, res, next) => {
       apiKey: process.env.CLOUDINARY_API_KEY
     }
   });
+});
+
+exports.getMyAgentProfile = asyncHandler(async (req, res, next) => {
+  const agent = await Agent.findOne({ user: req.user.id })
+    .populate({
+      path: 'agency',
+      select: 'name logoUrl'
+    })
+    .populate({
+      path: 'linkingRequests.agency',
+      select: 'name logoUrl'
+    });
+
+  if (!agent) {
+    return next(new ErrorResponse('No agent profile found for this user', 404));
+  }
+
+  res.status(200).json({ success: true, data: agent });
 });
 
 exports.getAgents = asyncHandler(async (req, res, next) => {
@@ -130,27 +149,20 @@ exports.createAgent = asyncHandler(async (req, res, next) => {
 });
 
 exports.updateAgent = asyncHandler(async (req, res, next) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return next(new ErrorResponse(`Invalid agent ID format`, 400));
-  }
-
   let agent = await Agent.findById(req.params.id);
 
   if (!agent) {
     return next(new ErrorResponse(`Agent not found with id of ${req.params.id}`, 404));
   }
 
-  if (agent.user.toString() !== req.user.id && req.user.role !== "admin") {
-    return next(
-      new ErrorResponse(`User ${req.user.id} is not authorized to update this agent profile`, 401)
-    );
+  if (agent.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this agent profile`, 401));
   }
 
-  agent = await Agent.findByIdAndUpdate(
-    req.params.id,
-    { ...req.body, photoUrl: req.body.photoUrl || agent.photoUrl },
-    { new: true, runValidators: true }
-  );
+  agent = await Agent.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true
+  });
 
   if (req.body.photoUrl) {
     await User.findByIdAndUpdate(agent.user, { avatarUrl: req.body.photoUrl });
@@ -332,32 +344,38 @@ exports.uploadAgentPhoto = asyncHandler(async (req, res, next) => {
 
 exports.requestLinkToAgency = asyncHandler(async (req, res, next) => {
   const { agencyId } = req.body;
+  const user = req.user;
 
-  if (!mongoose.Types.ObjectId.isValid(agencyId)) {
-    return next(new ErrorResponse(`Invalid agency ID format`, 400));
-  }
-
-  const agent = await Agent.findOne({ user: req.user.id });
-  const agency = await Agency.findById(agencyId);
-
+  const agent = await Agent.findOne({ user: user.id });
   if (!agent) {
-    return next(new ErrorResponse(`Agent not found for user ${req.user.id}`, 404));
+    return next(new ErrorResponse('No agent profile found for this user', 404));
   }
 
+  const agency = await Agency.findById(agencyId);
   if (!agency) {
-    return next(new ErrorResponse(`Agency not found with id of ${agencyId}`, 404));
+    return next(new ErrorResponse('Agency not found', 404));
+  }
+
+  if (agency.approvalStatus !== 'approved') {
+    return next(new ErrorResponse('Cannot link to an unapproved agency', 400));
   }
 
   const existingRequest = agent.linkingRequests.find(
-    (req) => req.agency.toString() === agencyId && req.status === 'pending'
+    req => req.agency.toString() === agencyId && req.status === 'pending'
   );
 
   if (existingRequest) {
-    return next(new ErrorResponse(`You already have a pending request to this agency`, 400));
+    return next(new ErrorResponse('A pending request already exists for this agency', 400));
   }
 
   agent.linkingRequests.push({ agency: agencyId });
   await agent.save();
+
+  await Notification.create({
+    user: agency.user,
+    type: 'agency_link_request',
+    message: `Agent ${user.firstName} ${user.lastName} has requested to link with your agency.`,
+  });
 
   res.status(200).json({ success: true, data: agent });
 });
@@ -365,51 +383,45 @@ exports.requestLinkToAgency = asyncHandler(async (req, res, next) => {
 exports.approveAgentLink = asyncHandler(async (req, res, next) => {
   const { agentId, requestId } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(agentId)) {
-    return next(new ErrorResponse(`Invalid agent ID format: ${agentId}`, 400));
-  }
-  if (!mongoose.Types.ObjectId.isValid(requestId)) {
-    return next(new ErrorResponse(`Invalid request ID format: ${requestId}`, 400));
-  }
-
   const agent = await Agent.findById(agentId);
   if (!agent) {
-    return next(new ErrorResponse(`Agent not found with id of ${agentId}`, 404));
+    return next(new ErrorResponse('Agent not found', 404));
   }
 
   const agency = await Agency.findOne({ user: req.user.id });
   if (!agency) {
-    return next(new ErrorResponse(`Agency not found for user ${req.user.id}`, 404));
+    return next(new ErrorResponse('Agency not found for this user', 404));
   }
 
-  if (req.user.role !== 'admin' && agency.user.toString() !== req.user.id) {
-    return next(
-      new ErrorResponse(`User ${req.user.id} is not authorized to approve this agent`, 401)
-    );
-  }
-
-  const request = agent.linkingRequests.find(req => req._id.toString() === requestId);
+  const request = agent.linkingRequests.id(requestId);
   if (!request) {
-    return next(new ErrorResponse(`Linking request not found with id of ${requestId}`, 404));
+    return next(new ErrorResponse('Linking request not found', 404));
   }
 
   if (request.agency.toString() !== agency._id.toString()) {
-    return next(
-      new ErrorResponse(`Linking request does not belong to agency ${agency._id}`, 403)
-    );
+    return next(new ErrorResponse('Request does not belong to this agency', 403));
   }
 
   request.status = 'approved';
   agent.agency = agency._id;
-  agent.approvalStatus = 'approved';
-
-  agent.linkingRequests.forEach(req => {
+  
+  agent.linkingRequests = agent.linkingRequests.map(req => {
     if (req._id.toString() !== requestId && req.status === 'pending') {
       req.status = 'rejected';
     }
+    return req;
   });
 
   await agent.save();
+  
+  agency.agents.push(agentId);
+  await agency.save();
+
+  await Notification.create({
+    user: agent.user,
+    type: 'agency_link_approved',
+    message: `Your request to link with ${agency.name} has been approved.`,
+  });
 
   res.status(200).json({ success: true, data: agent });
 });
@@ -417,41 +429,26 @@ exports.approveAgentLink = asyncHandler(async (req, res, next) => {
 exports.rejectAgentLink = asyncHandler(async (req, res, next) => {
   const { agentId, requestId } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(agentId) || !mongoose.Types.ObjectId.isValid(requestId)) {
-    return next(new ErrorResponse(`Invalid ID format`, 400));
-  }
-
   const agent = await Agent.findById(agentId);
   if (!agent) {
-    return next(new ErrorResponse(`Agent not found with id of ${agentId}`, 404));
+    return next(new ErrorResponse('Agent not found', 404));
   }
 
   const agency = await Agency.findOne({ user: req.user.id });
   if (!agency) {
-    return next(new ErrorResponse(`Agency not found for user ${req.user.id}`, 404));
-  }
-
-  if (req.user.role !== 'admin' && agency.user.toString() !== req.user.id) {
-    return next(
-      new ErrorResponse(`User ${req.user.id} is not authorized to reject this agent`, 401)
-    );
+    return next(new ErrorResponse('Agency not found for this user', 404));
   }
 
   const request = agent.linkingRequests.id(requestId);
   if (!request) {
-    return next(new ErrorResponse(`Linking request not found`, 404));
+    return next(new ErrorResponse('Linking request not found', 404));
   }
 
   if (request.agency.toString() !== agency._id.toString()) {
-    return next(
-      new ErrorResponse(`Linking request does not belong to agency ${agency._id}`, 403)
-    );
+    return next(new ErrorResponse('Request does not belong to this agency', 403));
   }
 
   request.status = 'rejected';
-  await agent.save();
-
-  agent.linkingRequests = agent.linkingRequests.filter(req => req.status !== 'rejected');
   await agent.save();
 
   res.status(200).json({ success: true, data: agent });

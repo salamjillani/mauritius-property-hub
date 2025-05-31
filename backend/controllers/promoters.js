@@ -4,6 +4,16 @@ const Promoter = require('../models/Promoter');
 const Property = require('../models/Property');
 const AuditLog = require('../models/Log');
 
+exports.getMyPromoterProfile = asyncHandler(async (req, res, next) => {
+  const promoter = await Promoter.findOne({ user: req.user.id });
+  
+  if (!promoter) {
+    return next(new ErrorResponse('No promoter profile found for this user', 404));
+  }
+
+  res.status(200).json({ success: true, data: promoter });
+});
+
 // Get all promoters
 exports.getPromoters = asyncHandler(async (req, res, next) => {
   const { name, status } = req.query;
@@ -38,22 +48,15 @@ exports.createPromoter = asyncHandler(async (req, res, next) => {
   res.status(201).json({ success: true, data: promoter });
 });
 
-// Update promoter
 exports.updatePromoter = asyncHandler(async (req, res, next) => {
   const promoter = await Promoter.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
   });
+  
   if (!promoter) {
     return next(new ErrorResponse(`Promoter not found with id ${req.params.id}`, 404));
   }
-
-  await AuditLog.create({
-    user: req.user.id,
-    action: 'update_promoter',
-    resourceId: promoter._id,
-    resourceType: 'Promoter',
-  });
 
   res.status(200).json({ success: true, data: promoter });
 });

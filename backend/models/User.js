@@ -48,6 +48,11 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     default: null, // null for unlimited
   },
+   agency: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Agency',
+  },
+  
   goldCards: {
     type: Number,
     default: 0,

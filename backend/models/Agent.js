@@ -15,6 +15,13 @@ const AgentSchema = new mongoose.Schema({
     type: String,
     default: 'default-avatar.jpg',
   },
+  professionalTitle: String,
+  specialization: [String],
+  biography: String,
+  website: String,
+  facebook: String,
+  twitter: String,
+  linkedin: String,
   isPremium: {
     type: Boolean,
     default: false,
@@ -24,7 +31,7 @@ const AgentSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
-  agency: {
+   agency: {
     type: mongoose.Schema.ObjectId,
     ref: 'Agency',
   },
@@ -33,7 +40,6 @@ const AgentSchema = new mongoose.Schema({
       agency: {
         type: mongoose.Schema.ObjectId,
         ref: 'Agency',
-        required: true,
       },
       status: {
         type: String,
