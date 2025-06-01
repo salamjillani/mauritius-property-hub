@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Phone, Mail, Globe, Facebook, Twitter, Linkedin, Heart, Bed, Bath, MapPin, Square } from "lucide-react";
+import { User, Phone, Mail, Globe, Facebook, Twitter, Linkedin, Heart, Bed, Bath, MapPin, Square, Clock, CheckCircle} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ const Profile = () => {
   const [agencies, setAgencies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [listings, setListings] = useState<any[]>([]);
@@ -258,29 +259,30 @@ const Profile = () => {
     }
   };
 
-  const submitRegistrationForm = async (formData: any) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registration-requests`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to submit registration");
-      }
-      
-      const data = await response.json();
-      toast({ title: "Success", description: "Registration submitted for approval" });
-      setShowRegistrationForm(false);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to submit registration", variant: "destructive" });
+ const submitRegistrationForm = async (formData: any) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registration-requests`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+    
+    if (!response.ok) {
+      throw new Error("Failed to submit registration");
     }
-  };
+    
+    const data = await response.json();
+    toast({ title: "Success", description: "Registration submitted for approval" });
+    setShowRegistrationForm(false);
+    setRegistrationSubmitted(true); // Add this line
+  } catch (error) {
+    toast({ title: "Error", description: "Failed to submit registration", variant: "destructive" });
+  }
+};
 
   if (isLoading) {
     return (
@@ -406,22 +408,24 @@ const Profile = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="listings">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              {showRegistrationForm ? (
-                <RegistrationForm 
-                  user={user} 
-                  onSubmit={submitRegistrationForm} 
-                />
-              ) : (
-                <ListingsTab 
-                  userId={user._id} 
-                  user={user} 
-                  listings={listings} 
-                />
-              )}
-            </div>
-          </TabsContent>
+  <TabsContent value="listings">
+  <div className="bg-white p-6 rounded-xl shadow-sm">
+    {showRegistrationForm ? (
+      <RegistrationForm 
+        user={user} 
+        onSubmit={submitRegistrationForm} 
+      />
+    ) : registrationSubmitted || (user.approvalStatus === 'pending') ? (
+      <PendingApprovalMessage user={user} />
+    ) : (
+      <ListingsTab 
+        userId={user._id} 
+        user={user} 
+        listings={listings} 
+      />
+    )}
+  </div>
+</TabsContent>
         </Tabs>
       </div>
       <Footer />
@@ -611,6 +615,44 @@ const RegistrationForm = ({ user, onSubmit }) => {
     </div>
   );
 };
+
+const PendingApprovalMessage = ({ user }) => (
+  <div className="max-w-2xl mx-auto text-center py-12">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="bg-blue-50 border border-blue-200 rounded-xl p-8"
+    >
+      <div className="flex justify-center mb-4">
+        <div className="bg-blue-100 p-3 rounded-full">
+          <Clock className="h-8 w-8 text-blue-600" />
+        </div>
+      </div>
+      
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        Application Under Review
+      </h2>
+      
+      <p className="text-gray-600 mb-6 leading-relaxed">
+        Thank you for submitting your {user.role} registration! We have received your application 
+        and our team is currently reviewing your information. You will receive an email notification 
+        at <strong>{user.email}</strong> once your account has been approved.
+      </p>
+      
+      <div className="bg-white p-4 rounded-lg border border-blue-100 mb-6">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <span>Application submitted successfully</span>
+        </div>
+      </div>
+      
+      <p className="text-sm text-gray-500">
+        This process typically takes 1-3 business days. Thank you for your patience!
+      </p>
+    </motion.div>
+  </div>
+);
 
 const ListingsTab = ({ userId, user, listings }) => (
   <div className="space-y-6">
