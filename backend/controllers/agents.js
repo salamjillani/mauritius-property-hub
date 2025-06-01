@@ -43,7 +43,10 @@ exports.getMyAgentProfile = asyncHandler(async (req, res, next) => {
     });
 
   if (!agent) {
-    return next(new ErrorResponse('No agent profile found for this user', 404));
+    return res.status(200).json({
+      success: true,
+      data: null
+    });
   }
 
   res.status(200).json({ success: true, data: agent });
