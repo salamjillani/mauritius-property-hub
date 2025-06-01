@@ -806,7 +806,6 @@ exports.getRegistrationRequests = asyncHandler(async (req, res, next) => {
  * @route   POST /api/registration-requests
  * @access  Private
  */
-// Backend controller fix - admin.js
 exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
   const {
     gender,
@@ -818,15 +817,10 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
     placeOfBirth,
     city,
     country,
-    agreeToTerms,
-    termsAccepted, // Also accept this field name from frontend
-    role
+    termsAccepted,
   } = req.body;
 
-  // Check both possible field names for terms acceptance
-  const hasAcceptedTerms = agreeToTerms || termsAccepted;
-  
-  if (!hasAcceptedTerms) {
+  if (!termsAccepted) {
     return next(new ErrorResponse('You must accept the terms and conditions', 400));
   }
 
@@ -835,8 +829,7 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('User not found', 404));
   }
 
-  // Check for existing pending request
-  const existingRequest = await RegistrationRequest.findOne({ 
+   const existingRequest = await RegistrationRequest.findOne({ 
     user: req.user.id, 
     status: 'pending' 
   });
@@ -860,24 +853,21 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
     placeOfBirth,
     city,
     country,
-    role: role || req.user.role, // Use provided role or fall back to user's current role
     status: 'pending',
   });
 
-  // Create notification
   await Notification.create({
     user: req.user.id,
     type: 'registration_request_submitted',
     message: 'Your registration request has been submitted and is pending approval.',
   });
 
-  // Create log entry
   await Log.create({
     user: req.user.id,
     action: 'Registration request created',
     resource: 'RegistrationRequest',
     resourceId: request._id,
-    details: `Registration request created by user ${user.email} for role: ${role || req.user.role}`,
+    details: `Registration request created by user ${user.email}`,
   });
 
   res.status(201).json({ success: true, data: request });

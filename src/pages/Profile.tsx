@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Phone, Mail, Globe, Facebook, Twitter, Linkedin } from "lucide-react";
+import { User, Phone, Mail, Globe, Facebook, Twitter, Linkedin, Heart, Bed, Bath, MapPin, Square } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
+
+import { Link } from "react-router-dom";
 import { uploadAgentPhotoToCloudinary, uploadAgencyLogoToCloudinary, uploadPromoterLogoToCloudinary } from "@/utils/cloudinaryService";
 
 const Profile = () => {
@@ -23,18 +26,8 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [registrationData, setRegistrationData] = useState({
-    gender: "",
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-    email: "",
-    companyName: "",
-    placeOfBirth: "",
-    city: "",
-    country: "",
-    agreeToTerms: false
-  });
+  const [listings, setListings] = useState<any[]>([]);
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -46,36 +39,13 @@ const Profile = () => {
         const data = await response.json();
         setUser(data.data);
         
-  
-if (data.data.role === 'agency') {
-  try {
-    const agencyRes = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/my-agency`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    
-    if (agencyRes.status === 404) {
-      // User doesn't have an agency profile yet - this is normal for new agencies
-      setProfile({}); 
-      console.log('No agency profile found - user can create one');
-    } else if (!agencyRes.ok) {
-      throw new Error(`Failed to load agency profile: ${agencyRes.status}`);
-    } else {
-      const agencyData = await agencyRes.json();
-      setProfile(agencyData.data);
-    }
-  } catch (error) {
-    console.error('Agency profile fetch error:', error);
-    // Only show error toast for actual errors, not 404s
-    if (!error.message.includes('404')) {
-      toast({ 
-        title: "Error", 
-        description: "Failed to load agency profile", 
-        variant: "destructive" 
-      });
-    }
-    setProfile({}); // Set empty profile as fallback
-  }
-}
+        if (data.data.role === 'agency') {
+          const agencyRes = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/my-agency`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const agencyData = await agencyRes.json();
+          setProfile(agencyData.data);
+        } 
         else if (data.data.role === 'agent') {
           const agentRes = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/my-profile`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -96,10 +66,29 @@ if (data.data.role === 'agency') {
           const promoterData = await promoterRes.json();
           setProfile(promoterData.data);
         }
+        
+        if (['agent', 'agency', 'promoter'].includes(data.data.role) && 
+            data.data.approvalStatus === 'pending') {
+          setShowRegistrationForm(true);
+        }
+        
+        fetchListings(token, data.data._id);
       } catch (error) {
         toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
       } finally {
         setIsLoading(false);
+      }
+    };
+    
+    const fetchListings = async (token: string, userId: string) => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?owner=${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        setListings(data.data);
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load listings", variant: "destructive" });
       }
     };
     
@@ -269,85 +258,25 @@ if (data.data.role === 'agency') {
     }
   };
 
-  const handleRegistrationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (type === "checkbox") {
-      setRegistrationData({
-        ...registrationData,
-        [name]: (e.target as HTMLInputElement).checked
+  const submitRegistrationForm = async (formData: any) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registration-requests`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       });
-    } else {
-      setRegistrationData({
-        ...registrationData,
-        [name]: value
-      });
-    }
-  };
-
-const submitRegistration = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  const requiredFields = ['gender', 'firstName', 'lastName', 'phoneNumber', 'email', 'city', 'country'];
-  const missingFields = requiredFields.filter(field => !registrationData[field]);
-  
-  if (missingFields.length > 0) {
-    toast({ 
-      title: "Missing Information", 
-      description: `Please fill in: ${missingFields.join(', ')}`, 
-      variant: "destructive" 
-    });
-    return;
-  }
-  
-  if (!registrationData.agreeToTerms) {
-    toast({ 
-      title: "Terms Required", 
-      description: "You must accept the terms and conditions", 
-      variant: "destructive" 
-    });
-    return;
-  }
-  
-  try {
-    const token = localStorage.getItem("token");
-    
-    // Prepare the request payload
-    const requestPayload = {
-      gender: registrationData.gender,
-      firstName: registrationData.firstName,
-      lastName: registrationData.lastName,
-      phoneNumber: registrationData.phoneNumber,
-      email: registrationData.email,
-      companyName: registrationData.companyName,
-      placeOfBirth: registrationData.placeOfBirth,
-      city: registrationData.city,
-      country: registrationData.country,
-      role: user.role,
-      agreeToTerms: registrationData.agreeToTerms // Send this field directly
-    };
-    
-    console.log('Submitting registration request:', requestPayload); // Debug log
-    
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registration-requests`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestPayload),
-    });
-
-    const responseData = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(responseData.message || "Failed to submit registration");
-    }
-
-    toast({ 
-      title: "Success", 
-      description: "Registration request submitted successfully. You will be notified once approved." 
-    });
+      
+      if (!response.ok) {
+        throw new Error("Failed to submit registration");
+      }
+      
+      const data = await response.json();
+      toast({ title: "Success", description: "Registration submitted for approval" });
+      setShowRegistrationForm(false);
     } catch (error) {
       toast({ title: "Error", description: "Failed to submit registration", variant: "destructive" });
     }
@@ -376,9 +305,6 @@ const submitRegistration = async (e: React.FormEvent) => {
       </div>
     );
   }
-
-  const showRegistrationForm = ['agent', 'agency', 'promoter'].includes(user.role) && 
-                             user.approvalStatus !== 'approved';
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -411,9 +337,6 @@ const submitRegistration = async (e: React.FormEvent) => {
               {user.role === 'agency' && profile && (
                 <p className="text-xl font-semibold mt-1">{profile.name}</p>
               )}
-              {showRegistrationForm && (
-                <p className="text-yellow-600 font-medium mt-1">Pending Approval</p>
-              )}
             </div>
             <div className="flex-1 flex flex-col gap-2">
               <div className="flex items-center gap-2">
@@ -424,11 +347,17 @@ const submitRegistration = async (e: React.FormEvent) => {
                 <Phone size={20} />
                 <p>{user.phone || "Not provided"}</p>
               </div>
+              {user.approvalStatus === 'approved' && (
+                <div className="mt-2 bg-teal-50 p-3 rounded-lg">
+                  <p className="text-sm font-medium">Listings Allowed: {user.listingLimit || 'Unlimited'}</p>
+                  <p className="text-sm font-medium">Gold Cards: {user.goldCards}</p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
 
-        <Tabs defaultValue={showRegistrationForm ? "listings" : "profile"}>
+        <Tabs defaultValue="profile">
           <TabsList className="mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="listings">Listings</TabsTrigger>
@@ -480,158 +409,16 @@ const submitRegistration = async (e: React.FormEvent) => {
           <TabsContent value="listings">
             <div className="bg-white p-6 rounded-xl shadow-sm">
               {showRegistrationForm ? (
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold">Registration Required</h2>
-                  <p className="text-gray-700">
-                    Thank you for your interest. At the moment, you are not yet eligible to act as an {user.role} based on your current status. 
-                    Kindly complete the form below to apply for eligibility and approval. We look forward to welcoming you soon!
-                  </p>
-                  
-                  <form onSubmit={submitRegistration} className="space-y-6">
-                    <h3 className="text-xl font-semibold">Please confirm your activity:</h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <Label htmlFor="gender">Gender</Label>
-                        <select
-                          id="gender"
-                          name="gender"
-                          value={registrationData.gender}
-                          onChange={handleRegistrationChange}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">Select Gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          value={registrationData.firstName}
-                          onChange={handleRegistrationChange}
-                          placeholder="First Name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          value={registrationData.lastName}
-                          onChange={handleRegistrationChange}
-                          placeholder="Last Name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="phoneNumber">Phone Number</Label>
-                        <Input
-                          id="phoneNumber"
-                          name="phoneNumber"
-                          value={registrationData.phoneNumber}
-                          onChange={handleRegistrationChange}
-                          placeholder="Phone Number"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={registrationData.email}
-                          onChange={handleRegistrationChange}
-                          placeholder="Email Address"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="companyName">Company Name</Label>
-                        <Input
-                          id="companyName"
-                          name="companyName"
-                          value={registrationData.companyName}
-                          onChange={handleRegistrationChange}
-                          placeholder="Company Name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="placeOfBirth">Place of Birth</Label>
-                        <Input
-                          id="placeOfBirth"
-                          name="placeOfBirth"
-                          value={registrationData.placeOfBirth}
-                          onChange={handleRegistrationChange}
-                          placeholder="Place of Birth"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          name="city"
-                          value={registrationData.city}
-                          onChange={handleRegistrationChange}
-                          placeholder="City"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="country">Country</Label>
-                        <Input
-                          id="country"
-                          name="country"
-                          value={registrationData.country}
-                          onChange={handleRegistrationChange}
-                          placeholder="Country"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6">
-                      <h4 className="text-lg font-semibold mb-3">Terms and Conditions</h4>
-                      <p className="text-gray-700 mb-4">
-                        By submitting this form, I confirm that all information provided is accurate and complete. 
-                        I agree to comply with all platform rules and regulations. I understand that my application 
-                        will be reviewed and approval is at the sole discretion of the platform administrators.
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="agreeToTerms"
-                          name="agreeToTerms"
-                          checked={registrationData.agreeToTerms}
-                          onChange={handleRegistrationChange}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                        <Label htmlFor="agreeToTerms">
-                          I agree to the terms and conditions
-                        </Label>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={!registrationData.agreeToTerms}
-                      className="w-full md:w-auto"
-                    >
-                      Submit Registration
-                    </Button>
-                  </form>
-                </div>
+                <RegistrationForm 
+                  user={user} 
+                  onSubmit={submitRegistrationForm} 
+                />
               ) : (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">Your Listings</h2>
-                  <Button onClick={() => navigate("/properties/add")}>Add New Property</Button>
-                </div>
+                <ListingsTab 
+                  userId={user._id} 
+                  user={user} 
+                  listings={listings} 
+                />
               )}
             </div>
           </TabsContent>
@@ -642,6 +429,216 @@ const submitRegistration = async (e: React.FormEvent) => {
   );
 };
 
+const RegistrationForm = ({ user, onSubmit }) => {
+  const [formData, setFormData] = useState({
+    gender: '',
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    phoneNumber: user.phone || '',
+    email: user.email || '',
+    companyName: '',
+    placeOfBirth: '',
+    city: '',
+    country: '',
+    termsAccepted: false
+  });
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+        <p className="font-medium text-amber-800">
+          Thank you for your interest. At the moment, you are not yet eligible to act as an {user.role} based on your current status. Kindly complete the form below to apply for eligibility and approval. We look forward to welcoming you soon!
+        </p>
+      </div>
+
+      <h2 className="text-2xl font-bold mb-6 text-center">Please confirm your activity</h2>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="gender">Gender</Label>
+            <Select 
+              name="gender"
+              value={formData.gender}
+              onValueChange={(value) => setFormData({...formData, gender: value})}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="companyName">Company Name</Label>
+            <Input
+              id="companyName"
+              name="companyName"
+              value={formData.companyName}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Input
+              id="phoneNumber"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              disabled
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="placeOfBirth">Place of Birth</Label>
+            <Input
+              id="placeOfBirth"
+              name="placeOfBirth"
+              value={formData.placeOfBirth}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="country">Country</Label>
+          <Input
+            id="country"
+            name="country"
+            value={formData.country}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        
+        <div className="flex items-start space-x-2">
+          <input
+            type="checkbox"
+            id="termsAccepted"
+            name="termsAccepted"
+            checked={formData.termsAccepted}
+            onChange={handleChange}
+            required
+            className="mt-1"
+          />
+          <Label htmlFor="termsAccepted" className="font-normal">
+            I agree to the Terms and Conditions of RealEstate
+          </Label>
+        </div>
+        
+        <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded-lg">
+          <p><strong>Terms and Conditions:</strong></p>
+          <p>1. By submitting this form, you confirm that all information provided is accurate.</p>
+          <p>2. You agree to comply with all platform rules and regulations.</p>
+          <p>3. Approval is subject to verification by our admin team.</p>
+          <p>4. You may be required to provide additional documentation for verification.</p>
+        </div>
+        
+        <Button type="submit" className="w-full">
+          Submit Registration
+        </Button>
+      </form>
+    </div>
+  );
+};
+
+const ListingsTab = ({ userId, user, listings }) => (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <h2 className="text-2xl font-bold">My Listings</h2>
+      <Link to="/properties/add">
+        <Button>Add New Listing</Button>
+      </Link>
+    </div>
+    {user && (
+      <p className="text-gray-600">
+        Listings Remaining: {user.listingLimit === null ? 'Unlimited' : user.listingLimit - listings.length} | 
+        Gold Cards Available: {user.goldCards}
+      </p>
+    )}
+    {listings.length === 0 ? (
+      <p className="text-gray-500">You have no listings yet.</p>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {listings.map((listing) => (
+          <PropertyCard key={listing._id} property={listing} currency="MUR" />
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+// AgencyForm Component
 const AgencyForm = ({ profile, setProfile, file, setFile, handleSubmit, isSaving }) => (
   <form onSubmit={handleSubmit} className="space-y-6">
     <h2 className="text-2xl font-bold">Agency Profile</h2>
@@ -751,6 +748,7 @@ const AgencyForm = ({ profile, setProfile, file, setFile, handleSubmit, isSaving
   </form>
 );
 
+// AgentForm Component
 const AgentForm = ({ 
   profile, 
   setProfile, 
@@ -940,6 +938,7 @@ const AgentForm = ({
   </form>
 );
 
+// PromoterForm Component
 const PromoterForm = ({ profile, setProfile, file, setFile, handleSubmit, isSaving }) => (
   <form onSubmit={handleSubmit} className="space-y-6">
     <h2 className="text-2xl font-bold">Promoter Profile</h2>
@@ -1040,5 +1039,159 @@ const PromoterForm = ({ profile, setProfile, file, setFile, handleSubmit, isSavi
     </Button>
   </form>
 );
+
+// PropertyCard Component (if not already included)
+const PropertyCard = ({ 
+  property, 
+  currency = "MUR",
+  variant = "standard"
+}) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const formatPrice = (price) => {
+    let convertedPrice = price;
+    let currencySymbol = "₨";
+    
+    if (currency === "USD") {
+      convertedPrice = price / 45;
+      currencySymbol = "$";
+    } else if (currency === "EUR") {
+      convertedPrice = price / 50;
+      currencySymbol = "€";
+    }
+    
+    return `${currencySymbol} ${convertedPrice.toLocaleString()}`;
+  };
+
+  const toggleFavorite = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFavorite(!isFavorite);
+  };
+  
+  const getImageUrl = () => {
+    if (!property.images || property.images.length === 0) {
+      return "https://via.placeholder.com/400x300?text=No+Image";
+    }
+    
+    const image = property.images[0];
+    if (!image || !image.url) {
+      return "https://via.placeholder.com/400x300?text=No+Image";
+    }
+    
+    if (image.url.startsWith('http')) {
+      return image.url;
+    }
+    
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${image.url}`;
+  };
+
+  return (
+    <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl rounded-xl cursor-pointer ${
+      property.isGoldCard
+        ? "ring-4 ring-amber-400 bg-amber-50 scale-105"
+        : variant === 'featured' 
+          ? (property.isPremium ? "ring-2 ring-amber-400 shadow-md transform hover:-translate-y-2" : "transform hover:-translate-y-1")
+          : ""
+    }`}>
+      <Link to={`/properties/${property.category || ""}/${property._id}`} className="block">
+        <div className={`relative ${variant === 'simple' ? 'h-48' : 'h-64'} overflow-hidden`}>
+          <img 
+            src={getImageUrl()} 
+            alt={property.title} 
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+          />
+          
+          <div className="absolute top-3 left-3 bg-teal-600 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
+            {property.type || "Property"}
+          </div>
+          
+          {(property.isPremium || property.isGoldCard) && (
+            <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
+              {property.isGoldCard ? "Gold" : "Premium"}
+            </div>
+          )}
+          
+          {property.agency?.name && property.agency?.logoUrl && (
+            <div className="absolute bottom-3 left-3 bg-teal-600/90 text-white text-sm font-semibold rounded-full py-1 pl-2 pr-3 shadow-md flex items-center gap-2 max-w-[150px] truncate z-10">
+              <img
+                src={property.agency.logoUrl}
+                alt={property.agency.name}
+                className="h-5 w-5 rounded-full object-cover"
+                onError={(e) => (e.currentTarget.src = "/default-agency-logo.png")}
+              />
+              <span className="truncate">{property.agency.name}</span>
+            </div>
+          )}
+          
+          <div className="absolute top-3 right-3 z-10">
+            <button 
+              onClick={toggleFavorite}
+              className={`w-8 h-8 flex items-center justify-center rounded-full shadow-md ${
+                isFavorite 
+                  ? "bg-red-500 text-white" 
+                  : "bg-white/60 backdrop-blur-sm text-gray-700"
+              } transition-all duration-200`}
+            >
+              <Heart className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
+            </button>
+          </div>
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
+        </div>
+        
+        <CardContent className="p-5">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-2">
+                {property.title}
+              </h3>
+              
+              <div className="flex items-center text-sm text-gray-500 mb-2">
+                <MapPin className="h-4 w-4 mr-1 text-teal-600" />
+                <span>{property.address?.city || "Location unavailable"}</span>
+              </div>
+              
+              <div className="flex items-center justify-start gap-4 mt-3 py-2 border-t border-gray-100">
+                {property.bedrooms !== undefined && property.bedrooms > 0 && (
+                  <div className="flex items-center text-gray-600">
+                    <Bed className="h-4 w-4 mr-1 text-blue-600" />
+                    <span className="text-xs">{property.bedrooms}</span>
+                  </div>
+                )}
+                
+                {property.bathrooms !== undefined && property.bathrooms > 0 && (
+                  <div className="flex items-center text-gray-600">
+                    <Bath className="h-4 w-4 mr-1 text-teal-600" />
+                    <span className="text-xs">{property.bathrooms}</span>
+                  </div>
+                )}
+                
+                {property.size !== undefined && (
+                  <div className="flex items-center text-gray-600">
+                    <Square className="h-4 w-4 mr-1 text-amber-600" />
+                    <span className="text-xs">{property.size} m²</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <div className="font-bold text-blue-900 text-right">
+                {formatPrice(property.price)}
+                {property.rentalPeriod && (
+                  <span className="text-sm text-gray-600 ml-1">
+                    /{property.rentalPeriod}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Link>
+    </Card>
+  );
+};
+
 
 export default Profile;

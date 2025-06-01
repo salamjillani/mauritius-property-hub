@@ -51,9 +51,7 @@ const AdminRequests = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/admin/requests/${requestId}/approve`,
+        `${import.meta.env.VITE_API_URL}/api/admin/requests/${requestId}/approve`,
         {
           method: "POST",
           headers: {
@@ -61,7 +59,7 @@ const AdminRequests = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            listingLimit: parseInt(listingLimit),
+            listingLimit: listingLimit === 'unlimited' ? null : parseInt(listingLimit),
             goldCards: parseInt(goldCards),
           }),
         }
@@ -85,9 +83,7 @@ const AdminRequests = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/admin/requests/${requestId}/reject`,
+        `${import.meta.env.VITE_API_URL}/api/admin/requests/${requestId}/reject`,
         {
           method: "POST",
           headers: {
@@ -137,36 +133,24 @@ const AdminRequests = () => {
               <Card key={request._id}>
                 <CardHeader>
                   <CardTitle>
-                    {request.user.firstName} {request.user.lastName} (
-                    {request.user.role})
+                    {request.firstName} {request.lastName} (
+                    {request.user?.role || 'N/A'})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p>
-                    <strong>Email:</strong> {request.user.email}
-                  </p>
-                  <p>
-                    <strong>Gender:</strong> {request.gender}
-                  </p>
-                  <p>
-                    <strong>Phone Number:</strong> {request.phoneNumber}
-                  </p>
-                  <p>
-                    <strong>Company Name:</strong>{" "}
-                    {request.companyName || "N/A"}
-                  </p>
-                  <p>
-                    <strong>Place of Birth:</strong> {request.placeOfBirth}
-                  </p>
-                  <p>
-                    <strong>City:</strong> {request.city}
-                  </p>
-                  <p>
-                    <strong>Country:</strong> {request.country}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {request.status}
-                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p><strong>Gender:</strong> {request.gender}</p>
+                      <p><strong>Phone:</strong> {request.phoneNumber}</p>
+                      <p><strong>Email:</strong> {request.email}</p>
+                    </div>
+                    <div>
+                      <p><strong>Company:</strong> {request.companyName || "N/A"}</p>
+                      <p><strong>Place of Birth:</strong> {request.placeOfBirth}</p>
+                      <p><strong>City:</strong> {request.city}, {request.country}</p>
+                    </div>
+                  </div>
+                  
                   <div className="mt-4">
                     <Label htmlFor={`listingLimit-${request._id}`}>
                       Listing Limit
@@ -189,6 +173,7 @@ const AdminRequests = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  
                   <div className="mt-4">
                     <Label htmlFor={`goldCards-${request._id}`}>
                       Gold Cards
@@ -201,7 +186,8 @@ const AdminRequests = () => {
                       onChange={(e) => setGoldCards(e.target.value)}
                     />
                   </div>
-                  <div className="mt-4 flex space-x-2">
+                  
+                  <div className="mt-6 flex space-x-2">
                     <Button onClick={() => handleApprove(request._id)}>
                       Approve
                     </Button>

@@ -2,6 +2,8 @@ const User = require('../models/User');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 
+const crypto = require('crypto');
+
 exports.register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, accountType } = req.body;
 
@@ -14,7 +16,8 @@ exports.register = asyncHandler(async (req, res, next) => {
     lastName,
     email,
     password,
-    role: accountType
+    role: accountType,
+    approvalStatus: 'pending',
   });
 
   sendTokenResponse(user, 201, res);
@@ -23,7 +26,6 @@ exports.register = asyncHandler(async (req, res, next) => {
 exports.adminRegister = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, adminSecret } = req.body;
 
-  // Optional: Require a secret key for admin registration
   if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
     return next(new ErrorResponse('Invalid admin secret', 403));
   }
@@ -38,7 +40,8 @@ exports.adminRegister = asyncHandler(async (req, res, next) => {
     lastName,
     email,
     password,
-    role: 'admin'
+    role: 'admin',
+    approvalStatus: 'approved',
   });
 
   sendTokenResponse(user, 201, res);
@@ -121,7 +124,10 @@ const sendTokenResponse = (user, statusCode, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        approvalStatus: user.approvalStatus,
+        listingLimit: user.listingLimit,
+        goldCards: user.goldCards
       }
     });
 };

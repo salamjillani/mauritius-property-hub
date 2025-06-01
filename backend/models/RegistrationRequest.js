@@ -1,11 +1,11 @@
-// backend/models/RegistrationRequest.js
 const mongoose = require('mongoose');
 
 const RegistrationRequestSchema = new mongoose.Schema({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.ObjectId,
     ref: 'User',
     required: true,
+    unique: true,
   },
   gender: {
     type: String,
@@ -30,8 +30,7 @@ const RegistrationRequestSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    trim: true,
-    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email'],
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please add a valid email'],
   },
   companyName: {
     type: String,
@@ -39,28 +38,27 @@ const RegistrationRequestSchema = new mongoose.Schema({
   },
   placeOfBirth: {
     type: String,
-    required: true,
     trim: true,
   },
   city: {
     type: String,
-    required: true,
     trim: true,
   },
   country: {
     type: String,
-    required: true,
     trim: true,
+  },
+  termsAccepted: {
+    type: Boolean,
+    default: false,
+    required: true,
   },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
-  rejectionReason: {
-    type: String,
-    trim: true,
-  },
+  rejectionReason: String,
   createdAt: {
     type: Date,
     default: Date.now,
