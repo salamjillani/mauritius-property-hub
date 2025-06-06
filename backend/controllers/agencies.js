@@ -79,21 +79,45 @@ exports.getAgency = asyncHandler(async (req, res, next) => {
 });
 
 exports.getMyAgency = asyncHandler(async (req, res, next) => {
-  const agency = await Agency.findOne({ user: req.user.id })
-    .populate('subscription')
-    .populate({
-      path: 'agents',
-      populate: {
-        path: 'user',
-        select: 'firstName lastName email avatarUrl'
-      }
-    });
+  try {
+    const agency = await Agency.findOne({ user: req.user.id })
+      .populate('subscription')
+      .populate({
+        path: 'agents',
+        populate: {
+          path: 'user',
+          select: 'firstName lastName email avatarUrl'
+        }
+      });
 
-  if (!agency) {
-    return next(new ErrorResponse('No agency associated with this user', 404));
+    if (!agency) {
+      // Return a default agency object with empty values
+      return res.status(200).json({
+        success: true,
+        data: {
+          _id: null,
+          name: "",
+          logoUrl: "",
+          description: "",
+          establishedYear: null,
+          website: "",
+          facebook: "",
+          twitter: "",
+          linkedin: "",
+          approvalStatus: "pending",
+          isPremium: false,
+          agents: [],
+          createdAt: new Date(),
+          user: req.user.id
+        }
+      });
+    }
+
+    res.status(200).json({ success: true, data: agency });
+  } catch (error) {
+    console.error("Error fetching agency:", error);
+    return next(new ErrorResponse('Server error while fetching agency', 500));
   }
-
-  res.status(200).json({ success: true, data: agency });
 });
 
 // @desc    Upgrade agency plan
@@ -150,17 +174,27 @@ exports.createAgency = asyncHandler(async (req, res, next) => {
   });
 });
 
+// controllers/agencies.js
 exports.updateAgency = asyncHandler(async (req, res, next) => {
+  // Validate ID
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorResponse('Invalid agency ID', 400));
+  }
+
   let agency = await Agency.findById(req.params.id);
-
+  
   if (!agency) {
-    return next(new ErrorResponse(`Agency not found with id of ${req.params.id}`, 404));
+    return next(new ErrorResponse('Agency not found', 404));
   }
 
-  if (agency.user.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this agency profile`, 401));
+  // Handle new agency creation
+  if (!agency._id) {
+    req.body.user = req.user.id;
+    agency = await Agency.create(req.body);
+    return res.status(201).json({ success: true, data: agency });
   }
 
+  // Existing agency update
   agency = await Agency.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true

@@ -3,13 +3,78 @@ const ErrorResponse = require('../utils/errorResponse');
 const Promoter = require('../models/Promoter');
 const Property = require('../models/Property');
 const AuditLog = require('../models/Log');
+const cloudinary = require('../config/cloudinary');
 
 exports.getMyPromoterProfile = asyncHandler(async (req, res, next) => {
   const promoter = await Promoter.findOne({ user: req.user.id });
   
   if (!promoter) {
-    return next(new ErrorResponse('No promoter profile found for this user', 404));
+    // Return empty promoter object instead of error
+    return res.status(200).json({ 
+      success: true, 
+        data: {
+          _id: null,
+          name: "",
+          logoUrl: "",
+          description: "",
+          establishedYear: null,
+          website: "",
+          facebook: "",
+          twitter: "",
+          linkedin: "",
+          approvalStatus: "pending",
+          isPremium: false,
+          createdAt: new Date(),
+          user: req.user.id
+        }
+    });
   }
+
+  res.status(200).json({ success: true, data: promoter });
+});
+
+exports.getPromoterCloudinarySignature = asyncHandler(async (req, res, next) => {
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = {
+    timestamp,
+    folder: 'promoter-logos',
+    upload_preset: 'mauritius'
+  };
+
+  const signature = cloudinary.utils.api_sign_request(
+    params,
+    process.env.CLOUDINARY_API_SECRET
+  );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      timestamp,
+      signature,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    }
+  });
+});
+
+exports.updateMyPromoterProfile = asyncHandler(async (req, res, next) => {
+  let promoter = await Promoter.findOne({ user: req.user.id });
+
+  if (!promoter) {
+    // Create new promoter profile if not found
+    promoter = await Promoter.create({ 
+      ...req.body,
+      user: req.user.id,
+      name: req.user.firstName + ' ' + req.user.lastName
+    });
+    
+    return res.status(201).json({ success: true, data: promoter });
+  }
+
+  promoter = await Promoter.findByIdAndUpdate(promoter._id, req.body, {
+    new: true,
+    runValidators: true
+  });
 
   res.status(200).json({ success: true, data: promoter });
 });

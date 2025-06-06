@@ -12,6 +12,7 @@ const PromoterSchema = new mongoose.Schema({
     required: [true, 'Please add a promoter name'],
     trim: true,
   },
+  
   logoUrl: {
     type: String,
     default: 'default-logo.jpg',

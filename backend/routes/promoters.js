@@ -7,20 +7,26 @@ const {
   updatePromoter,
   deletePromoter,
   getPromoterProjects,
-  getMyPromoterProfile
+  getMyPromoterProfile,
+  updateMyPromoterProfile,
+  getPromoterCloudinarySignature
 } = require('../controllers/promoters');
 const { protect, authorize } = require('../middleware/auth');
 
-// Apply admin-only middleware to all routes
+// Promoter-specific routes (no admin required)
+router.get('/my-profile', protect, authorize('promoter'), getMyPromoterProfile);
+router.put('/my-profile', protect, authorize('promoter'), updateMyPromoterProfile);
+router.get('/cloudinary-signature', protect, authorize('promoter'), getPromoterCloudinarySignature);
+
+// Allow promoters to create their own profile
+router.post('/', protect, authorize('promoter'), createPromoter);
+
+// Admin-only routes
 router.use(protect);
 router.use(authorize('admin'));
 
-// Promoter Management
-router
-  .route('/')
-  .get(getPromoters)
-  .post(createPromoter);
-router.get('/my-profile', protect, getMyPromoterProfile);
+router.get('/', getPromoters);
+
 router
   .route('/:id')
   .get(getPromoter)
