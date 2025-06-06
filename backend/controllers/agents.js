@@ -386,8 +386,15 @@ exports.requestLinkToAgency = asyncHandler(async (req, res, next) => {
 exports.approveAgentLink = asyncHandler(async (req, res, next) => {
   const { agentId, requestId } = req.params;
 
+  console.log(`Approving link: agent=${agentId}, request=${requestId}`);
+
+   if (!mongoose.Types.ObjectId.isValid(agentId)) {
+    return next(new ErrorResponse('Invalid agent ID format', 400));
+  }
+
   const agent = await Agent.findById(agentId);
-  if (!agent) {
+ if (!agent) {
+    console.error(`Agent not found: ${agentId}`);
     return next(new ErrorResponse('Agent not found', 404));
   }
 

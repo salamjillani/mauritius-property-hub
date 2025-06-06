@@ -335,34 +335,32 @@ const Profile = () => {
     }
   };
 
-  const handleApproveLink = async (requestId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/${
-          profile._id
-        }/approve/${requestId}`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to approve request");
+const handleApproveLink = async (agentId: string, requestId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/agents/${agentId}/approve/${requestId}`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
       }
+    );
 
-      const data = await response.json();
-      setProfile(data.data);
-      toast({ title: "Success", description: "Agent approved successfully" });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve request",
-        variant: "destructive",
-      });
+    if (!response.ok) {
+      throw new Error("Failed to approve request");
     }
-  };
+
+    const data = await response.json();
+    setProfile(data.data);
+    toast({ title: "Success", description: "Agent approved successfully" });
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to approve request",
+      variant: "destructive",
+    });
+  }
+};
 
   const handleRejectLink = async (requestId: string) => {
     try {
@@ -525,6 +523,8 @@ const Profile = () => {
                   setFile={setFile}
                   handleSubmit={handleSubmit}
                   isSaving={isSaving}
+                      handleApproveLink={(agentId, requestId) => handleApproveLink(agentId, requestId)}
+    handleRejectLink={handleRejectLink}
                 />
               )}
 
@@ -851,6 +851,7 @@ const ListingsTab = ({ userId, user, listings }) => (
 );
 
 // AgencyForm Component
+// AgencyForm Component
 const AgencyForm = ({
   profile,
   setProfile,
@@ -858,138 +859,225 @@ const AgencyForm = ({
   setFile,
   handleSubmit,
   isSaving,
-}) => (
-  <form onSubmit={handleSubmit} className="space-y-6">
-    <h2 className="text-2xl font-bold">Agency Profile</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <Label htmlFor="logo">Logo</Label>
-        <div className="flex items-center gap-4 mt-2">
-          {profile.logoUrl && (
-            <img
-              src={profile.logoUrl}
-              alt="Agency Logo"
-              className="h-20 w-20 rounded-full object-cover"
-            />
-          )}
-          <Input
-            type="file"
-            id="logo"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-        </div>
-      </div>
-      <div>
-        <Label htmlFor="name">Agency Name</Label>
-        <Input
-          id="name"
-          value={profile.name || ""}
-          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-        />
-      </div>
-    </div>
-    <div>
-      <Label htmlFor="description">Description</Label>
-      <Textarea
-        id="description"
-        value={profile.description || ""}
-        onChange={(e) =>
-          setProfile({ ...profile, description: e.target.value })
-        }
-        rows={4}
-      />
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <Label htmlFor="establishedYear">Established Year</Label>
-        <Input
-          id="establishedYear"
-          type="number"
-          value={profile.establishedYear || ""}
-          onChange={(e) =>
-            setProfile({
-              ...profile,
-              establishedYear: parseInt(e.target.value),
-            })
+  handleApproveLink, // Add these props to use existing handlers
+  handleRejectLink,
+}) => {
+  const { toast } = useToast();
+  const [pendingRequests, setPendingRequests] = useState([]);
+
+  // Fetch pending linking requests when component mounts
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/agents/linking-requests`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
           }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch linking requests");
+        }
+
+        const data = await response.json();
+        setPendingRequests(data.data || []);
+      } catch (error) {
+        console.error("Error fetching linking requests:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load pending linking requests",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (profile._id) {
+      fetchPendingRequests();
+    }
+  }, [profile._id, toast]);
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h2 className="text-2xl font-bold">Agency Profile</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <Label htmlFor="logo">Logo</Label>
+          <div className="flex items-center gap-4 mt-2">
+            {profile.logoUrl && (
+              <img
+                src={profile.logoUrl}
+                alt="Agency Logo"
+                className="h-20 w-20 rounded-full object-cover"
+              />
+            )}
+            <Input
+              type="file"
+              id="logo"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="name">Agency Name</Label>
+          <Input
+            id="name"
+            value={profile.name || ""}
+            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+          />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={profile.description || ""}
+          onChange={(e) =>
+            setProfile({ ...profile, description: e.target.value })
+          }
+          rows={4}
         />
       </div>
-    </div>
-    <div>
-      <h3 className="text-lg font-semibold mb-3">Social Links</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex items-center gap-2">
-          <Globe size={20} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <Label htmlFor="establishedYear">Established Year</Label>
           <Input
-            placeholder="Website"
-            value={profile.website || ""}
+            id="establishedYear"
+            type="number"
+            value={profile.establishedYear || ""}
             onChange={(e) =>
-              setProfile({ ...profile, website: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Facebook size={20} />
-          <Input
-            placeholder="Facebook"
-            value={profile.facebook || ""}
-            onChange={(e) =>
-              setProfile({ ...profile, facebook: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Twitter size={20} />
-          <Input
-            placeholder="Twitter"
-            value={profile.twitter || ""}
-            onChange={(e) =>
-              setProfile({ ...profile, twitter: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Linkedin size={20} />
-          <Input
-            placeholder="LinkedIn"
-            value={profile.linkedin || ""}
-            onChange={(e) =>
-              setProfile({ ...profile, linkedin: e.target.value })
+              setProfile({
+                ...profile,
+                establishedYear: parseInt(e.target.value),
+              })
             }
           />
         </div>
       </div>
-    </div>
-    {profile.agents && profile.agents.length > 0 && (
       <div>
-        <h3 className="text-lg font-semibold mb-3">Linked Agents</h3>
-        <div className="space-y-3">
-          {profile.agents.map((agent) => (
-            <div
-              key={agent._id}
-              className="flex items-center gap-3 p-3 border rounded-lg"
-            >
-              <img
-                src={agent.user?.avatarUrl || "/default-avatar.jpg"}
-                alt={agent.user?.firstName}
-                className="h-12 w-12 rounded-full"
-              />
-              <div>
-                <p className="font-medium">
-                  {agent.user?.firstName} {agent.user?.lastName}
-                </p>
-                <p className="text-sm text-gray-500">{agent.title}</p>
-              </div>
-            </div>
-          ))}
+        <h3 className="text-lg font-semibold mb-3">Social Links</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-2">
+            <Globe size={20} />
+            <Input
+              placeholder="Website"
+              value={profile.website || ""}
+              onChange={(e) =>
+                setProfile({ ...profile, website: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Facebook size={20} />
+            <Input
+              placeholder="Facebook"
+              value={profile.facebook || ""}
+              onChange={(e) =>
+                setProfile({ ...profile, facebook: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Twitter size={20} />
+            <Input
+              placeholder="Twitter"
+              value={profile.twitter || ""}
+              onChange={(e) =>
+                setProfile({ ...profile, twitter: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Linkedin size={20} />
+            <Input
+              placeholder="LinkedIn"
+              value={profile.linkedin || ""}
+              onChange={(e) =>
+                setProfile({ ...profile, linkedin: e.target.value })
+              }
+            />
+          </div>
         </div>
       </div>
-    )}
-    <Button type="submit" disabled={isSaving}>
-      {isSaving ? "Saving..." : "Save Profile"}
-    </Button>
-  </form>
-);
+      {/* Existing Linked Agents Section */}
+      {profile.agents && profile.agents.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Linked Agents</h3>
+          <div className="space-y-3">
+            {profile.agents.map((agent) => (
+              <div
+                key={agent._id}
+                className="flex items-center gap-3 p-3 border rounded-lg"
+              >
+                <img
+                  src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+                  alt={agent.user?.firstName}
+                  className="h-12 w-12 rounded-full"
+                />
+                <div>
+                  <p className="font-Medium">
+                    {agent.user?.firstName} {agent.user?.lastName}
+                  </p>
+                  <p className="text-sm text-gray-500">{agent.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* New Pending Linking Requests Section */}
+      {pendingRequests.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Pending Agent Linking Requests</h3>
+          <div className="space-y-3">
+            {pendingRequests.map((agent) => (
+              agent.linkingRequests
+                .filter((req) => req.status === "pending" && req.agency.toString() === profile._id)
+                .map((request) => (
+                  <div
+                    key={request._id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+                        alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
+                        className="h-10 w-10 rounded-full"
+                      />
+                      <div>
+                        <p className="font-medium">
+                          {agent.user?.firstName} {agent.user?.lastName}
+                        </p>
+                        <p className="text-sm text-gray-500">{agent.title || "Agent"}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+          onClick={() => handleApproveLink(agent._id, request._id)}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          Approve
+        </Button>
+        <Button
+          onClick={() => handleRejectLink(agent._id, request._id)}
+          variant="destructive"
+        >
+          Reject
+        </Button>
+                    </div>
+                  </div>
+                ))
+            ))}
+          </div>
+        </div>
+      )}
+      <Button type="submit" disabled={isSaving}>
+        {isSaving ? "Saving..." : "Save Profile"}
+      </Button>
+    </form>
+  );
+};
 
 // AgentForm Component
 const AgentForm = ({
