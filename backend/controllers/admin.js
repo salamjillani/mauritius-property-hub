@@ -882,78 +882,137 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { listingLimit, goldCards } = req.body;
 
+  // Validate request ID format
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorResponse('Invalid request ID format', 400));
   }
 
- const validListingLimits = [15, 50, 100, 200, 300, 400, 'unlimited'];
-// Convert string numbers to integers for comparison
-const parsedLimit = isNaN(parseInt(listingLimit)) 
-  ? listingLimit 
-  : parseInt(listingLimit);
+  // Validate listing limit
+  const validListingLimits = [15, 50, 100, 200, 300, 400, 'unlimited'];
+  const parsedLimit = isNaN(parseInt(listingLimit)) 
+    ? listingLimit 
+    : parseInt(listingLimit);
+  
+  if (!validListingLimits.includes(parsedLimit)) {
+    return next(new ErrorResponse('Invalid listing limit', 400));
+  }
 
-if (!validListingLimits.includes(parsedLimit)) {
-  return next(new ErrorResponse('Invalid listing limit', 400));
-}
-
+  // Validate gold cards
   if (isNaN(goldCards) || goldCards < 0) {
     return next(new ErrorResponse('Invalid gold cards value', 400));
   }
 
+  // Find the registration request
   const request = await RegistrationRequest.findById(id).populate('user');
   if (!request) {
     return next(new ErrorResponse(`Request not found with id of ${id}`, 404));
   }
 
+  // Find the user
   const user = await User.findById(request.user._id);
   if (!user) {
     return next(new ErrorResponse(`User not found`, 404));
   }
 
+  // Check if request is already processed
+  if (request.status === 'approved') {
+    return next(new ErrorResponse('Registration request already approved', 400));
+  }
+
+  // Update user status and limits
   user.approvalStatus = 'approved';
   user.listingLimit = listingLimit === 'unlimited' ? null : parseInt(listingLimit);
   user.goldCards = parseInt(goldCards);
   await user.save();
 
+  // Update registration request status
   request.status = 'approved';
   await request.save();
 
-  let entity;
-  if (user.role === 'agent') {
-    entity = await Agent.findOneAndUpdate(
-      { user: user._id },
-      { approvalStatus: 'approved' },
-      { new: true }
-    );
-  } else if (user.role === 'agency') {
-    entity = await Agency.findOneAndUpdate(
-      { user: user._id },
-      { approvalStatus: 'approved' },
-      { new: true }
-    );
-  } else if (user.role === 'promoter') {
-    entity = await Promoter.findOneAndUpdate(
-      { user: user._id },
-      { approvalStatus: 'approved' },
-      { new: true }
-    );
+  // Update corresponding entity based on user role
+  let entity = null;
+  try {
+    if (user.role === 'agent') {
+      entity = await Agent.findOneAndUpdate(
+        { user: user._id },
+        { approvalStatus: 'approved' },
+        { new: true, upsert: false }
+      );
+      
+      if (!entity) {
+        console.warn(`Agent profile not found for user ${user._id}`);
+      }
+    } else if (user.role === 'agency') {
+      entity = await Agency.findOneAndUpdate(
+        { user: user._id },
+        { approvalStatus: 'approved', name: request.companyName },
+        { new: true, upsert: true }
+      );
+      
+      if (!entity) {
+        console.warn(`Agency profile not found for user ${user._id}`);
+      }
+    } else if (user.role === 'promoter') {
+      entity = await Promoter.findOneAndUpdate(
+        { user: user._id },
+        { approvalStatus: 'approved' },
+        { new: true, upsert: false }
+      );
+      
+      if (!entity) {
+        console.warn(`Promoter profile not found for user ${user._id}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error updating ${user.role} entity:`, error);
+    // Continue with the process even if entity update fails
   }
 
-  await Notification.create({
-    user: user._id,
-    type: 'registration_approved',
-    message: `Your ${user.role} profile has been approved. You can now create up to ${listingLimit === null ? 'unlimited' : listingLimit} listings with ${goldCards} gold cards.`,
-  });
+  // Create notification for user
+  try {
+    await Notification.create({
+      user: user._id,
+      type: 'registration_approved',
+      message: `Your ${user.role} profile has been approved. You can now create up to ${
+        listingLimit === 'unlimited' ? 'unlimited' : listingLimit
+      } listings with ${goldCards} gold cards.`,
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
 
-  await Log.create({
-    user: req.user.id,
-    action: 'Registration approved',
-    resource: 'RegistrationRequest',
-    resourceId: id,
-    details: `Registration request for user ${user.email} was approved by admin with ${listingLimit} listings and ${goldCards} gold cards`,
-  });
+  // Create admin log
+  try {
+    await Log.create({
+      user: req.user.id,
+      action: 'Registration approved',
+      resource: 'RegistrationRequest',
+      resourceId: id,
+      details: `Registration request for user ${user.email} (${user.role}) was approved by admin with ${
+        listingLimit === 'unlimited' ? 'unlimited' : listingLimit
+      } listings and ${goldCards} gold cards`,
+    });
+  } catch (error) {
+    console.error('Error creating log:', error);
+  }
 
-  res.status(200).json({ success: true, data: { user, entity } });
+  res.status(200).json({ 
+    success: true, 
+    data: { 
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        approvalStatus: user.approvalStatus,
+        listingLimit: user.listingLimit,
+        goldCards: user.goldCards
+      }, 
+      entity: entity ? {
+        id: entity._id,
+        approvalStatus: entity.approvalStatus
+      } : null
+    } 
+  });
 });
 
 /**

@@ -49,7 +49,10 @@ const AgencySchema = new mongoose.Schema({
 
 AgencySchema.pre('save', async function (next) {
   if (this.isModified('approvalStatus') && this.approvalStatus === 'approved') {
-    await mongoose.model('User').findByIdAndUpdate(this.user, { approvalStatus: 'approved' });
+    await mongoose.model('User').findByIdAndUpdate(this.user, { 
+      approvalStatus: 'approved',
+      role: 'agency'
+    });
   }
   next();
 });

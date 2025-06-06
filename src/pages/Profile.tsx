@@ -1138,7 +1138,7 @@ const AgentForm = ({
                 <SelectTrigger>
                   <SelectValue placeholder="Select an agency" />
                 </SelectTrigger>
-            <SelectContent>
+           <SelectContent>
   {agencies.length === 0 ? (
     <div className="text-gray-500 p-2 text-sm">
       No approved agencies available
@@ -1148,7 +1148,11 @@ const AgentForm = ({
       <SelectItem key={agency._id} value={agency._id}>
         <div className="flex items-center gap-2">
           {agency.logoUrl && (
-            <img src={agency.logoUrl} alt={agency.name} className="h-6 w-6 rounded-full" />
+            <img 
+              src={agency.logoUrl} 
+              alt={agency.name} 
+              className="h-6 w-6 rounded-full" 
+            />
           )}
           {agency.name}
         </div>

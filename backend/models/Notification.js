@@ -1,29 +1,33 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const NotificationSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.ObjectId,
-    ref: 'User',
+    ref: "User",
     required: true,
   },
   type: {
     type: String,
     enum: [
-      'registration_approved',
-      'registration_rejected',
-      'agent_approved',
-      'agent_rejected',
-      'agency_approved',
-      'agency_rejected',
-      'promoter_approved',
-      'promoter_rejected',
-      'property_approved',
-      'property_rejected',
-      'property_pending',
-      'new_property',
-      'property_status_updated',
-      'subscription_updated',
-      'registration_request_submitted'
+      "registration_approved",
+      "registration_rejected",
+      "agent_approved",
+      "agent_rejected",
+      "agency_approved",
+      "agency_rejected",
+      "promoter_approved",
+      "promoter_rejected",
+      "property_approved",
+      "property_rejected",
+      "property_pending",
+      "new_property",
+      "property_status_updated",
+      "subscription_updated",
+      "registration_request_submitted",
+      "agency_link_request",
+      "agency_link_request_received",
+      "agency_link_approved",
+      "agency_link_rejected",
     ],
     required: true,
   },
@@ -41,4 +45,4 @@ const NotificationSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model('Notification', NotificationSchema);
+module.exports = mongoose.model("Notification", NotificationSchema);
