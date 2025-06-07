@@ -22,11 +22,13 @@ const AgentPage = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
-
-  useEffect(() => {
-    const fetchAgent = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/${id}`);
+  
+useEffect(() => {
+  const fetchAgent = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/agents/${id}?approvalStatus=approved`
+      );
         if (!response.ok) throw new Error("Failed to fetch agent");
         const data = await response.json();
         setAgent(data.data);

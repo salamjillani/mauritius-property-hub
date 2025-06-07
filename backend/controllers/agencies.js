@@ -39,7 +39,6 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
   query = query.populate([
     { path: 'user', select: 'firstName lastName email' },
     { path: 'agents' },
-    { path: 'listingsCount' }
   ]);
 
   const agencies = await query;

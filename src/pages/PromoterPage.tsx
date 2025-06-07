@@ -22,10 +22,12 @@ const PromoterPage = () => {
     visible: { opacity: 1, y: 0 },
   };
 
-  useEffect(() => {
-    const fetchPromoter = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`);
+ useEffect(() => {
+  const fetchPromoter = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/promoters/${id}?approvalStatus=approved`
+      );
         if (!response.ok) throw new Error("Failed to fetch promoter");
         const data = await response.json();
         setPromoter(data.data);

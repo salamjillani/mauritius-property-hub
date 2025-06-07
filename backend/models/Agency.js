@@ -44,7 +44,18 @@ const AgencySchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-  },
+  }
+  }, {
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+
+AgencySchema.virtual('listingsCount', {
+  ref: 'Property',
+  localField: '_id',
+  foreignField: 'agency',
+  count: true
 });
 
 AgencySchema.pre('save', async function (next) {

@@ -18,10 +18,12 @@ const AgencyPage = () => {
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAgency = async () => {
-      try {
-        const agencyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/${id}`);
+useEffect(() => {
+  const fetchAgency = async () => {
+    try {
+      const agencyResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/agencies/${id}?approvalStatus=approved`
+      );
         if (!agencyResponse.ok) throw new Error("Failed to fetch agency");
         const agencyData = await agencyResponse.json();
         setAgency(agencyData.data);

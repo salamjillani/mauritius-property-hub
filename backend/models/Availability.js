@@ -20,6 +20,10 @@ const AvailabilitySchema = new mongoose.Schema({
     enum: ['available', 'booked'],
     default: 'available',
   },
+  
+}, {
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 module.exports = mongoose.model('Availability', AvailabilitySchema);

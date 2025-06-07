@@ -14,10 +14,12 @@ const AllAgentsPage = () => {
   const [hoveredAgent, setHoveredAgent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents?approvalStatus=approved`);
+ useEffect(() => {
+  const fetchAgents = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/agents?approvalStatus=approved`
+      );
         if (!response.ok) {
           throw new Error("Failed to fetch agents");
         }
