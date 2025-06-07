@@ -55,100 +55,100 @@ const Profile = () => {
   const [listings, setListings] = useState<any[]>([]);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
- useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/users/getMe`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const data = await response.json();
-      setUser(data.data);
-
-      if (data.data.role === "agency") {
-        try {
-          const agencyRes = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/agencies/my-agency`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          const agencyData = await agencyRes.json();
-          // Handle empty agency case
-          setProfile(agencyData.data || {});
-        } catch (error) {
-          setProfile({});
-        }
-      } else if (data.data.role === "agent") {
-        const agentRes = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/agents/my-profile`,
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/users/getMe`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        const agentData = await agentRes.json();
-        setProfile(agentData.data || {});
+        const data = await response.json();
+        setUser(data.data);
 
-        // Enhanced error handling for agencies fetch
-        try {
-          const agenciesRes = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/agencies/approved`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          
-          if (!agenciesRes.ok) {
-            throw new Error('Failed to fetch agencies');
+        if (data.data.role === "agency") {
+          try {
+            const agencyRes = await fetch(
+              `${import.meta.env.VITE_API_URL}/api/agencies/my-agency`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            const agencyData = await agencyRes.json();
+            // Handle empty agency case
+            setProfile(agencyData.data || {});
+          } catch (error) {
+            setProfile({});
           }
-          
-          const agenciesData = await agenciesRes.json();
-          setAgencies(agenciesData.data || []);
-        } catch (error) {
-          console.error('Error fetching agencies:', error);
-          toast({ 
-            title: "Error", 
-            description: "Failed to load agencies", 
-            variant: "destructive" 
-          });
-          setAgencies([]);
-        }
-      } else if (data.data.role === "promoter") {
-        try {
-          const promoterRes = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/promoters/my-profile`,
+        } else if (data.data.role === "agent") {
+          const agentRes = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/agents/my-profile`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          const promoterData = await promoterRes.json();
-          setProfile(promoterData.data || {});
-        } catch (error) {
-          setProfile({});
+          const agentData = await agentRes.json();
+          setProfile(agentData.data || {});
+
+          // Enhanced error handling for agencies fetch
+          try {
+            const agenciesRes = await fetch(
+              `${import.meta.env.VITE_API_URL}/api/agencies/approved`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+
+            if (!agenciesRes.ok) {
+              throw new Error("Failed to fetch agencies");
+            }
+
+            const agenciesData = await agenciesRes.json();
+            setAgencies(agenciesData.data || []);
+          } catch (error) {
+            console.error("Error fetching agencies:", error);
+            toast({
+              title: "Error",
+              description: "Failed to load agencies",
+              variant: "destructive",
+            });
+            setAgencies([]);
+          }
+        } else if (data.data.role === "promoter") {
+          try {
+            const promoterRes = await fetch(
+              `${import.meta.env.VITE_API_URL}/api/promoters/my-profile`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            const promoterData = await promoterRes.json();
+            setProfile(promoterData.data || {});
+          } catch (error) {
+            setProfile({});
+          }
         }
-      }
 
-      if (
-        ["agent", "agency", "promoter"].includes(data.data.role) &&
-        data.data.approvalStatus === "pending"
-      ) {
-        setShowRegistrationForm(true);
-      }
+        if (
+          ["agent", "agency", "promoter"].includes(data.data.role) &&
+          data.data.approvalStatus === "pending"
+        ) {
+          setShowRegistrationForm(true);
+        }
 
-      fetchListings(token, data.data._id);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load profile",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        fetchListings(token, data.data._id);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load profile",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
     const fetchListings = async (token: string, userId: string) => {
       try {
@@ -335,32 +335,34 @@ const Profile = () => {
     }
   };
 
-const handleApproveLink = async (agentId: string, requestId: string) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/agents/${agentId}/approve/${requestId}`,
-      {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
+  const handleApproveLink = async (agentId: string, requestId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/agents/${agentId}/approve/${requestId}`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to approve request");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to approve request");
+      const data = await response.json();
+      setProfile(data.data);
+      toast({ title: "Success", description: "Agent approved successfully" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive",
+      });
     }
-
-    const data = await response.json();
-    setProfile(data.data);
-    toast({ title: "Success", description: "Agent approved successfully" });
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: "Failed to approve request",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
   const handleRejectLink = async (requestId: string) => {
     try {
@@ -523,8 +525,10 @@ const handleApproveLink = async (agentId: string, requestId: string) => {
                   setFile={setFile}
                   handleSubmit={handleSubmit}
                   isSaving={isSaving}
-                      handleApproveLink={(agentId, requestId) => handleApproveLink(agentId, requestId)}
-    handleRejectLink={handleRejectLink}
+                  handleApproveLink={(agentId, requestId) =>
+                    handleApproveLink(agentId, requestId)
+                  }
+                  handleRejectLink={handleRejectLink}
                 />
               )}
 
@@ -1029,11 +1033,17 @@ const AgencyForm = ({
       {/* New Pending Linking Requests Section */}
       {pendingRequests.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3">Pending Agent Linking Requests</h3>
+          <h3 className="text-lg font-semibold mb-3">
+            Pending Agent Linking Requests
+          </h3>
           <div className="space-y-3">
-            {pendingRequests.map((agent) => (
+            {pendingRequests.map((agent) =>
               agent.linkingRequests
-                .filter((req) => req.status === "pending" && req.agency.toString() === profile._id)
+                .filter(
+                  (req) =>
+                    req.status === "pending" &&
+                    req.agency.toString() === profile._id
+                )
                 .map((request) => (
                   <div
                     key={request._id}
@@ -1049,26 +1059,30 @@ const AgencyForm = ({
                         <p className="font-medium">
                           {agent.user?.firstName} {agent.user?.lastName}
                         </p>
-                        <p className="text-sm text-gray-500">{agent.title || "Agent"}</p>
+                        <p className="text-sm text-gray-500">
+                          {agent.title || "Agent"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
-          onClick={() => handleApproveLink(agent._id, request._id)}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          Approve
-        </Button>
-        <Button
-          onClick={() => handleRejectLink(agent._id, request._id)}
-          variant="destructive"
-        >
-          Reject
-        </Button>
+                        onClick={() =>
+                          handleApproveLink(agent._id, request._id)
+                        }
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectLink(agent._id, request._id)}
+                        variant="destructive"
+                      >
+                        Reject
+                      </Button>
                     </div>
                   </div>
                 ))
-            ))}
+            )}
           </div>
         </div>
       )}
@@ -1226,28 +1240,28 @@ const AgentForm = ({
                 <SelectTrigger>
                   <SelectValue placeholder="Select an agency" />
                 </SelectTrigger>
-           <SelectContent>
-  {agencies.length === 0 ? (
-    <div className="text-gray-500 p-2 text-sm">
-      No approved agencies available
-    </div>
-  ) : (
-    agencies.map(agency => (
-      <SelectItem key={agency._id} value={agency._id}>
-        <div className="flex items-center gap-2">
-          {agency.logoUrl && (
-            <img 
-              src={agency.logoUrl} 
-              alt={agency.name} 
-              className="h-6 w-6 rounded-full" 
-            />
-          )}
-          {agency.name}
-        </div>
-      </SelectItem>
-    ))
-  )}
-</SelectContent>
+                <SelectContent>
+                  {agencies.length === 0 ? (
+                    <div className="text-gray-500 p-2 text-sm">
+                      No approved agencies available
+                    </div>
+                  ) : (
+                    agencies.map((agency) => (
+                      <SelectItem key={agency._id} value={agency._id}>
+                        <div className="flex items-center gap-2">
+                          {agency.logoUrl && (
+                            <img
+                              src={agency.logoUrl}
+                              alt={agency.name}
+                              className="h-6 w-6 rounded-full"
+                            />
+                          )}
+                          {agency.name}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
               </Select>
             </div>
             <div className="flex items-end">

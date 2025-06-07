@@ -932,12 +932,16 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
   // Update corresponding entity based on user role
   let entity = null;
   try {
-    if (user.role === 'agent') {
-      entity = await Agent.findOneAndUpdate(
-        { user: user._id },
-        { approvalStatus: 'approved' },
-        { new: true, upsert: false }
-      );
+   if (user.role === 'agent') {
+  entity = await Agent.findOneAndUpdate(
+    { user: user._id },
+    {
+      title: `Agent ${request.firstName} ${request.lastName}`,
+      approvalStatus: 'approved',
+      user: user._id
+    },
+    { new: true, upsert: true }
+  );
       
       if (!entity) {
         console.warn(`Agent profile not found for user ${user._id}`);
@@ -953,11 +957,15 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
         console.warn(`Agency profile not found for user ${user._id}`);
       }
     } else if (user.role === 'promoter') {
-      entity = await Promoter.findOneAndUpdate(
-        { user: user._id },
-        { approvalStatus: 'approved' },
-        { new: true, upsert: false }
-      );
+  entity = await Promoter.findOneAndUpdate(
+    { user: user._id },
+    {
+      name: request.companyName || `Promoter ${request.firstName} ${request.lastName}`,
+      approvalStatus: 'approved',
+      user: user._id
+    },
+    { new: true, upsert: true }
+  );
       
       if (!entity) {
         console.warn(`Promoter profile not found for user ${user._id}`);

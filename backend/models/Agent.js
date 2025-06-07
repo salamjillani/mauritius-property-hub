@@ -68,6 +68,12 @@ AgentSchema.virtual('listingsCount', {
   count: true
 });
 
+AgentSchema.virtual('properties', {
+  ref: 'Property',
+  localField: '_id',
+  foreignField: 'agent',
+});
+
 AgentSchema.pre('save', async function (next) {
   if (this.isModified('approvalStatus') && this.approvalStatus === 'approved') {
     await mongoose.model('User').findByIdAndUpdate(this.user, { approvalStatus: 'approved' });

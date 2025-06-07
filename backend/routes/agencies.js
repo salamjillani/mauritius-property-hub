@@ -17,10 +17,12 @@ const router = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
 
+
+
 router.route('/')
   .get(getAgencies)
   .post(protect, authorize('agency', 'admin'), createAgency);
-
+router.get('/:id', getAgency);
 router.get('/premium', getPremiumAgencies);
 
 router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature);

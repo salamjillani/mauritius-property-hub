@@ -292,6 +292,20 @@ PropertySchema.pre('save', function (next) {
   next();
 });
 
+PropertySchema.virtual('agentDetails', {
+  ref: 'Agent',
+  localField: 'agent',
+  foreignField: '_id',
+  justOne: true
+});
+
+PropertySchema.virtual('agencyDetails', {
+  ref: 'Agency',
+  localField: 'agency',
+  foreignField: '_id',
+  justOne: true
+});
+
 // Pre-save hook to validate images
 PropertySchema.pre('save', function (next) {
   if (this.images?.length > 10) {

@@ -53,6 +53,11 @@ const RegistrationRequestSchema = new mongoose.Schema({
     default: false,
     required: true,
   },
+  companyName: {
+  type: String,
+  required: true,
+  trim: true
+},
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],

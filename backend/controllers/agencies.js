@@ -65,7 +65,9 @@ exports.getAgency = asyncHandler(async (req, res, next) => {
     .populate([
       { path: 'user', select: 'firstName lastName email' },
       { path: 'agents' },
-      { path: 'properties' }
+      {
+        path: 'properties',
+        select: 'title price images status' }
     ]);
 
   if (!agency) {
