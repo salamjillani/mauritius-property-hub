@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { HelmetProvider } from 'react-helmet-async';
 import { useEffect } from 'react';
+import 'leaflet/dist/leaflet.css';
 import Index from './pages/Index';
 import Login from './pages/Login';
 import Register from './pages/Register';

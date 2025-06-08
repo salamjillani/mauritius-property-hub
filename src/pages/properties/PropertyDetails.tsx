@@ -8,10 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import BackButton from '@/components/BackButton';
 import { useToast } from '@/hooks/use-toast';
+// Leaflet imports
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Interfaces for type safety
 interface Address {
@@ -20,6 +25,8 @@ interface Address {
   state?: string;
   zipCode?: string;
   country: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 interface PropertyImage {
@@ -115,6 +122,9 @@ const PropertyDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState(null);
+  
+  // Add marker position state
+  const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
 
   // Load user from localStorage
   useEffect(() => {
@@ -126,6 +136,26 @@ const PropertyDetails = () => {
     } catch {
       setUser(null);
     }
+  }, []);
+
+  // Set marker position when property data is loaded
+  useEffect(() => {
+    if (property && property.address.latitude && property.address.longitude) {
+      setMarkerPosition([
+        parseFloat(property.address.latitude),
+        parseFloat(property.address.longitude)
+      ]);
+    }
+  }, [property]);
+
+  // Fix leaflet default icon
+  useEffect(() => {
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: '/marker-icon.png',
+      iconRetinaUrl: '/marker-icon-2x.png',
+      shadowUrl: '/marker-shadow.png',
+    });
   }, []);
 
 const fetchProperty = useCallback(async () => {
@@ -484,6 +514,34 @@ const fetchProperty = useCallback(async () => {
                 />
               ))}
             </div>
+
+            {/* Location Map Section */}
+            <div className="mb-6">
+              <Label className="text-lg font-bold mb-4 block">{t('location')}</Label>
+              <div className="h-96 w-full rounded-lg overflow-hidden border border-gray-200">
+                <MapContainer 
+                  center={markerPosition || [-20.2, 57.5]} 
+                  zoom={markerPosition ? 15 : 10} 
+                  className="h-full w-full"
+                  scrollWheelZoom={false}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {markerPosition && (
+                    <Marker position={markerPosition}>
+                    </Marker>
+                  )}
+                </MapContainer>
+              </div>
+              {!markerPosition && (
+                <p className="text-sm text-gray-500 mt-2">
+                  {t('location_coordinates_not_available')}
+                </p>
+              )}
+            </div>
+
             {(property.virtualTourUrl || property.videoUrl) && (
               <div className="mt-6">
                 <h3 className="text-lg font-bold mb-2">{t('virtual_tour')}</h3>
