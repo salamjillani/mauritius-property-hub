@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import mauritiusDistricts from '@/data/mauritiusDistricts.json';
 
 // Define interfaces for type safety
 interface Address {
@@ -53,6 +57,105 @@ interface User {
   goldCards: number;
 }
 
+// Get all district names from the JSON data
+const getAvailableDistricts = () => {
+  return mauritiusDistricts.features.map(feature => feature.properties.name).sort();
+};
+
+// Get GeoJSON for a specific district
+const getGeoJsonForDistrict = (districtName: string) => {
+  const feature = mauritiusDistricts.features.find(f => f.properties.name === districtName);
+  if (!feature) return null;
+  
+  return {
+    type: 'FeatureCollection',
+    features: [feature]
+  };
+};
+
+// Get center coordinates for a district
+const getDistrictCenter = (districtName: string): [number, number] | null => {
+  const feature = mauritiusDistricts.features.find(f => f.properties.name === districtName);
+  if (!feature) return null;
+  
+  // Calculate center of the polygon
+  const coordinates = feature.geometry.coordinates[0];
+  const lats = coordinates.map(coord => coord[1]);
+  const lngs = coordinates.map(coord => coord[0]);
+  
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  
+  return [centerLat, centerLng];
+};
+
+// Custom hook to handle map interactions and district highlighting
+const MapController = ({ selectedDistrict, setMarkerPosition, setFormData }) => {
+  const map = useMap();
+  const geoJsonLayerRef = useRef(null);
+  
+  useEffect(() => {
+    const handleClick = (e) => {
+      const { lat, lng } = e.latlng;
+      setMarkerPosition([lat, lng]);
+      setFormData(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          latitude: lat.toString(),
+          longitude: lng.toString()
+        }
+      }));
+    };
+
+    map.on('click', handleClick);
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, setMarkerPosition, setFormData]);
+
+  // Handle district highlighting
+  useEffect(() => {
+    // Remove previous GeoJSON layer if it exists
+    if (geoJsonLayerRef.current) {
+      map.removeLayer(geoJsonLayerRef.current);
+      geoJsonLayerRef.current = null;
+    }
+
+    if (selectedDistrict) {
+      const geoJsonData = getGeoJsonForDistrict(selectedDistrict);
+      if (geoJsonData) {
+        // Create new GeoJSON layer
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: () => ({ 
+            color: '#4f46e5', 
+            weight: 2, 
+            fillOpacity: 0.1,
+            fillColor: '#4f46e5'
+          })
+        });
+
+        // Add to map and store reference
+        geoJsonLayer.addTo(map);
+        geoJsonLayerRef.current = geoJsonLayer;
+
+        // Fit bounds to the district
+        map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (geoJsonLayerRef.current) {
+        map.removeLayer(geoJsonLayerRef.current);
+        geoJsonLayerRef.current = null;
+      }
+    };
+  }, [selectedDistrict, map]);
+
+  return null;
+};
+
 const AddProperty = () => {
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -75,8 +178,60 @@ const AddProperty = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [user, setUser] = useState<User | null>(null);
+  const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const availableDistricts = getAvailableDistricts();
+
+  // Fix leaflet default icon
+  useEffect(() => {
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: '/marker-icon.png',
+      iconRetinaUrl: '/marker-icon-2x.png',
+      shadowUrl: '/marker-shadow.png',
+    });
+  }, []);
+
+  // Set initial marker position
+  useEffect(() => {
+    if (formData.address.latitude && formData.address.longitude) {
+      setMarkerPosition([
+        parseFloat(formData.address.latitude),
+        parseFloat(formData.address.longitude)
+      ]);
+    }
+  }, []);
+
+  // Update form data when district is selected
+  useEffect(() => {
+    if (!selectedDistrict) return;
+    
+    // Auto-fill the city field with selected district
+    setFormData(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        city: selectedDistrict
+      }
+    }));
+    
+    // Auto-center marker on district
+    const districtCenter = getDistrictCenter(selectedDistrict);
+    if (districtCenter) {
+      setMarkerPosition(districtCenter);
+      setFormData(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          latitude: districtCenter[0].toString(),
+          longitude: districtCenter[1].toString()
+        }
+      }));
+    }
+  }, [selectedDistrict]);
 
   // Fetch user data to check listing limits and gold cards
   useEffect(() => {
@@ -370,7 +525,8 @@ const AddProperty = () => {
 
         {user && (
           <p className="text-gray-600 mb-4">
-            Listings Remaining: {user.listingLimit - (user.listingLimit > 0 ? /* Assume currentListings fetched */ 0 : 0)} | Gold Cards Available: {user.goldCards}
+            Listings Remaining: {user.listingLimit === null ? 'Unlimited' : user.listingLimit - 0} | 
+            Gold Cards Available: {user.goldCards}
           </p>
         )}
 
@@ -505,11 +661,11 @@ const AddProperty = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="address.city">City</Label>
+              <Label htmlFor="address.city">City/District</Label>
               <Input
                 id="address.city"
                 name="address.city"
-                placeholder="City"
+                placeholder="City/District"
                 value={formData.address.city}
                 onChange={handleChange}
                 required
@@ -527,30 +683,69 @@ const AddProperty = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="address.latitude">Latitude (Optional)</Label>
-              <Input
-                id="address.latitude"
-                name="address.latitude"
-                type="number"
-                step="any"
-                placeholder="Latitude"
-                value={formData.address.latitude}
-                onChange={handleChange}
-              />
+          <div>
+            <Label>Location</Label>
+            <div className="mb-4">
+              <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a district/area" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDistricts.map((district) => (
+                    <SelectItem key={district} value={district}>
+                      {district}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label htmlFor="address.longitude">Longitude (Optional)</Label>
-              <Input
-                id="address.longitude"
-                name="address.longitude"
-                type="number"
-                step="any"
-                placeholder="Longitude"
-                value={formData.address.longitude}
-                onChange={handleChange}
-              />
+            
+            <div className="h-96 w-full rounded-lg overflow-hidden">
+              <MapContainer 
+                center={[-20.2, 57.5]} 
+                zoom={10} 
+                className="h-full w-full"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {markerPosition && <Marker position={markerPosition} />}
+                <MapController 
+                  selectedDistrict={selectedDistrict}
+                  setMarkerPosition={setMarkerPosition} 
+                  setFormData={setFormData} 
+                />
+              </MapContainer>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label htmlFor="address.latitude">Latitude</Label>
+                <Input
+                  id="address.latitude"
+                  name="address.latitude"
+                  type="number"
+                  step="any"
+                  placeholder="Latitude"
+                  value={formData.address.latitude}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="address.longitude">Longitude</Label>
+                <Input
+                  id="address.longitude"
+                  name="address.longitude"
+                  type="number"
+                  step="any"
+                  placeholder="Longitude"
+                  value={formData.address.longitude}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
           </div>
 

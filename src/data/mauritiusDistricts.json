@@ -1,0 +1,211 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Port Louis",
+        "district_code": "PL",
+        "capital": "Port Louis",
+        "type": "urban"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.48, -20.16],
+          [57.52, -20.15],
+          [57.54, -20.17],
+          [57.53, -20.19],
+          [57.50, -20.20],
+          [57.47, -20.18],
+          [57.48, -20.16]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Pamplemousses",
+        "district_code": "PA",
+        "capital": "Pamplemousses",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.52, -20.04],
+          [57.62, -20.00],
+          [57.68, -20.02],
+          [57.70, -20.08],
+          [57.65, -20.12],
+          [57.58, -20.15],
+          [57.52, -20.14],
+          [57.52, -20.04]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Rivière du Rempart",
+        "district_code": "RR",
+        "capital": "Goodlands",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.62, -19.98],
+          [57.75, -19.95],
+          [57.80, -20.05],
+          [57.78, -20.12],
+          [57.70, -20.08],
+          [57.68, -20.02],
+          [57.62, -19.98]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Flacq",
+        "district_code": "FL",
+        "capital": "Centre de Flacq",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.68, -20.12],
+          [57.78, -20.12],
+          [57.80, -20.22],
+          [57.78, -20.30],
+          [57.72, -20.35],
+          [57.65, -20.32],
+          [57.62, -20.25],
+          [57.65, -20.18],
+          [57.68, -20.12]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Grand Port",
+        "district_code": "GP",
+        "capital": "Rose Belle",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.62, -20.25],
+          [57.72, -20.35],
+          [57.75, -20.42],
+          [57.70, -20.48],
+          [57.62, -20.50],
+          [57.55, -20.45],
+          [57.52, -20.38],
+          [57.55, -20.30],
+          [57.62, -20.25]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Savanne",
+        "district_code": "SA",
+        "capital": "Souillac",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.38, -20.45],
+          [57.52, -20.38],
+          [57.55, -20.45],
+          [57.62, -20.50],
+          [57.58, -20.52],
+          [57.48, -20.52],
+          [57.35, -20.50],
+          [57.32, -20.48],
+          [57.38, -20.45]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Black River",
+        "district_code": "BR",
+        "capital": "Bambous",
+        "type": "rural",
+        "alternative_name": "Rivière Noire"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.28, -20.25],
+          [57.38, -20.22],
+          [57.42, -20.28],
+          [57.45, -20.35],
+          [57.38, -20.45],
+          [57.32, -20.48],
+          [57.25, -20.45],
+          [57.22, -20.38],
+          [57.25, -20.30],
+          [57.28, -20.25]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Plaines Wilhems",
+        "district_code": "PW",
+        "capital": "Curepipe",
+        "type": "urban",
+        "major_towns": ["Curepipe", "Quatre Bornes", "Vacoas-Phoenix", "Beau Bassin-Rose Hill"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.42, -20.20],
+          [57.52, -20.18],
+          [57.55, -20.22],
+          [57.58, -20.28],
+          [57.55, -20.35],
+          [57.48, -20.38],
+          [57.42, -20.35],
+          [57.38, -20.30],
+          [57.40, -20.25],
+          [57.42, -20.20]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { 
+        "name": "Moka",
+        "district_code": "MO",
+        "capital": "Moka",
+        "type": "rural"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [57.48, -20.15],
+          [57.58, -20.15],
+          [57.65, -20.18],
+          [57.62, -20.25],
+          [57.55, -20.30],
+          [57.52, -20.28],
+          [57.48, -20.25],
+          [57.45, -20.20],
+          [57.48, -20.15]
+        ]]
+      }
+    }
+  ]
+}
