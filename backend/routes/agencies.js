@@ -22,13 +22,15 @@ const { protect, authorize } = require('../middleware/auth');
 router.route('/')
   .get(getAgencies)
   .post(protect, authorize('agency', 'admin'), createAgency);
-router.get('/:id', getAgency);
+
 router.get('/premium', getPremiumAgencies);
 
 router.get('/cloudinary-signature', protect, authorize('agency', 'admin'), getAgencyCloudinarySignature);
 
-router.get('/approved', protect, getApprovedAgencies);
+router.get('/approved', getApprovedAgencies);
 router.get('/my-agency', protect, getMyAgency);
+router.get('/:id', getAgency);
+
 router.put('/:id', protect, authorize('agency', 'admin'), updateAgency);
 router.post('/:id/logo', protect, authorize('agency', 'admin'), uploadAgencyLogo);
 router.route('/upgrade-plan').post(protect, upgradePlan);

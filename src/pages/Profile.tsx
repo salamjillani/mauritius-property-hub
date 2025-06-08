@@ -101,9 +101,10 @@ const Profile = () => {
               }
             );
 
-            if (!agenciesRes.ok) {
-              throw new Error("Failed to fetch agencies");
-            }
+           if (!agenciesRes.ok) {
+  const errorData = await agenciesRes.json();
+  throw new Error(errorData.message || "Failed to fetch agencies");
+}
 
             const agenciesData = await agenciesRes.json();
             setAgencies(agenciesData.data || []);
