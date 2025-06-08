@@ -119,7 +119,17 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 });
 
 exports.createProperty = asyncHandler(async (req, res, next) => {
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
   const user = await User.findById(req.user.id);
+
+  if (!req.body.title || !req.body.description || !req.body.price) {
+    return next(new ErrorResponse('Missing required fields', 400));
+  }
+
+   if (!req.user || !req.user.id) {
+    return next(new ErrorResponse('User not authenticated', 401));
+  }
+
   if (!user) {
     return next(new ErrorResponse('User not found', 404));
   }
@@ -136,17 +146,24 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
   }
 
   req.body.owner = req.user.id;
+  req.body.status = 'approved';
   req.body.isGoldCard = req.body.isGoldCard && user.goldCards > 0;
 
-  if (req.body.isGoldCard) {
+   if (req.body.isGoldCard && user.goldCards > 0) {
     user.goldCards -= 1;
     await user.save();
   }
-
-  const property = await Property.create(req.body);
-  await notifyNewProperty(property);
-
-  res.status(201).json({ success: true, data: property });
+try {
+    const property = await Property.create(req.body);
+    res.status(201).json({ success: true, data: property });
+  } catch (error) {
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return next(new ErrorResponse(messages.join(', '), 400));
+    }
+    return next(error);
+  }
 });
 
 // @desc    Update property
@@ -506,13 +523,14 @@ exports.deletePropertyImage = asyncHandler(async (req, res, next) => {
 // @desc    Get Cloudinary signature for direct uploads
 // @route   GET /api/properties/cloudinary-signature
 // @access  Private
-exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
+exports.getCloudinarySignature = asyncHandler(async (req, res) => {
   const timestamp = Math.round(Date.now() / 1000);
+  const folder = `properties/${req.user.id}`;
   
-  // Parameters for signature - only include what's needed
   const params = {
     timestamp,
-    folder: `properties/${req.user.id}`,
+    folder,
+    upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || 'mauritius' // Default preset
   };
   
   // Only add upload_preset if it exists in environment
@@ -531,7 +549,7 @@ exports.getCloudinarySignature = asyncHandler(async (req, res, next) => {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
       apiKey: process.env.CLOUDINARY_API_KEY,
       folder: params.folder,
-      uploadPreset: params.upload_preset || null, // Include only if exists
+      uploadPreset: params.upload_preset || null,
     },
   });
 });

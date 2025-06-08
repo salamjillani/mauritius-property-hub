@@ -107,7 +107,7 @@ const PropertySchema = new Schema(
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected', 'active', 'inactive'],
-      default: 'pending',
+      default: 'approved',
     },
     area: {
       type: Number,

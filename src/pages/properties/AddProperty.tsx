@@ -375,7 +375,7 @@ const AddProperty = () => {
         formData.append('api_key', signatureData.apiKey);
         formData.append('timestamp', signatureData.timestamp.toString());
         formData.append('signature', signatureData.signature);
-        formData.append('folder', 'signatureData.folder');
+        formData.append('folder', signatureData.folder);
 
         if (signatureData.uploadPreset) {
           formData.append('upload_preset', signatureData.uploadPreset);
@@ -413,109 +413,125 @@ const AddProperty = () => {
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  
+  // Move user validation to the top
+  if (!user) {
+    toast({ title: 'Error', description: 'User not loaded', variant: 'destructive' });
+    return;
+  }
 
+  if (!formData.area || isNaN(Number(formData.area))) {
+    toast({
+      title: 'Validation Error',
+      description: 'Please enter a valid area in square meters',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
     // Validate listing limit
     const token = localStorage.getItem('token');
-    try {
-      const listingsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?owner=${user._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!listingsResponse.ok) {
-        throw new Error('Failed to check listing limit');
-      }
-      const listingsData = await listingsResponse.json();
-      const currentListings = listingsData.count;
+    const listingsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?owner=${user._id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!listingsResponse.ok) {
+      throw new Error('Failed to check listing limit');
+    }
+    
+    const listingsData = await listingsResponse.json();
+    const currentListings = listingsData.count;
 
-      if (user.listingLimit > 0 && currentListings >= user.listingLimit) {
-        toast({
-          title: 'Error',
-          description: 'You have reached your listing limit. Please contact support to increase your limit.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Validate gold card usage
-      if (formData.isGoldCard && user.goldCards <= 0) {
-        toast({
-          title: 'Error',
-          description: 'You have no gold cards available.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setIsLoading(true);
-
-      let finalFormData = { ...formData };
-
-      // Upload images to Cloudinary if any files are selected
-      if (selectedFiles.length > 0) {
-        toast({ title: 'Uploading Images', description: 'Please wait while images are being uploaded...' });
-        finalFormData.images = await uploadImagesToCloudinary(selectedFiles);
-      } else {
-        finalFormData.images = [];
-      }
-
-      // Convert numeric fields
-      finalFormData.price = finalFormData.price ? Number(finalFormData.price) : 0;
-      finalFormData.bedrooms = finalFormData.bedrooms ? Number(formData.bedrooms) : undefined;
-      finalFormData.bathrooms = finalFormData.bathrooms ? Number(formData.bathrooms) : undefined;
-      finalFormData.area = finalFormData.area ? Number(formData.area) : undefined;
-
-      // Set up location if coordinates are provided
-      if (finalFormData.address.latitude && finalFormData.address.longitude) {
-        finalFormData.location = {
-          type: 'Point',
-          coordinates: [Number(finalFormData.address.longitude), Number(finalFormData.address.latitude)],
-        };
-      }
-
-      // Remove coordinates from address
-      const { latitude, longitude, ...addressWithoutCoords } = finalFormData.address;
-      finalFormData.address = {
-        ...addressWithoutCoords,
-        country: addressWithoutCoords.country || 'Mauritius', // Default country
-      };
-
-      // Map area to size for backend compatibility
-      finalFormData.size = finalFormData.area;
-      delete finalFormData.area;
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalFormData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create property');
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Property added successfully. It is pending admin approval.',
-      });
-      navigate('/profile');
-    } catch (error: any) {
+    if (user.listingLimit > 0 && currentListings >= user.listingLimit) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add property',
+        description: 'You have reached your listing limit. Please contact support to increase your limit.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  };
+
+    // Validate gold card usage
+    if (formData.isGoldCard && user.goldCards <= 0) {
+      toast({
+        title: 'Error',
+        description: 'You have no gold cards available.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    let finalFormData = { ...formData, owner: user._id };
+
+    // Upload images to Cloudinary if any files are selected
+    if (selectedFiles.length > 0) {
+      toast({ title: 'Uploading Images', description: 'Please wait while images are being uploaded...' });
+      finalFormData.images = await uploadImagesToCloudinary(selectedFiles);
+    } else {
+      finalFormData.images = [];
+    }
+
+    // Convert numeric fields
+    finalFormData.price = finalFormData.price ? Number(finalFormData.price) : 0;
+    finalFormData.bedrooms = finalFormData.bedrooms ? Number(finalFormData.bedrooms) : undefined;
+    finalFormData.bathrooms = finalFormData.bathrooms ? Number(finalFormData.bathrooms) : undefined;
+    finalFormData.area = Number(formData.area); // Keep as area, don't convert to size
+
+    // Set up location if coordinates are provided
+    if (finalFormData.address.latitude && finalFormData.address.longitude) {
+      finalFormData.location = {
+        type: 'Point',
+        coordinates: [Number(finalFormData.address.longitude), Number(finalFormData.address.latitude)],
+      };
+    }
+
+    // Remove coordinates from address
+    const { latitude, longitude, ...addressWithoutCoords } = finalFormData.address;
+    finalFormData.address = {
+      ...addressWithoutCoords,
+      country: addressWithoutCoords.country || 'Mauritius',
+    };
+
+    // REMOVED: Don't map area to size and delete area
+    // finalFormData.size = finalFormData.area;
+    // delete finalFormData.area;
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(finalFormData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create property');
+    }
+
+    toast({
+      title: 'Success',
+      description: 'Property added successfully. It is pending admin approval.',
+    });
+    navigate('/profile');
+  } catch (error: any) {
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to add property',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -785,7 +801,7 @@ const AddProperty = () => {
                 value={formData.area}
                 onChange={handleChange}
                 required
-                min="0"
+                min="1"
               />
             </div>
           </div>
