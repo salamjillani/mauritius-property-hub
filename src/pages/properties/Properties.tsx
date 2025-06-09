@@ -87,7 +87,7 @@ const Properties = () => {
                   className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
                     property.isGoldCard ? "border-4 border-yellow-400 scale-105" : ""
                   }`}
-                  onClick={() => navigate(`/properties/${property._id}`)}
+                  onClick={() => navigate(`/properties/${property.category}/${property._id}`)}
                 >
                   <div className="absolute top-4 right-4 z-10 flex gap-2">
                     <Button

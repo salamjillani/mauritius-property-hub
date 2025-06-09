@@ -52,6 +52,7 @@ interface User {
   email: string;
   phone?: string;
   avatar?: string;
+  role?: string;
 }
 
 interface Agent {
@@ -118,6 +119,7 @@ const PropertyDetails = () => {
   const { t } = useTranslation();
   const { id, category } = useParams();
   const navigate = useNavigate();
+  const [agentData, setAgentData] = useState<Agent | null>(null);
   const { toast } = useToast();
   const [property, setProperty] = useState<Property | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -132,6 +134,24 @@ const PropertyDetails = () => {
     if (!property?.location?.coordinates) return null;
     // Coordinates are stored as [longitude, latitude]
     return [property.location.coordinates[1], property.location.coordinates[0]] as [number, number];
+  }, [property]);
+
+  useEffect(() => {
+    if (property?.agent?._id) {
+      const fetchAgent = async () => {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/agents/${property.agent._id}`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
+          );
+          const data = await response.json();
+          setAgentData(data.data);
+        } catch (error) {
+          console.error("Failed to fetch agent details", error);
+        }
+      };
+      fetchAgent();
+    }
   }, [property]);
 
   // Load user from localStorage
@@ -172,7 +192,7 @@ const PropertyDetails = () => {
       // Check favorites
       const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
       setIsFavorite(favorites.includes(data.data._id));
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to load property',
@@ -189,7 +209,7 @@ const PropertyDetails = () => {
   }, [fetchProperty]);
 
   const handleFavorite = () => {
-    const favorites = JSON.parse(localStorage.getItem('favorites') || []);
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
     const newFavorites = isFavorite
       ? favorites.filter((favId: string) => favId !== property?._id)
       : [...favorites, property?._id];
@@ -202,6 +222,12 @@ const PropertyDetails = () => {
       description: isFavorite ? 'Property removed from favorites' : 'Property added to favorites',
     });
   };
+
+  const shouldShowInquiryForm = useMemo(() => {
+    if (!user) return true;
+    const professionalRoles = ['individual', 'agent', 'agency', 'promoter'];
+    return !professionalRoles.includes(user.role || '');
+  }, [user]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -451,32 +477,41 @@ const PropertyDetails = () => {
             <h2 className="text-xl font-bold mb-4">Contact</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Agent Info */}
-              {property.agent ? (
+              {/* Show agent if property has agent data */}
+              {agentData ? (
                 <div className="bg-gray-50 rounded-lg p-6">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
+                    <img 
+                      src={agentData.user?.avatar || '/default-avatar.jpg'} 
+                      alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
                     <div>
                       <h3 className="font-bold text-lg">
-                        {property.agent.user.firstName} {property.agent.user.lastName}
+                        {agentData.user.firstName} {agentData.user.lastName}
                       </h3>
-                      <p className="text-gray-600">{property.agent.title || 'Real Estate Agent'}</p>
+                      <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
+                      {property.agency?.name && (
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <Building2 className="h-4 w-4" /> {property.agency.name}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     {user ? (
                       <>
-                        {property.agent.user.phone && (
+                        {agentData.user.phone && (
                           <div className="flex items-center gap-2">
                             <Phone className="h-5 w-5 text-gray-600" />
-                            <span>{property.agent.user.phone}</span>
+                            <span>{agentData.user.phone}</span>
                           </div>
                         )}
-                        {property.agent.user.email && (
+                        {agentData.user.email && (
                           <div className="flex items-center gap-2">
                             <Mail className="h-5 w-5 text-gray-600" />
-                            <span>{property.agent.user.email}</span>
+                            <span>{agentData.user.email}</span>
                           </div>
                         )}
                       </>
@@ -487,64 +522,83 @@ const PropertyDetails = () => {
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : 
+              /* Show agency if property has agency */
+              property.agency ? (
                 <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="font-bold text-lg mb-2">Contact Property Owner</h3>
-                  {user ? (
-                    <>
-                      {property.contactDetails?.phone && (
-                        <div className="flex items-center gap-2 mb-2">
-                          <Phone className="h-5 w-5 text-gray-600" />
-                          <span>{property.contactDetails.phone}</span>
-                        </div>
-                      )}
-                      {property.contactDetails?.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-5 w-5 text-gray-600" />
-                          <span>{property.contactDetails.email}</span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-gray-500 italic">
-                      Log in to view contact details
-                    </p>
-                  )}
+                  <div className="flex items-center gap-4 mb-4">
+                    {property.agency.logoUrl && (
+                      <img 
+                        src={property.agency.logoUrl} 
+                        alt={property.agency.name}
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-bold text-lg">{property.agency.name}</h3>
+                      <p className="text-gray-600">Real Estate Agency</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {user ? (
+                      <>
+                        {property.contactDetails?.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-5 w-5 text-gray-600" />
+                            <span>{property.contactDetails.phone}</span>
+                          </div>
+                        )}
+                        {property.contactDetails?.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-gray-600" />
+                            <span>{property.contactDetails.email}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-gray-500 italic">
+                        Log in to view contact details
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Conditionally render inquiry form */}
+              {shouldShowInquiryForm && (
+                <div className="bg-white border rounded-lg p-6">
+                  <h3 className="font-bold text-lg mb-4">Send Inquiry</h3>
+                  <form onSubmit={handleInquirySubmit}>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Your Name</Label>
+                        <Input id="name" required />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" required />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" type="tel" />
+                      </div>
+                      <div>
+                        <Label htmlFor="message">Message</Label>
+                        <Textarea 
+                          id="message" 
+                          rows={4} 
+                          placeholder="I'm interested in this property..." 
+                          required 
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">
+                        Send Inquiry
+                      </Button>
+                    </div>
+                  </form>
                 </div>
               )}
-              
-              {/* Inquiry Form */}
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="font-bold text-lg mb-4">Send Inquiry</h3>
-                <form onSubmit={handleInquirySubmit}>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Your Name</Label>
-                      <Input id="name" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" type="tel" />
-                    </div>
-                    <div>
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea 
-                        id="message" 
-                        rows={4} 
-                        placeholder="I'm interested in this property..." 
-                        required 
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Send Inquiry
-                    </Button>
-                  </div>
-                </form>
-              </div>
             </div>
           </div>
         </motion.div>

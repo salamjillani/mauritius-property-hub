@@ -1016,7 +1016,7 @@ const AgencyForm = ({
                 className="flex items-center gap-3 p-3 border rounded-lg"
               >
                 <img
-                  src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+                  src={agent.photoUrl || "/default-avatar.jpg"}
                   alt={agent.user?.firstName}
                   className="h-12 w-12 rounded-full"
                 />
@@ -1052,7 +1052,7 @@ const AgencyForm = ({
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+                        src={agent.photoUrl || "/default-avatar.jpg"}
                         alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
                         className="h-10 w-10 rounded-full"
                       />
@@ -1275,35 +1275,42 @@ const AgentForm = ({
               </Button>
             </div>
           </div>
-          {profile.linkingRequests && profile.linkingRequests.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Pending Requests</h4>
-              <div className="space-y-2">
-                {profile.linkingRequests
-                  .filter((req) => req.status === "pending")
-                  .map((req) => (
-                    <div
-                      key={req._id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        {req.agency?.logoUrl ? (
-                          <img
-                            src={req.agency.logoUrl}
-                            alt={req.agency.name}
-                            className="h-10 w-10 rounded-full"
-                          />
-                        ) : (
-                          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-                        )}
-                        <span>{req.agency?.name || "Unknown Agency"}</span>
-                      </div>
-                      <span className="text-yellow-600">Pending</span>
-                    </div>
-                  ))}
+     {profile.linkingRequests && profile.linkingRequests.length > 0 && (
+  <div>
+    <h4 className="font-medium mb-2">Pending Requests</h4>
+    <div className="space-y-2">
+      {profile.linkingRequests
+        .filter((req) => req.status === "pending")
+        .map((req) => {
+          // Find agency in the agencies array
+          const agency = agencies.find(
+            (a) => a._id === (req.agency?._id || req.agency)
+          );
+          
+          return (
+            <div
+              key={req._id}
+              className="flex items-center justify-between p-3 border rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                {agency?.logoUrl ? (
+                  <img
+                    src={agency.logoUrl}
+                    alt={agency.name}
+                    className="h-10 w-10 rounded-full"
+                  />
+                ) : (
+                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+                )}
+                <span>{agency?.name || "Unknown Agency"}</span>
               </div>
+              <span className="text-yellow-600">Pending</span>
             </div>
-          )}
+          );
+        })}
+    </div>
+  </div>
+)}
         </div>
       )}
     </div>
