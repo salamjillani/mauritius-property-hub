@@ -131,7 +131,7 @@ const AllAgentsPage = () => {
               <div className="relative p-6 flex flex-col items-center">
                 <div className="w-28 h-28 rounded-full overflow-hidden mb-5 border-4 border-white shadow-md group-hover:scale-105 transition-transform duration-300">
                   <img
-                    src={agent.user?.avatarUrl || "default-avatar.jpg"}
+                    src={agent.photoUrl || "/default-avatar.jpg"}
                     alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
                     className="w-full h-full object-cover"
                   />

@@ -95,7 +95,7 @@ useEffect(() => {
         >
           <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-md">
             <img
-              src={agent.user?.avatarUrl || "/default-avatar.jpg"}
+              src={agent.photoUrl || "/default-avatar.jpg"}
               alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
               className="w-full h-full object-cover"
             />
