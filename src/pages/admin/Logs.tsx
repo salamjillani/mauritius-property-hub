@@ -15,23 +15,42 @@ const Logs = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const token = sessionStorage.getItem("token");
+        // Fix: Check both sessionStorage and localStorage like in Dashboard
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/admin/logs`, 
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
         );
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch logs");
+          if (response.status === 401) {
+            throw new Error("Unauthorized access. Please login again.");
+          }
+          if (response.status === 403) {
+            throw new Error("Access forbidden. Admin privileges required.");
+          }
+          
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        // Corrected: Use data.logs instead of data.data
-        setLogs(data.logs || data.data || []);
+        console.log('API Response:', data); // Debug log
+        
+        // Fix: Access logs from data.data (based on your controller response structure)
+        setLogs(data.data || []);
+        setError(null); // Clear any previous errors
       } catch (error: any) {
+        console.error('Fetch logs error:', error);
         setError(error.message);
         toast({
           title: "Error",
@@ -42,6 +61,7 @@ const Logs = () => {
         setIsLoading(false);
       }
     };
+    
     fetchLogs();
   }, [toast]);
 
@@ -70,36 +90,36 @@ const Logs = () => {
         )}
 
         <div className="space-y-4">
-             {logs.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-gray-500 text-center">
-                {error ? "Error loading logs" : "No logs available"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          logs.map((log) => (
-            <Card key={log._id}>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>{log.action}</span>
-                  <span className="text-sm text-gray-500 font-normal">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p><strong>Resource:</strong> {log.resource}</p>
-                  {log.resourceId && <p><strong>Resource ID:</strong> {log.resourceId}</p>}
-                  {log.details && <p><strong>Details:</strong> {log.details}</p>}
-                  <p><strong>User:</strong> {log.user?.firstName} {log.user?.lastName} ({log.user?.email})</p>
-                </div>
+          {logs.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-gray-500 text-center">
+                  {error ? "Error loading logs" : "No logs available"}
+                </p>
               </CardContent>
             </Card>
-          ))
-        )}
+          ) : (
+            logs.map((log) => (
+              <Card key={log._id}>
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span>{log.action}</span>
+                    <span className="text-sm text-gray-500 font-normal">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p><strong>Resource:</strong> {log.resource}</p>
+                    {log.resourceId && <p><strong>Resource ID:</strong> {log.resourceId}</p>}
+                    {log.details && <p><strong>Details:</strong> {log.details}</p>}
+                    <p><strong>User:</strong> {log.user?.firstName} {log.user?.lastName} ({log.user?.email})</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </main>
       <Footer />
