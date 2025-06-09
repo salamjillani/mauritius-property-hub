@@ -92,7 +92,7 @@ exports.getAgents = asyncHandler(async (req, res, next) => {
   query = query.skip(startIndex).limit(limit);
 
   query = query.populate([
-    { path: "user", select: "firstName lastName email avatarUrl" },
+    { path: "user", select: "firstName lastName email avatarUrl phone" },
     { path: "agency", select: "name logoUrl" },
   ]);
 
@@ -127,7 +127,7 @@ exports.getAgent = asyncHandler(async (req, res, next) => {
   }).populate([
     {
       path: "user",
-      select: "firstName lastName email avatarUrl contactDetails",
+      select: "firstName lastName email avatarUrl contactDetails phone",
     },
     { path: "agency", select: "name logoUrl" },
     {

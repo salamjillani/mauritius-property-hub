@@ -37,7 +37,7 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
   query = query.skip(startIndex).limit(limit);
 
   query = query.populate([
-    { path: 'user', select: 'firstName lastName email' },
+    { path: 'user', select: 'firstName lastName email phone' },
     { path: 'agents' },
   ]);
 
@@ -63,7 +63,7 @@ exports.getAgencies = asyncHandler(async (req, res, next) => {
 exports.getAgency = asyncHandler(async (req, res, next) => {
   const agency = await Agency.findOne({ _id: req.params.id, approvalStatus: 'approved' })
     .populate([
-      { path: 'user', select: 'firstName lastName email' },
+      { path: 'user', select: 'firstName lastName email phone' },
       { path: 'agents' },
       {
         path: 'properties',

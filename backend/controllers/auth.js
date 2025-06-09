@@ -5,7 +5,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const crypto = require('crypto');
 
 exports.register = asyncHandler(async (req, res, next) => {
-  const { firstName, lastName, email, password, accountType } = req.body;
+  const { firstName, lastName, email, password, accountType, phone } = req.body;
 
   if (!['individual', 'agent', 'agency', 'promoter'].includes(accountType)) {
     return next(new ErrorResponse('Invalid account type', 400));
@@ -16,6 +16,7 @@ exports.register = asyncHandler(async (req, res, next) => {
     lastName,
     email,
     password,
+    phone,
     role: accountType,
     approvalStatus: 'pending',
   });

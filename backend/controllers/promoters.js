@@ -6,7 +6,11 @@ const AuditLog = require('../models/Log');
 const cloudinary = require('../config/cloudinary');
 
 exports.getMyPromoterProfile = asyncHandler(async (req, res, next) => {
-  const promoter = await Promoter.findOne({ user: req.user.id });
+  const promoter = await Promoter.findOne({ user: req.user.id })
+   .populate({
+      path: 'user',
+      select: 'firstName lastName email phone'
+    });
   
   if (!promoter) {
     // Return empty promoter object instead of error

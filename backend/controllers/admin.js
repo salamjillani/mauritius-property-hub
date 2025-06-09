@@ -923,6 +923,7 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
   user.approvalStatus = 'approved';
   user.listingLimit = listingLimit === 'unlimited' ? null : parseInt(listingLimit);
   user.goldCards = parseInt(goldCards);
+  user.phone = request.phoneNumber;
   await user.save();
 
   // Update registration request status
