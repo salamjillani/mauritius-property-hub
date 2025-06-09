@@ -490,20 +490,13 @@ const Profile = () => {
             <div className="flex-1 flex flex-col gap-2">
               <div className="flex items-center gap-2 text-slate-600">
                 <Phone size={20} />
-                <span>
-                  {profile.user?.phone ||
-                    profile.contactDetails?.phone ||
-                    "Not provided"}
-                </span>
+                <span>{user?.phone || "Not provided"}</span>
               </div>
               <div className="flex items-center gap-2 text-slate-600">
                 <Mail size={20} />
-                <span>
-                  {profile.user?.email ||
-                    profile.contactDetails?.email ||
-                    "Not provided"}
-                </span>
+                <span>{user?.email || "Not provided"}</span>
               </div>
+
               {user.approvalStatus === "approved" && (
                 <div className="mt-2 bg-teal-50 p-3 rounded-lg">
                   <p className="text-sm font-medium">

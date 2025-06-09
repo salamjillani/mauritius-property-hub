@@ -115,17 +115,13 @@ const AgencyPage = () => {
               <div className="flex items-center gap-2">
                 <Phone size={20} />
                 <p>
-                  {agency.user?.phone ||
-                    agency.contactDetails?.phone ||
-                    "(555) 123-4567"}
+                  {agency.user?.phone || "Not provided"}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Mail size={20} />
                 <p>
-                  {agency.user?.email ||
-                    agency.contactDetails?.email ||
-                    "agency@example.com"}
+                 {agency.user?.email || "Not provided"}
                 </p>
               </div>
             </div>

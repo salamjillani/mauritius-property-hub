@@ -145,17 +145,13 @@ const AgentPage = () => {
                 <div className="flex items-center gap-2 text-blue-100">
                   <Phone size={20} />
                   <span>
-                    {agent.user?.phone ||
-                      agent.contactDetails?.phone ||
-                      "(555) 123-4567"}
+                    {agent.user?.phone || "Not provided"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-blue-100">
                   <Mail size={20} />
                   <span>
-                    {agent.user?.email ||
-                      agent.contactDetails?.email ||
-                      "agent@example.com"}
+                   {agent.user?.email || "Not provided"}
                   </span>
                 </div>
               </>

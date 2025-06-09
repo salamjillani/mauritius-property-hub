@@ -180,22 +180,18 @@ const AllAgentsPage = () => {
                   className="w-full overflow-hidden"
                 >
                   <div className="pt-3 border-t border-slate-100 mt-2 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Phone className="w-4 h-4" />
-                      <span className="text-sm">
-                        {agent.user?.phone ||
-                          agent.contactDetails?.phone ||
-                          "(555) 123-4567"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Mail className="w-4 h-4" />
-                      <span className="text-sm">
-                        {agent.user?.email ||
-                          agent.contactDetails?.email ||
-                          "agent@example.com"}
-                      </span>
-                    </div>
+                   <div className="flex items-center gap-2 text-slate-600">
+  <Phone className="w-4 h-4" />
+  <span className="text-sm">
+    {agent.user?.phone || "Not provided"}
+  </span>
+</div>
+<div className="flex items-center gap-2 text-slate-600">
+  <Mail className="w-4 h-4" />
+  <span className="text-sm">
+    {agent.user?.email}
+  </span>
+</div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <MapPin className="w-4 h-4" />
                       <span className="text-sm">
