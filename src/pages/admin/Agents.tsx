@@ -1,4 +1,3 @@
-// pages/admin/Agents.tsx
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -13,20 +12,19 @@ const Agents = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/agents`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/agents`, 
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch agents');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch agents');
+        
         const data = await response.json();
         setAgents(data.data);
       } catch (error) {
-        console.error('Error fetching agents:', error);
         toast({
           title: 'Error',
           description: 'Failed to load agents',
@@ -36,7 +34,6 @@ const Agents = () => {
         setIsLoading(false);
       }
     };
-
     fetchAgents();
   }, [toast]);
 
@@ -59,6 +56,7 @@ const Agents = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Agency</TableHead>
               <TableHead>Created At</TableHead>
             </TableRow>
@@ -68,6 +66,7 @@ const Agents = () => {
               <TableRow key={agent._id}>
                 <TableCell>{agent.user?.firstName} {agent.user?.lastName}</TableCell>
                 <TableCell>{agent.user?.email}</TableCell>
+                <TableCell className="capitalize">{agent.approvalStatus}</TableCell>
                 <TableCell>{agent.agency?.name || 'Independent'}</TableCell>
                 <TableCell>{new Date(agent.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>

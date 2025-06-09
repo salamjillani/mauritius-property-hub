@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -15,49 +16,28 @@ const Logs = () => {
     const fetchLogs = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/logs`, 
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
 
-        console.log('Fetching logs from:', `${import.meta.env.VITE_API_URL}/api/admin/logs`);
+        if (!response.ok) throw new Error("Failed to fetch logs");
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/logs`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Error response:', errorData);
-          throw new Error(errorData.message || `HTTP ${response.status}: Failed to fetch logs`);
-        }
-
         const data = await response.json();
-        console.log('Logs data received:', data);
-        
-        if (data.success && data.data) {
-          setLogs(data.data);
-        } else {
-          console.warn('Unexpected response format:', data);
-          setLogs([]);
-        }
+        setLogs(data.data);
       } catch (error) {
-        console.error('Fetch logs error:', error);
         setError(error.message);
         toast({
           title: "Error",
-          description: error.message || "Failed to fetch logs",
+          description: "Failed to load logs",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchLogs();
   }, [toast]);
 
@@ -90,7 +70,7 @@ const Logs = () => {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-gray-500 text-center">
-                  {error ? "Could not load logs due to an error." : "No logs available."}
+                  {error ? "Error loading logs" : "No logs available"}
                 </p>
               </CardContent>
             </Card>
@@ -108,13 +88,9 @@ const Logs = () => {
                 <CardContent>
                   <div className="space-y-2">
                     <p><strong>Resource:</strong> {log.resource}</p>
-                    {log.resourceId && (
-                      <p><strong>Resource ID:</strong> {log.resourceId}</p>
-                    )}
-                    {log.details && (
-                      <p><strong>Details:</strong> {log.details}</p>
-                    )}
-                    <p><strong>User:</strong> {log.user?.firstName} {log.user?.lastName} ({log.user?.email || "N/A"})</p>
+                    {log.resourceId && <p><strong>Resource ID:</strong> {log.resourceId}</p>}
+                    {log.details && <p><strong>Details:</strong> {log.details}</p>}
+                    <p><strong>User:</strong> {log.user?.firstName} {log.user?.lastName} ({log.user?.email})</p>
                   </div>
                 </CardContent>
               </Card>

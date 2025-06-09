@@ -1,4 +1,3 @@
-// pages/admin/Agencies.tsx
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -13,20 +12,19 @@ const Agencies = () => {
   useEffect(() => {
     const fetchAgencies = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/agencies`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/agencies`, 
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch agencies');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch agencies');
+        
         const data = await response.json();
         setAgencies(data.data);
       } catch (error) {
-        console.error('Error fetching agencies:', error);
         toast({
           title: 'Error',
           description: 'Failed to load agencies',
@@ -36,7 +34,6 @@ const Agencies = () => {
         setIsLoading(false);
       }
     };
-
     fetchAgencies();
   }, [toast]);
 
@@ -59,6 +56,7 @@ const Agencies = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Created At</TableHead>
             </TableRow>
           </TableHeader>
@@ -67,6 +65,7 @@ const Agencies = () => {
               <TableRow key={agency._id}>
                 <TableCell>{agency.name}</TableCell>
                 <TableCell>{agency.user?.email}</TableCell>
+                <TableCell className="capitalize">{agency.approvalStatus}</TableCell>
                 <TableCell>{new Date(agency.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
