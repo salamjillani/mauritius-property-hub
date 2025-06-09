@@ -857,7 +857,6 @@ const ListingsTab = ({ userId, user, listings }) => (
 );
 
 // AgencyForm Component
-// AgencyForm Component
 const AgencyForm = ({
   profile,
   setProfile,
@@ -865,7 +864,7 @@ const AgencyForm = ({
   setFile,
   handleSubmit,
   isSaving,
-  handleApproveLink, // Add these props to use existing handlers
+  handleApproveLink,
   handleRejectLink,
 }) => {
   const { toast } = useToast();
