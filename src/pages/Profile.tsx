@@ -101,10 +101,10 @@ const Profile = () => {
               }
             );
 
-           if (!agenciesRes.ok) {
-  const errorData = await agenciesRes.json();
-  throw new Error(errorData.message || "Failed to fetch agencies");
-}
+            if (!agenciesRes.ok) {
+              const errorData = await agenciesRes.json();
+              throw new Error(errorData.message || "Failed to fetch agencies");
+            }
 
             const agenciesData = await agenciesRes.json();
             setAgencies(agenciesData.data || []);
@@ -488,13 +488,21 @@ const Profile = () => {
               )}
             </div>
             <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Mail size={20} />
-                <p>{user.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-slate-600">
                 <Phone size={20} />
-                <p>{user.phone || "Not provided"}</p>
+                <span>
+                  {profile.user?.phone ||
+                    profile.contactDetails?.phone ||
+                    "Not provided"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <Mail size={20} />
+                <span>
+                  {profile.user?.email ||
+                    profile.contactDetails?.email ||
+                    "Not provided"}
+                </span>
               </div>
               {user.approvalStatus === "approved" && (
                 <div className="mt-2 bg-teal-50 p-3 rounded-lg">
@@ -1275,42 +1283,42 @@ const AgentForm = ({
               </Button>
             </div>
           </div>
-     {profile.linkingRequests && profile.linkingRequests.length > 0 && (
-  <div>
-    <h4 className="font-medium mb-2">Pending Requests</h4>
-    <div className="space-y-2">
-      {profile.linkingRequests
-        .filter((req) => req.status === "pending")
-        .map((req) => {
-          // Find agency in the agencies array
-          const agency = agencies.find(
-            (a) => a._id === (req.agency?._id || req.agency)
-          );
-          
-          return (
-            <div
-              key={req._id}
-              className="flex items-center justify-between p-3 border rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                {agency?.logoUrl ? (
-                  <img
-                    src={agency.logoUrl}
-                    alt={agency.name}
-                    className="h-10 w-10 rounded-full"
-                  />
-                ) : (
-                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-                )}
-                <span>{agency?.name || "Unknown Agency"}</span>
+          {profile.linkingRequests && profile.linkingRequests.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Pending Requests</h4>
+              <div className="space-y-2">
+                {profile.linkingRequests
+                  .filter((req) => req.status === "pending")
+                  .map((req) => {
+                    // Find agency in the agencies array
+                    const agency = agencies.find(
+                      (a) => a._id === (req.agency?._id || req.agency)
+                    );
+
+                    return (
+                      <div
+                        key={req._id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          {agency?.logoUrl ? (
+                            <img
+                              src={agency.logoUrl}
+                              alt={agency.name}
+                              className="h-10 w-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+                          )}
+                          <span>{agency?.name || "Unknown Agency"}</span>
+                        </div>
+                        <span className="text-yellow-600">Pending</span>
+                      </div>
+                    );
+                  })}
               </div>
-              <span className="text-yellow-600">Pending</span>
             </div>
-          );
-        })}
-    </div>
-  </div>
-)}
+          )}
         </div>
       )}
     </div>

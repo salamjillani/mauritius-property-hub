@@ -18,23 +18,30 @@ const AgencyPage = () => {
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-useEffect(() => {
-  const fetchAgency = async () => {
-    try {
-      const agencyResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agencies/${id}?approvalStatus=approved`
-      );
+  useEffect(() => {
+    const fetchAgency = async () => {
+      try {
+        const agencyResponse = await fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/agencies/${id}?approvalStatus=approved`
+        );
         if (!agencyResponse.ok) throw new Error("Failed to fetch agency");
         const agencyData = await agencyResponse.json();
         setAgency(agencyData.data);
 
-        const agentsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/agents?agency=${id}`);
+        const agentsResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/agents?agency=${id}`
+        );
         if (!agentsResponse.ok) throw new Error("Failed to fetch agents");
         const agentsData = await agentsResponse.json();
         setAgents(agentsData.data);
 
-        const propertiesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`);
-        if (!propertiesResponse.ok) throw new Error("Failed to fetch properties");
+        const propertiesResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`
+        );
+        if (!propertiesResponse.ok)
+          throw new Error("Failed to fetch properties");
         const propertiesData = await propertiesResponse.json();
         setProperties(propertiesData.data);
       } catch (error) {
@@ -100,15 +107,26 @@ useEffect(() => {
             <div className="flex-1 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <MapPin size={20} />
-                <p>{agency.address?.city}, {agency.address?.country || "Mauritius"}</p>
+                <p>
+                  {agency.address?.city},{" "}
+                  {agency.address?.country || "Mauritius"}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Phone size={20} />
-                <p>{agency.contactDetails?.phone || "(555) 123-4567"}</p>
+                <p>
+                  {agency.user?.phone ||
+                    agency.contactDetails?.phone ||
+                    "(555) 123-4567"}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Mail size={20} />
-                <p>{agency.contactDetails?.email || "agency@example.com"}</p>
+                <p>
+                  {agency.user?.email ||
+                    agency.contactDetails?.email ||
+                    "agency@example.com"}
+                </p>
               </div>
             </div>
           </div>
@@ -125,7 +143,9 @@ useEffect(() => {
             {agents.map((agent) => (
               <div
                 key={agent._id}
-                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${agent.isPremium ? 'border-2 border-amber-400' : ''}`}
+                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
+                  agent.isPremium ? "border-2 border-amber-400" : ""
+                }`}
                 onClick={() => navigate(`/agent/${agent._id}`)}
               >
                 <img
@@ -134,7 +154,9 @@ useEffect(() => {
                   className="h-48 w-full object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-lg font-bold">{agent.user.firstName} {agent.user.lastName}</h3>
+                  <h3 className="text-lg font-bold">
+                    {agent.user.firstName} {agent.user.lastName}
+                  </h3>
                   <p className="text-sm text-gray-600">{agent.title}</p>
                 </div>
               </div>
@@ -153,7 +175,9 @@ useEffect(() => {
             {properties.map((property) => (
               <div
                 key={property._id}
-                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${property.isPremium ? 'border-2 border-amber-400' : ''}`}
+                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
+                  property.isPremium ? "border-2 border-amber-400" : ""
+                }`}
                 onClick={() => navigate(`/properties/${property._id}`)}
               >
                 <img
@@ -163,7 +187,9 @@ useEffect(() => {
                 />
                 <div className="p-4">
                   <h3 className="text-lg font-bold">{property.title}</h3>
-                  <p className="text-sm text-gray-600">{property.address.city}, {property.address.country}</p>
+                  <p className="text-sm text-gray-600">
+                    {property.address.city}, {property.address.country}
+                  </p>
                 </div>
               </div>
             ))}

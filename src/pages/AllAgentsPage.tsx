@@ -14,12 +14,12 @@ const AllAgentsPage = () => {
   const [hoveredAgent, setHoveredAgent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
- useEffect(() => {
-  const fetchAgents = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents?approvalStatus=approved`
-      );
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/agents?approvalStatus=approved`
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch agents");
         }
@@ -84,7 +84,11 @@ const AllAgentsPage = () => {
       <Navbar />
 
       <main className="flex-1 container mx-auto py-16 px-4">
-        <BackButton to="/" label="Back to Home" className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors" />
+        <BackButton
+          to="/"
+          label="Back to Home"
+          className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -96,13 +100,15 @@ const AllAgentsPage = () => {
             Our Real Estate Experts
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Meet our dedicated team of professionals committed to helping you find your perfect home
+            Meet our dedicated team of professionals committed to helping you
+            find your perfect home
           </p>
         </motion.div>
 
         <div className="mb-8 flex justify-between items-center">
           <p className="text-slate-700">
-            <span className="font-semibold">{agents.length}</span> Agents Available
+            <span className="font-semibold">{agents.length}</span> Agents
+            Available
           </p>
           <div className="flex items-center gap-2 text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
             <Filter className="w-4 h-4" />
@@ -140,19 +146,28 @@ const AllAgentsPage = () => {
                 <h3 className="font-bold text-lg text-center mb-1">
                   {agent.user?.firstName} {agent.user?.lastName}
                 </h3>
-                <p className="text-sm text-blue-600 font-medium text-center mb-3">{agent.title}</p>
+                <p className="text-sm text-blue-600 font-medium text-center mb-3">
+                  {agent.title}
+                </p>
 
                 <div className="flex mb-3">
                   {Array.from({ length: agent.rating || 4 }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <Star
+                      key={i}
+                      className="w-4 h-4 text-amber-400 fill-amber-400"
+                    />
                   ))}
-                  {Array.from({ length: 5 - (agent.rating || 4) }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-slate-200" />
-                  ))}
+                  {Array.from({ length: 5 - (agent.rating || 4) }).map(
+                    (_, i) => (
+                      <Star key={i} className="w-4 h-4 text-slate-200" />
+                    )
+                  )}
                 </div>
 
                 <div className="bg-blue-50 px-4 py-1 rounded-full mb-4">
-                  <p className="text-sm font-medium text-blue-700">{agent.listingsCount || 0} Properties</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    {agent.listingsCount || 0} Properties
+                  </p>
                 </div>
 
                 <motion.div
@@ -167,15 +182,25 @@ const AllAgentsPage = () => {
                   <div className="pt-3 border-t border-slate-100 mt-2 flex flex-col gap-2">
                     <div className="flex items-center gap-2 text-slate-600">
                       <Phone className="w-4 h-4" />
-                      <span className="text-sm">{agent.contactDetails?.phone || "(555) 123-4567"}</span>
+                      <span className="text-sm">
+                        {agent.user?.phone ||
+                          agent.contactDetails?.phone ||
+                          "(555) 123-4567"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Mail className="w-4 h-4" />
-                      <span className="text-sm">{agent.contactDetails?.email || "agent@example.com"}</span>
+                      <span className="text-sm">
+                        {agent.user?.email ||
+                          agent.contactDetails?.email ||
+                          "agent@example.com"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <MapPin className="w-4 h-4" />
-                      <span className="text-sm">{agent.location || "Mauritius"}</span>
+                      <span className="text-sm">
+                        {agent.location || "Mauritius"}
+                      </span>
                     </div>
                   </div>
                 </motion.div>

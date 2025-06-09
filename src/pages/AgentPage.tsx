@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, MapPin, Phone, Mail, MessageCircle, Home, Bed, Bath, Square, Heart, Eye } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  Phone,
+  Mail,
+  MessageCircle,
+  Home,
+  Bed,
+  Bath,
+  Square,
+  Heart,
+  Eye,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -22,13 +34,15 @@ const AgentPage = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
-  
-useEffect(() => {
-  const fetchAgent = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/agents/${id}?approvalStatus=approved`
-      );
+
+  useEffect(() => {
+    const fetchAgent = async () => {
+      try {
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/agents/${id}?approvalStatus=approved`
+        );
         if (!response.ok) throw new Error("Failed to fetch agent");
         const data = await response.json();
         setAgent(data.data);
@@ -36,7 +50,8 @@ useEffect(() => {
         const propertiesResponse = await fetch(
           `${import.meta.env.VITE_API_URL}/api/properties?agent=${id}`
         );
-        if (!propertiesResponse.ok) throw new Error("Failed to fetch properties");
+        if (!propertiesResponse.ok)
+          throw new Error("Failed to fetch properties");
         const propertiesData = await propertiesResponse.json();
         setProperties(propertiesData.data);
       } catch (error) {
@@ -53,9 +68,10 @@ useEffect(() => {
     fetchAgent();
   }, [id, toast]);
 
-  const filteredProperties = activeTab === "all"
-    ? properties
-    : properties.filter((property) => property.category === activeTab);
+  const filteredProperties =
+    activeTab === "all"
+      ? properties
+      : properties.filter((property) => property.category === activeTab);
 
   if (isLoading) {
     return (
@@ -85,7 +101,11 @@ useEffect(() => {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
       <Navbar />
       <div className="container mx-auto px-4 py-16">
-        <BackButton to="/agents" label="Back to Agents" className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors" />
+        <BackButton
+          to="/agents"
+          label="Back to Agents"
+          className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -124,11 +144,19 @@ useEffect(() => {
               <>
                 <div className="flex items-center gap-2 text-blue-100">
                   <Phone size={20} />
-                  <span>{agent.contactDetails?.phone || "(555) 123-4567"}</span>
+                  <span>
+                    {agent.user?.phone ||
+                      agent.contactDetails?.phone ||
+                      "(555) 123-4567"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-blue-100">
                   <Mail size={20} />
-                  <span>{agent.contactDetails?.email || "agent@example.com"}</span>
+                  <span>
+                    {agent.user?.email ||
+                      agent.contactDetails?.email ||
+                      "agent@example.com"}
+                  </span>
                 </div>
               </>
             ) : (
@@ -163,7 +191,9 @@ useEffect(() => {
                       viewport={{ once: true }}
                       variants={fadeInUp}
                       className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
-                        property.isPremium ? "border-2 border-amber-400 animate-pulse" : ""
+                        property.isPremium
+                          ? "border-2 border-amber-400 animate-pulse"
+                          : ""
                       }`}
                       onClick={() => navigate(`/properties/${property._id}`)}
                     >
@@ -174,21 +204,43 @@ useEffect(() => {
                           className="bg-white/80 hover:bg-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+                            const favorites = JSON.parse(
+                              localStorage.getItem("favorites") || "[]"
+                            );
                             if (favorites.includes(property._id)) {
                               localStorage.setItem(
                                 "favorites",
-                                JSON.stringify(favorites.filter((id) => id !== property._id))
+                                JSON.stringify(
+                                  favorites.filter((id) => id !== property._id)
+                                )
                               );
-                              toast({ title: "Removed from Favorites", description: `${property.title} removed` });
+                              toast({
+                                title: "Removed from Favorites",
+                                description: `${property.title} removed`,
+                              });
                             } else {
                               favorites.push(property._id);
-                              localStorage.setItem("favorites", JSON.stringify(favorites));
-                              toast({ title: "Added to Favorites", description: `${property.title} added` });
+                              localStorage.setItem(
+                                "favorites",
+                                JSON.stringify(favorites)
+                              );
+                              toast({
+                                title: "Added to Favorites",
+                                description: `${property.title} added`,
+                              });
                             }
                           }}
                         >
-                          <Heart size={16} className={JSON.parse(localStorage.getItem("favorites") || "[]").includes(property._id) ? "fill-red-500" : "text-slate-600"} />
+                          <Heart
+                            size={16}
+                            className={
+                              JSON.parse(
+                                localStorage.getItem("favorites") || "[]"
+                              ).includes(property._id)
+                                ? "fill-red-500"
+                                : "text-slate-600"
+                            }
+                          />
                         </Button>
                       </div>
                       <div className="relative">
@@ -225,7 +277,10 @@ useEffect(() => {
                         </div>
                         <div className="flex items-center gap-1 text-slate-500">
                           <MapPin size={16} />
-                          <p className="text-sm">{property.address?.city}, {property.address?.country || "Mauritius"}</p>
+                          <p className="text-sm">
+                            {property.address?.city},{" "}
+                            {property.address?.country || "Mauritius"}
+                          </p>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-slate-600">
                           {property.bedrooms > 0 && (
@@ -247,15 +302,22 @@ useEffect(() => {
                             </div>
                           )}
                         </div>
-                        <p className="text-sm text-slate-600 line-clamp-2">{property.description}</p>
+                        <p className="text-sm text-slate-600 line-clamp-2">
+                          {property.description}
+                        </p>
                         {property.agency && (
                           <div className="flex items-center gap-2">
                             <img
-                              src={property.agency.logoUrl || "/default-agency-logo.png"}
+                              src={
+                                property.agency.logoUrl ||
+                                "/default-agency-logo.png"
+                              }
                               alt={property.agency.name}
                               className="w-8 h-8 rounded-full"
                             />
-                            <p className="text-sm text-slate-600">{property.agency.name}</p>
+                            <p className="text-sm text-slate-600">
+                              {property.agency.name}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -298,7 +360,9 @@ useEffect(() => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {agent.specializations?.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-4">Specializations</h3>
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">
+                    Specializations
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {agent.specializations.map((spec, index) => (
                       <span
@@ -313,7 +377,9 @@ useEffect(() => {
               )}
               {agent.languages?.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-4">Languages</h3>
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">
+                    Languages
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {agent.languages.map((lang, index) => (
                       <span
@@ -338,17 +404,24 @@ useEffect(() => {
           className="mb-16"
         >
           <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <MessageCircle size={24} className="text-amber-500" /> Client Testimonials
+            <MessageCircle size={24} className="text-amber-500" /> Client
+            Testimonials
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
               <div className="flex gap-2 mb-3">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} className="text-amber-400 fill-amber-400" />
+                  <Star
+                    key={i}
+                    size={18}
+                    className="text-amber-400 fill-amber-400"
+                  />
                 ))}
               </div>
               <blockquote className="italic text-slate-700 text-lg">
-                "Working with {agent.user?.firstName} was an absolute pleasure. Their expertise and dedication made finding our perfect property a seamless experience."
+                "Working with {agent.user?.firstName} was an absolute pleasure.
+                Their expertise and dedication made finding our perfect property
+                a seamless experience."
               </blockquote>
               <div className="flex items-center gap-4 mt-6">
                 <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold">
@@ -356,18 +429,26 @@ useEffect(() => {
                 </div>
                 <div>
                   <p className="font-medium text-slate-800">John Doe</p>
-                  <p className="text-sm text-slate-500">Purchased in Grand Baie</p>
+                  <p className="text-sm text-slate-500">
+                    Purchased in Grand Baie
+                  </p>
                 </div>
               </div>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
               <div className="flex gap-2 mb-3">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} className="text-amber-400 fill-amber-400" />
+                  <Star
+                    key={i}
+                    size={18}
+                    className="text-amber-400 fill-amber-400"
+                  />
                 ))}
               </div>
               <blockquote className="italic text-slate-700 text-lg">
-                "Exceptional market knowledge and personalized service. {agent.user?.firstName} understood exactly what we were looking for and delivered beyond our expectations."
+                "Exceptional market knowledge and personalized service.{" "}
+                {agent.user?.firstName} understood exactly what we were looking
+                for and delivered beyond our expectations."
               </blockquote>
               <div className="flex items-center gap-4 mt-6">
                 <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold">

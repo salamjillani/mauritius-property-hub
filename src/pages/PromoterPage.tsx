@@ -22,17 +22,21 @@ const PromoterPage = () => {
     visible: { opacity: 1, y: 0 },
   };
 
- useEffect(() => {
-  const fetchPromoter = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/promoters/${id}?approvalStatus=approved`
-      );
+  useEffect(() => {
+    const fetchPromoter = async () => {
+      try {
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/promoters/${id}?approvalStatus=approved`
+        );
         if (!response.ok) throw new Error("Failed to fetch promoter");
         const data = await response.json();
         setPromoter(data.data);
 
-        const projectsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/projects?promoter=${id}`);
+        const projectsResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/projects?promoter=${id}`
+        );
         if (!projectsResponse.ok) throw new Error("Failed to fetch projects");
         const projectsData = await projectsResponse.json();
         setProjects(projectsData.data);
@@ -78,7 +82,11 @@ const PromoterPage = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
       <Navbar />
       <div className="container mx-auto px-4 py-16">
-        <BackButton to="/promoters" label="Back to Promoters" className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors" />
+        <BackButton
+          to="/promoters"
+          label="Back to Promoters"
+          className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -94,17 +102,29 @@ const PromoterPage = () => {
             />
           </div>
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold">{promoter.firstName} {promoter.lastName}</h1>
+            <h1 className="text-3xl font-bold">
+              {promoter.firstName} {promoter.lastName}
+            </h1>
             <p className="text-lg text-blue-100">Property Developer</p>
           </div>
           <div className="flex-1 flex justify-center md:justify-end gap-4">
             <div className="flex items-center gap-2 text-blue-100">
               <Phone size={20} />
-              <span>{localStorage.getItem("token") ? promoter.phone || "(555) 123-4567" : "Log in to view"}</span>
+              <span>
+                {localStorage.getItem("token")
+                  ? promoter.user?.phone || promoter.phone || "(555) 123-4567"
+                  : "Log in to view"}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-blue-100">
               <Mail size={20} />
-              <span>{localStorage.getItem("token") ? promoter.email || "promoter@example.com" : "Log in to view"}</span>
+              <span>
+                {localStorage.getItem("token")
+                  ? promoter.user?.email ||
+                    promoter.email ||
+                    "promoter@example.com"
+                  : "Log in to view"}
+              </span>
             </div>
           </div>
         </motion.div>
@@ -116,7 +136,9 @@ const PromoterPage = () => {
           variants={fadeInUp}
           className="mb-16"
         >
-          <h2 className="text-2xl font-bold text-slate-800 mb-6">Our Projects</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-6">
+            Our Projects
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <div
@@ -144,17 +166,27 @@ const PromoterPage = () => {
                       {project.title}
                     </h3>
                     <div className="text-right">
-                      <div className="text-sm text-slate-500 capitalize">{project.status}</div>
+                      <div className="text-sm text-slate-500 capitalize">
+                        {project.status}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-slate-500">
                     <MapPin size={16} />
-                    <p className="text-sm">{project.address?.city}, {project.address?.country || "Mauritius"}</p>
+                    <p className="text-sm">
+                      {project.address?.city},{" "}
+                      {project.address?.country || "Mauritius"}
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-600 line-clamp-2">{project.description}</p>
+                  <p className="text-sm text-slate-600 line-clamp-2">
+                    {project.description}
+                  </p>
                   {project.estimatedCompletion && (
                     <p className="text-sm text-slate-600">
-                      Est. Completion: {new Date(project.estimatedCompletion).toLocaleDateString()}
+                      Est. Completion:{" "}
+                      {new Date(
+                        project.estimatedCompletion
+                      ).toLocaleDateString()}
                     </p>
                   )}
                 </div>
