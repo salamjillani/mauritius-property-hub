@@ -7,18 +7,20 @@ import { Loader2, Users, Home, DollarSign, Clock, Star, RefreshCw } from 'lucide
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Dashboard = () => {
+  // Initialize state with all required fields
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalProperties: 0,
     totalSubscriptions: 0,
     pendingRequests: 0,
     goldCardsUsed: 0,
-    recentActivity: [],
+    recentActivity: [] as any[],
     propertyStatusCounts: {
       pending: 0,
       approved: 0,
       rejected: 0,
       inactive: 0,
+      active: 0,
     },
     userRoleCounts: {
       individual: 0,
@@ -32,7 +34,7 @@ const Dashboard = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,7 +52,7 @@ const Dashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      const token = sessionStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (!token) throw new Error('Authentication required');
 
       const response = await fetch(
@@ -61,8 +63,37 @@ const Dashboard = () => {
       if (!response.ok) throw new Error('Failed to fetch dashboard data');
       
       const data = await response.json();
-      setStats(data.data);
-    } catch (error) {
+      console.log('Dashboard API Response:', data); // Debug log
+      
+      // Handle the API response properly
+      const apiData = data.data || data;
+      
+      // Update stats with proper handling of nested objects
+      setStats({
+        totalUsers: apiData.totalUsers || 0,
+        totalProperties: apiData.totalProperties || 0,
+        totalSubscriptions: apiData.totalSubscriptions || 0,
+        pendingRequests: apiData.pendingRequests || 0,
+        goldCardsUsed: apiData.goldCardsUsed || 0,
+        recentActivity: apiData.recentActivity || [],
+        propertyStatusCounts: {
+          pending: apiData.propertyStatusCounts?.pending || 0,
+          approved: apiData.propertyStatusCounts?.approved || 0,
+          rejected: apiData.propertyStatusCounts?.rejected || 0,
+          inactive: apiData.propertyStatusCounts?.inactive || 0,
+          active: apiData.propertyStatusCounts?.active || 0,
+        },
+        userRoleCounts: {
+          individual: apiData.userRoleCounts?.individual || 0,
+          agent: apiData.userRoleCounts?.agent || 0,
+          agency: apiData.userRoleCounts?.agency || 0,
+          promoter: apiData.userRoleCounts?.promoter || 0,
+          admin: apiData.userRoleCounts?.admin || 0,
+          subAdmin: apiData.userRoleCounts?.subAdmin || 0,
+        }
+      });
+    } catch (error: any) {
+      console.error('Dashboard fetch error:', error); // Debug log
       toast({
         title: 'Error',
         description: error.message || 'Failed to load dashboard data',
@@ -192,19 +223,23 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                        <span className="text-sm">Pending: {stats.propertyStatusCounts?.pending || 0}</span>
+                        <span className="text-sm">Pending: {stats.propertyStatusCounts.pending}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-green-500"></div>
-                        <span className="text-sm">Approved: {stats.propertyStatusCounts?.approved || 0}</span>
+                        <span className="text-sm">Approved: {stats.propertyStatusCounts.approved}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-red-500"></div>
-                        <span className="text-sm">Rejected: {stats.propertyStatusCounts?.rejected || 0}</span>
+                        <span className="text-sm">Rejected: {stats.propertyStatusCounts.rejected}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded bg-blue-500"></div>
+                        <span className="text-sm">Active: {stats.propertyStatusCounts.active}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-gray-500"></div>
-                        <span className="text-sm">Inactive: {stats.propertyStatusCounts?.inactive || 0}</span>
+                        <span className="text-sm">Inactive: {stats.propertyStatusCounts.inactive}</span>
                       </div>
                     </div>
                   </div>
@@ -224,27 +259,27 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Individual: {stats.userRoleCounts?.individual || 0}</span>
+                        <span className="text-sm">Individual: {stats.userRoleCounts.individual}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Agent: {stats.userRoleCounts?.agent || 0}</span>
+                        <div className="w-4 h-4 rounded bg-green-500"></div>
+                        <span className="text-sm">Agent: {stats.userRoleCounts.agent}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Agency: {stats.userRoleCounts?.agency || 0}</span>
+                        <div className="w-4 h-4 rounded bg-purple-500"></div>
+                        <span className="text-sm">Agency: {stats.userRoleCounts.agency}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Promoter: {stats.userRoleCounts?.promoter || 0}</span>
+                        <div className="w-4 h-4 rounded bg-orange-500"></div>
+                        <span className="text-sm">Promoter: {stats.userRoleCounts.promoter}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Admin: {stats.userRoleCounts?.admin || 0}</span>
+                        <div className="w-4 h-4 rounded bg-red-500"></div>
+                        <span className="text-sm">Admin: {stats.userRoleCounts.admin}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-500"></div>
-                        <span className="text-sm">Sub-Admin: {stats.userRoleCounts?.subAdmin || 0}</span>
+                        <div className="w-4 h-4 rounded bg-yellow-500"></div>
+                        <span className="text-sm">Sub-Admin: {stats.userRoleCounts.subAdmin}</span>
                       </div>
                     </div>
                   </div>

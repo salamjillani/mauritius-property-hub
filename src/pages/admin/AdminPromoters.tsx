@@ -102,7 +102,7 @@ const AdminPromoters = () => {
     );
   }
 
-  return (
+    return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-12">
@@ -117,8 +117,9 @@ const AdminPromoters = () => {
                   <CardTitle>{promoter.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p><strong>User:</strong> {promoter.user.firstName} {promoter.user.lastName}</p>
-                  <p><strong>Email:</strong> {promoter.user.email}</p>
+                  {/* Fixed with optional chaining */}
+                  <p><strong>User:</strong> {promoter.user?.firstName} {promoter.user?.lastName}</p>
+                  <p><strong>Email:</strong> {promoter.user?.email}</p>
                   <p><strong>Status:</strong> {promoter.approvalStatus}</p>
                   <div className="mt-4 flex space-x-2">
                     <Button onClick={() => handleApprove(promoter._id)}>

@@ -26,8 +26,8 @@ exports.getDashboardData = asyncHandler(async (req, res, next) => {
   const recentActivity = await Property.find()
     .sort({ createdAt: -1 })
     .limit(5)
-    .populate('owner', 'firstName lastName')
-    .select('_id title owner createdAt');
+    .populate('owner', 'firstName lastName email')
+    .select('_id title owner createdAt status');
 
   res.status(200).json({
     success: true,
@@ -38,6 +38,20 @@ exports.getDashboardData = asyncHandler(async (req, res, next) => {
       pendingRequests,
       goldCardsUsed,
       recentActivity,
+      propertyStatusCounts: {
+        pending: await Property.countDocuments({ status: 'pending' }),
+        approved: await Property.countDocuments({ status: 'approved' }),
+        rejected: await Property.countDocuments({ status: 'rejected' }),
+        inactive: await Property.countDocuments({ status: 'inactive' }),
+      },
+      userRoleCounts: {
+        individual: await User.countDocuments({ role: 'individual' }),
+        agent: await User.countDocuments({ role: 'agent' }),
+        agency: await User.countDocuments({ role: 'agency' }),
+        promoter: await User.countDocuments({ role: 'promoter' }),
+        admin: await User.countDocuments({ role: 'admin' }),
+        subAdmin: await User.countDocuments({ role: 'sub-admin' }),
+      },
     },
   });
 });
@@ -700,14 +714,14 @@ exports.approvePromoter = asyncHandler(async (req, res, next) => {
   promoter.approvalStatus = 'approved';
   await promoter.save();
 
-  const user = await User.findById(promoter.user._id);
+  const user = await User.findById(promoter.user?._id || promoter.user);
   if (user) {
     user.approvalStatus = 'approved';
     await user.save();
   }
 
   await Notification.create({
-    user: promoter.user._id,
+    user: promoter.user?._id || promoter.user,
     type: 'promoter_approved',
     message: `Your promoter profile has been approved.`,
   });
@@ -745,12 +759,20 @@ exports.rejectPromoter = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Promoter not found with id of ${id}`, 404));
   }
 
+   if (promoter.user && promoter.user?._id || promoter.user) {
+    await Notification.create({
+      user: promoter.user?._id || promoter.user,
+      type: 'promoter_rejected',
+      message: `Your promoter profile has been rejected. Reason: ${reason}`,
+    });
+  }
+
   promoter.approvalStatus = 'rejected';
   promoter.rejectionReason = reason;
   await promoter.save();
 
   await Notification.create({
-    user: promoter.user._id,
+    user: promoter.user?._id || promoter.user,
     type: 'promoter_rejected',
     message: `Your promoter profile has been rejected. Reason: ${reason}`,
   });
@@ -798,6 +820,18 @@ exports.getRegistrationRequests = asyncHandler(async (req, res, next) => {
     count: requests.length,
     pagination,
     data: requests,
+  });
+});
+
+exports.getLogs = asyncHandler(async (req, res, next) => {
+  const logs = await Log.find()
+    .sort('-createdAt')
+    .populate('user', 'firstName lastName email');
+
+  res.status(200).json({
+    success: true,
+    count: logs.length,
+    data: logs,
   });
 });
 

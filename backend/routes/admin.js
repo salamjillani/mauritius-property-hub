@@ -29,6 +29,7 @@ const {
   rejectProperty,
   updateProperty,
   deleteProperty,
+  getLogs
 } = require('../controllers/admin');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -62,5 +63,6 @@ router.post('/properties/:id/approve', approveProperty);
 router.post('/properties/:id/reject', rejectProperty);
 router.put('/properties/:id', updateProperty);
 router.delete('/properties/:id', deleteProperty);
+router.get('/logs', getLogs);
 
 module.exports = router;
