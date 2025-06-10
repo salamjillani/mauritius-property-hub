@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Mail, Home } from "lucide-react";
+import { MapPin, Phone, Mail, Home, Bed, Bath, Square, Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -37,20 +37,23 @@ const AgencyPage = () => {
         const agentsData = await agentsResponse.json();
         setAgents(agentsData.data);
 
-      const propertiesResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`
-      );
+        const propertiesResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`
+        );
+        
+        if (!propertiesResponse.ok) {
+          console.error("Properties fetch failed:", propertiesResponse.status);
+          throw new Error("Failed to fetch properties");
+        }
       
-      if (!propertiesResponse.ok) {
-        console.error("Properties fetch failed:", propertiesResponse.status);
-        throw new Error("Failed to fetch properties");
-      }
-    
-      const propertiesData = await propertiesResponse.json();
-      console.log("Fetched properties:", propertiesData); // Log for debugging
-      setProperties(propertiesData.data);
-    } catch (error) {
-      console.error("Agency fetch error:", error);
+        const propertiesData = await propertiesResponse.json();
+        console.log("Fetched properties:", propertiesData); // Log for debugging
+        // Sort properties to show Gold Card listings first
+        setProperties(
+          propertiesData.data.sort((a, b) => (b.isGoldCard ? 1 : 0) - (a.isGoldCard ? 1 : 0))
+        );
+      } catch (error) {
+        console.error("Agency fetch error:", error);
         toast({
           title: "Error",
           description: "Failed to load agency data",
@@ -63,6 +66,28 @@ const AgencyPage = () => {
 
     fetchAgency();
   }, [id, toast]);
+
+  const handleFavoriteToggle = (e, property) => {
+    e.stopPropagation();
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    if (favorites.includes(property._id)) {
+      localStorage.setItem(
+        "favorites",
+        JSON.stringify(favorites.filter((id) => id !== property._id))
+      );
+      toast({ 
+        title: "Removed from Favorites", 
+        description: `${property.title} removed` 
+      });
+    } else {
+      favorites.push(property._id);
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+      toast({ 
+        title: "Added to Favorites", 
+        description: `${property.title} added` 
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -145,7 +170,7 @@ const AgencyPage = () => {
             {agents.map((agent) => (
               <div
                 key={agent._id}
-                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
+                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer ${
                   agent.isPremium ? "border-2 border-amber-400" : ""
                 }`}
                 onClick={() => navigate(`/agent/${agent._id}`)}
@@ -175,25 +200,102 @@ const AgencyPage = () => {
           <h2 className="text-2xl font-bold mb-6">Our Properties</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {properties.map((property) => (
-              <div
+              <motion.div
                 key={property._id}
-                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
-                  property.isPremium ? "border-2 border-amber-400" : ""
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                  property.isGoldCard ? "border-4 border-yellow-400 scale-105" : ""
                 }`}
-                onClick={() => navigate(`/properties/${property._id}`)}
+                onClick={() => navigate(`/properties/${property.category}/${property._id}`)}
               >
-                <img
-                  src={property.images?.[0]?.url || "/placeholder.jpg"}
-                  alt={property.title}
-                  className="h-48 w-full object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-lg font-bold">{property.title}</h3>
-                  <p className="text-sm text-gray-600">
-                    {property.address.city}, {property.address.country}
-                  </p>
+                <div className="absolute top-4 right-4 z-10 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="bg-white/80 hover:bg-white"
+                    onClick={(e) => handleFavoriteToggle(e, property)}
+                  >
+                    <Heart
+                      size={16}
+                      className={JSON.parse(localStorage.getItem("favorites") || "[]").includes(property._id) ? "fill-red-500 text-red-500" : "text-slate-600"}
+                    />
+                  </Button>
                 </div>
-              </div>
+                
+                <div className="relative">
+                  <img
+                    src={property.images?.[0]?.url || "/placeholder.jpg"}
+                    alt={property.title}
+                    className="h-64 w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <Button className="w-full bg-white/90 hover:bg-white text-slate-800 backdrop-blur-sm">
+                      <Eye size={16} className="mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="p-6 space-y-3 bg-white">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-lg font-bold text-slate-800 group-hover:text-amber-600 transition-colors duration-300 line-clamp-2">
+                      {property.title}
+                    </h3>
+                    <div className="text-right">
+                      <div className="text-amber-600 font-bold">
+                        ${property.price?.toLocaleString()}
+                        {property.category === "for-rent" && (
+                          <span className="text-sm text-slate-500">
+                            /{property.rentalPeriod || "month"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 text-slate-500">
+                    <MapPin size={16} />
+                    <p className="text-sm">{property.address?.city}, {property.address?.country || "Mauritius"}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-slate-600">
+                    {property.bedrooms > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Bed size={16} />
+                        <span>{property.bedrooms} bed</span>
+                      </div>
+                    )}
+                    {property.bathrooms > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Bath size={16} />
+                        <span>{property.bathrooms} bath</span>
+                      </div>
+                    )}
+                    {property.size && (
+                      <div className="flex items-center gap-1">
+                        <Square size={16} />
+                        <span>{property.size} m²</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-slate-600 line-clamp-2">{property.description}</p>
+                  
+                  {property.agency && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={property.agency.logoUrl || "/default-agency-logo.png"}
+                        alt={property.agency.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <p className="text-sm text-slate-600">{property.agency.name}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             ))}
           </div>
         </motion.section>

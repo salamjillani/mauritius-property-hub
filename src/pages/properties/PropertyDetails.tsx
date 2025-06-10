@@ -51,7 +51,7 @@ interface User {
   lastName: string;
   email: string;
   phone?: string;
-  avatar?: string;
+  photoUrl?: string;
   role?: string;
 }
 
@@ -59,6 +59,7 @@ interface Agent {
   _id: string;
   user: User;
   title?: string;
+  photoUrl?: string;
   isPremium?: boolean;
 }
 
@@ -121,6 +122,7 @@ const PropertyDetails = () => {
   const navigate = useNavigate();
   const [agentData, setAgentData] = useState<Agent | null>(null);
   const { toast } = useToast();
+  const [agencyAgents, setAgencyAgents] = useState<Agent[]>([]);
   const [property, setProperty] = useState<Property | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -134,6 +136,24 @@ const PropertyDetails = () => {
     if (!property?.location?.coordinates) return null;
     // Coordinates are stored as [longitude, latitude]
     return [property.location.coordinates[1], property.location.coordinates[0]] as [number, number];
+  }, [property]);
+
+    useEffect(() => {
+    if (property?.agency?._id) {
+      const fetchAgencyAgents = async () => {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/agents?agency=${property.agency._id}`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
+          );
+          const data = await response.json();
+          setAgencyAgents(data.data || []);
+        } catch (error) {
+          console.error("Failed to fetch agency agents", error);
+        }
+      };
+      fetchAgencyAgents();
+    }
   }, [property]);
 
   useEffect(() => {
@@ -223,12 +243,6 @@ const PropertyDetails = () => {
     });
   };
 
-  const shouldShowInquiryForm = useMemo(() => {
-    if (!user) return true;
-    const professionalRoles = ['individual', 'agent', 'agency', 'promoter'];
-    return !professionalRoles.includes(user.role || '');
-  }, [user]);
-
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -243,14 +257,6 @@ const PropertyDetails = () => {
         description: 'Property link copied to clipboard',
       });
     }
-  };
-
-  const handleInquirySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: 'Inquiry Sent',
-      description: 'Your inquiry has been sent to the agent',
-    });
   };
 
   if (isLoading) {
@@ -477,49 +483,98 @@ const PropertyDetails = () => {
             <h2 className="text-xl font-bold mb-4">Contact</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Show agent if property has agent data */}
-              {agentData ? (
+              {/* Show agent if property has agent data OR agency has agents */}
+              {agentData || agencyAgents.length > 0 ? (
                 <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <img 
-                      src={agentData.user?.avatar || '/default-avatar.jpg'} 
-                      alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                    <div>
-                      <h3 className="font-bold text-lg">
-                        {agentData.user.firstName} {agentData.user.lastName}
-                      </h3>
-                      <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
-                      {property.agency?.name && (
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <Building2 className="h-4 w-4" /> {property.agency.name}
-                        </p>
-                      )}
+                  {agentData ? (
+                    // Individual agent card
+                    <div className="flex items-center gap-4 mb-4">
+               <img 
+      src={agentData.photoUrl || '/default-avatar.jpg'} // Changed here
+      alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
+      className="w-16 h-16 rounded-full object-cover"
+    />
+                      <div>
+                        <h3 className="font-bold text-lg">
+                          {agentData.user.firstName} {agentData.user.lastName}
+                        </h3>
+                        <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
+                        {property.agency?.name && (
+                          <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <Building2 className="h-4 w-4" /> {property.agency.name}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    // Agency agent card
+                    <div className="flex items-center gap-4 mb-4">
+             <img 
+      src={agencyAgents[0].photoUrl || '/default-avatar.jpg'} // Changed here
+      alt={`${agencyAgents[0].user.firstName} ${agencyAgents[0].user.lastName}`}
+      className="w-16 h-16 rounded-full object-cover"
+    />
+                      <div>
+                        <h3 className="font-bold text-lg">
+                          {agencyAgents[0].user.firstName} {agencyAgents[0].user.lastName}
+                        </h3>
+                        <p className="text-gray-600">{agencyAgents[0].title || 'Real Estate Agent'}</p>
+                        {property.agency?.name && (
+                          <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <Building2 className="h-4 w-4" /> {property.agency.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
-                  <div className="space-y-2">
-                    {user ? (
+                  <div className="space-y-3">
+                    {/* Phone and Email with icons */}
+                    {agentData ? (
                       <>
-                        {agentData.user.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-5 w-5 text-gray-600" />
-                            <span>{agentData.user.phone}</span>
+                        {agentData.user?.phone && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Phone className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium">{agentData.user.phone}</span>
                           </div>
                         )}
-                        {agentData.user.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-5 w-5 text-gray-600" />
-                            <span>{agentData.user.email}</span>
+                        {agentData.user?.email && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Mail className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">{agentData.user.email}</span>
                           </div>
                         )}
+                        {/* View More Button */}
+                        <Button 
+                          onClick={() => navigate(`/agent/${agentData._id}`)}
+                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          View More Details
+                        </Button>
                       </>
-                    ) : (
-                      <p className="text-gray-500 italic">
-                        Log in to view contact details
-                      </p>
-                    )}
+                    ) : agencyAgents.length > 0 ? (
+                      <>
+                        {agencyAgents[0].user?.phone && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Phone className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium">{agencyAgents[0].user.phone}</span>
+                          </div>
+                        )}
+                        {agencyAgents[0].user?.email && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Mail className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">{agencyAgents[0].user.email}</span>
+                          </div>
+                        )}
+                        {/* View More Button */}
+                        <Button 
+                          onClick={() => navigate(`/agent/${agencyAgents[0]._id}`)}
+                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          View More Details
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ) : 
@@ -540,65 +595,29 @@ const PropertyDetails = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    {user ? (
-                      <>
-                        {property.contactDetails?.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-5 w-5 text-gray-600" />
-                            <span>{property.contactDetails.phone}</span>
-                          </div>
-                        )}
-                        {property.contactDetails?.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-5 w-5 text-gray-600" />
-                            <span>{property.contactDetails.email}</span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-gray-500 italic">
-                        Log in to view contact details
-                      </p>
+                  <div className="space-y-3">
+                    {property.contactDetails?.phone && (
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                        <Phone className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium">{property.contactDetails.phone}</span>
+                      </div>
                     )}
+                    {property.contactDetails?.email && (
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                        <Mail className="h-5 w-5 text-green-600" />
+                        <span className="font-medium">{property.contactDetails.email}</span>
+                      </div>
+                    )}
+                    {/* View More Button for Agency */}
+                    <Button 
+                      onClick={() => navigate(`/agency/${property.agency._id}`)}
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      View Agency Details
+                    </Button>
                   </div>
                 </div>
               ) : null}
-
-              {/* Conditionally render inquiry form */}
-              {shouldShowInquiryForm && (
-                <div className="bg-white border rounded-lg p-6">
-                  <h3 className="font-bold text-lg mb-4">Send Inquiry</h3>
-                  <form onSubmit={handleInquirySubmit}>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Your Name</Label>
-                        <Input id="name" required />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" required />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" type="tel" />
-                      </div>
-                      <div>
-                        <Label htmlFor="message">Message</Label>
-                        <Textarea 
-                          id="message" 
-                          rows={4} 
-                          placeholder="I'm interested in this property..." 
-                          required 
-                        />
-                      </div>
-                      <Button type="submit" className="w-full">
-                        Send Inquiry
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-              )}
             </div>
           </div>
         </motion.div>
