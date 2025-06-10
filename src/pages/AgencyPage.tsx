@@ -37,14 +37,20 @@ const AgencyPage = () => {
         const agentsData = await agentsResponse.json();
         setAgents(agentsData.data);
 
-        const propertiesResponse = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`
-        );
-        if (!propertiesResponse.ok)
-          throw new Error("Failed to fetch properties");
-        const propertiesData = await propertiesResponse.json();
-        setProperties(propertiesData.data);
-      } catch (error) {
+      const propertiesResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/properties?agency=${id}`
+      );
+      
+      if (!propertiesResponse.ok) {
+        console.error("Properties fetch failed:", propertiesResponse.status);
+        throw new Error("Failed to fetch properties");
+      }
+    
+      const propertiesData = await propertiesResponse.json();
+      console.log("Fetched properties:", propertiesData); // Log for debugging
+      setProperties(propertiesData.data);
+    } catch (error) {
+      console.error("Agency fetch error:", error);
         toast({
           title: "Error",
           description: "Failed to load agency data",

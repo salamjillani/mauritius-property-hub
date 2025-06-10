@@ -121,6 +121,17 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 exports.createProperty = asyncHandler(async (req, res, next) => {
   console.log('Request body:', JSON.stringify(req.body, null, 2));
   const user = await User.findById(req.user.id);
+  if (user.role === 'agency') {
+    const agency = await Agency.findOne({ user: req.user.id });
+    if (agency) {
+      req.body.agency = agency._id;
+    }
+  } else if (user.role === 'agent') {
+    const agent = await Agent.findOne({ user: req.user.id }).populate('agency');
+    if (agent && agent.agency) {
+      req.body.agency = agent.agency._id;
+    }
+  }
 
   if (!req.body.title || !req.body.description || !req.body.price) {
     return next(new ErrorResponse('Missing required fields', 400));
