@@ -30,11 +30,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  role: {
-    type: String,
-    enum: ['user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'],
-    default: 'user',
-  },
+role: {
+  type: String,
+  enum: ['individual', 'user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'],
+  default: 'user',
+},
   avatarUrl: {
     type: String,
     default: '',

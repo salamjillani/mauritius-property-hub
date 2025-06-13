@@ -86,6 +86,25 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
   });
 });
 
+exports.updateMe = asyncHandler(async (req, res, next) => {
+  const { firstName, lastName, phone, avatarUrl } = req.body;
+
+  const updatedFields = {
+    firstName,
+    lastName,
+    phone,
+    ...(avatarUrl && { avatarUrl })
+  };
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    updatedFields,
+    { new: true, runValidators: true }
+  ).select('-password');
+
+  res.status(200).json({ success: true, data: updatedUser });
+});
+
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin

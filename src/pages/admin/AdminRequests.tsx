@@ -151,41 +151,45 @@ const AdminRequests = () => {
                     </div>
                   </div>
                   
-                  <div className="mt-4">
-                    <Label htmlFor={`listingLimit-${request._id}`}>
-                      Listing Limit
-                    </Label>
-                    <Select
-                      value={listingLimit}
-                      onValueChange={setListingLimit}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select limit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                        <SelectItem value="200">200</SelectItem>
-                        <SelectItem value="300">300</SelectItem>
-                        <SelectItem value="400">400</SelectItem>
-                        <SelectItem value="unlimited">Unlimited</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <Label htmlFor={`goldCards-${request._id}`}>
-                      Gold Cards
-                    </Label>
-                    <Input
-                      id={`goldCards-${request._id}`}
-                      type="number"
-                      min="0"
-                      value={goldCards}
-                      onChange={(e) => setGoldCards(e.target.value)}
-                    />
-                  </div>
+                  {request.user?.role !== 'individual' && (
+                    <>
+                      <div className="mt-4">
+                        <Label htmlFor={`listingLimit-${request._id}`}>
+                          Listing Limit
+                        </Label>
+                        <Select
+                          value={listingLimit}
+                          onValueChange={setListingLimit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select limit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15">15</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                            <SelectItem value="200">200</SelectItem>
+                            <SelectItem value="300">300</SelectItem>
+                            <SelectItem value="400">400</SelectItem>
+                            <SelectItem value="unlimited">Unlimited</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <Label htmlFor={`goldCards-${request._id}`}>
+                          Gold Cards
+                        </Label>
+                        <Input
+                          id={`goldCards-${request._id}`}
+                          type="number"
+                          min="0"
+                          value={goldCards}
+                          onChange={(e) => setGoldCards(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
                   
                   <div className="mt-6 flex space-x-2">
                     <Button onClick={() => handleApprove(request._id)}>

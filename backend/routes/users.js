@@ -7,6 +7,7 @@ const {
   createUser,
   updateUser,
   deleteUser,
+  updateMe
 } = require('../controllers/users');
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.use(protect);
 
 // Current user profile - MUST come before /:id route
 router.route('/getMe').get(getMe);
+router.route('/me').put(updateMe);
 
 // Admin-only routes
 router

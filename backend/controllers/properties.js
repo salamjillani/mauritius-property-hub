@@ -120,7 +120,47 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 
 exports.createProperty = asyncHandler(async (req, res, next) => {
   console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
+  // Early validation for required fields
+  if (!req.body.title || !req.body.description || !req.body.price) {
+    return next(new ErrorResponse('Missing required fields', 400));
+  }
+  
+  // Authentication check
+  if (!req.user || !req.user.id) {
+    return next(new ErrorResponse('User not authenticated', 401));
+  }
+  
+  // Find user
   const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new ErrorResponse('User not found', 404));
+  }
+  
+  // Check approval status for certain roles
+  if (['agent', 'agency', 'promoter'].includes(user.role) && user.approvalStatus !== 'approved') {
+    return next(new ErrorResponse(`Your ${user.role} profile is not approved`, 403));
+  }
+  
+  // Handle individual user restrictions
+  if (user.role === 'individual') {
+    const activeListings = await Property.countDocuments({
+      owner: user._id,
+      status: 'active',
+      expiresAt: { $gt: new Date() }
+    });
+    
+    if (activeListings > 0) {
+      return next(new ErrorResponse('Individuals can only have one active listing at a time', 400));
+    }
+    
+    // Set expiration date for individual listings (60 days)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 60);
+    req.body.expiresAt = expiresAt;
+  }
+  
+  // Handle agency assignment
   if (user.role === 'agency') {
     const agency = await Agency.findOne({ user: req.user.id });
     if (agency) {
@@ -132,41 +172,32 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       req.body.agency = agent.agency._id;
     }
   }
-
-  if (!req.body.title || !req.body.description || !req.body.price) {
-    return next(new ErrorResponse('Missing required fields', 400));
-  }
-
-   if (!req.user || !req.user.id) {
-    return next(new ErrorResponse('User not authenticated', 401));
-  }
-
-  if (!user) {
-    return next(new ErrorResponse('User not found', 404));
-  }
-
-  if (['agent', 'agency', 'promoter'].includes(user.role) && user.approvalStatus !== 'approved') {
-    return next(new ErrorResponse(`Your ${user.role} profile is not approved`, 403));
-  }
-
+  
+  // Check listing limits
   if (user.listingLimit > 0) {
     const currentListings = await Property.countDocuments({ owner: user._id });
     if (currentListings >= user.listingLimit) {
       return next(new ErrorResponse('Listing limit reached', 403));
     }
   }
-
+  
+  // Set property data
   req.body.owner = req.user.id;
-  req.body.status = 'approved';
+  req.body.status = user.role === 'individual' ? 'active' : 'approved';
   req.body.isGoldCard = req.body.isGoldCard && user.goldCards > 0;
-
-   if (req.body.isGoldCard && user.goldCards > 0) {
+  
+  // Handle gold card usage
+  if (req.body.isGoldCard && user.goldCards > 0) {
     user.goldCards -= 1;
     await user.save();
   }
-try {
+  
+  try {
     const property = await Property.create(req.body);
-    res.status(201).json({ success: true, data: property });
+    res.status(201).json({ 
+      success: true, 
+      data: property 
+    });
   } catch (error) {
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {

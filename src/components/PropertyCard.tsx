@@ -5,6 +5,7 @@ import { Heart, MapPin, Bed, Bath, Square, Check } from "lucide-react";
 
 const PropertyCard = ({ 
   property, 
+  isExpired,
   currency = "MUR",
   variant = "standard"
 }) => {
@@ -101,6 +102,12 @@ const PropertyCard = ({
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
         </div>
+
+         {isExpired && (
+        <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-semibold rounded-full py-1 px-3 z-10">
+          EXPIRED
+        </div>
+      )}
         
         <CardContent className="p-5">
           <div className="flex justify-between items-start">

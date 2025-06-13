@@ -77,7 +77,6 @@ const Profile = () => {
               }
             );
             const agencyData = await agencyRes.json();
-            // Handle empty agency case
             setProfile(agencyData.data || {});
           } catch (error) {
             setProfile({});
@@ -92,7 +91,6 @@ const Profile = () => {
           const agentData = await agentRes.json();
           setProfile(agentData.data || {});
 
-          // Enhanced error handling for agencies fetch
           try {
             const agenciesRes = await fetch(
               `${import.meta.env.VITE_API_URL}/api/agencies/approved`,
@@ -130,10 +128,12 @@ const Profile = () => {
           } catch (error) {
             setProfile({});
           }
+        } else if (data.data.role === "individual") {
+          setProfile(data.data || {});
         }
 
         if (
-          ["agent", "agency", "promoter"].includes(data.data.role) &&
+          ["individual", "agent", "agency", "promoter"].includes(data.data.role) &&
           data.data.approvalStatus === "pending"
         ) {
           setShowRegistrationForm(true);
@@ -190,6 +190,8 @@ const Profile = () => {
         url = (await uploadAgentPhotoToCloudinary(file)).url;
       } else if (user.role === "promoter") {
         url = (await uploadPromoterLogoToCloudinary(file)).url;
+      } else if (user.role === "individual") {
+        url = (await uploadAgentPhotoToCloudinary(file)).url;
       }
 
       return url;
@@ -209,16 +211,18 @@ const Profile = () => {
 
     try {
       const token = localStorage.getItem("token");
-      let photoUrl = profile.photoUrl || profile.logoUrl;
+      let photoUrl = profile.photoUrl || profile.logoUrl || profile.avatarUrl;
 
       if (file) {
         photoUrl = await uploadPhoto();
       }
 
-      const updatedProfile = { ...profile };
+      let updatedProfile = { ...profile };
       if (photoUrl) {
         if (user.role === "agency" || user.role === "promoter") {
           updatedProfile.logoUrl = photoUrl;
+        } else if (user.role === "individual") {
+          updatedProfile.avatarUrl = photoUrl;
         } else {
           updatedProfile.photoUrl = photoUrl;
         }
@@ -246,17 +250,23 @@ const Profile = () => {
         }
       } else if (user.role === "promoter") {
         if (profile._id) {
-          // Existing profile - update
           endpoint = `/api/promoters/my-profile`;
           method = "PUT";
         } else {
-          // New profile - create
           endpoint = `/api/promoters`;
           method = "POST";
           isNewProfile = true;
-          // Add user ID for new promoter profile
           updatedProfile.user = user.id;
         }
+      } else if (user.role === "individual") {
+        endpoint = `/api/users/me`;
+        method = "PUT";
+        updatedProfile = {
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          ...(photoUrl && { avatarUrl: photoUrl })
+        };
       }
 
       const response = await fetch(
@@ -279,12 +289,10 @@ const Profile = () => {
       setProfile(data.data);
       toast({ title: "Success", description: "Profile updated successfully" });
 
-      // Update user avatar if agent photo changed
       if (user.role === "agent" && photoUrl) {
         setUser({ ...user, avatarUrl: photoUrl });
       }
 
-      // Update user role if creating new profile
       if (isNewProfile) {
         setUser({ ...user, role: user.role });
       }
@@ -419,7 +427,7 @@ const Profile = () => {
         description: "Registration submitted for approval",
       });
       setShowRegistrationForm(false);
-      setRegistrationSubmitted(true); // Add this line
+      setRegistrationSubmitted(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -553,6 +561,17 @@ const Profile = () => {
 
               {user.role === "promoter" && profile && (
                 <PromoterForm
+                  profile={profile}
+                  setProfile={setProfile}
+                  file={file}
+                  setFile={setFile}
+                  handleSubmit={handleSubmit}
+                  isSaving={isSaving}
+                />
+              )}
+
+              {user.role === "individual" && (
+                <IndividualForm
                   profile={profile}
                   setProfile={setProfile}
                   file={file}
@@ -827,36 +846,138 @@ const PendingApprovalMessage = ({ user }) => (
   </div>
 );
 
-const ListingsTab = ({ userId, user, listings }) => (
-  <div className="space-y-6">
-    <div className="flex justify-between items-center">
-      <h2 className="text-2xl font-bold">My Listings</h2>
-      <Link to="/properties/add">
-        <Button>Add New Listing</Button>
-      </Link>
-    </div>
-    {user && (
-      <p className="text-gray-600">
-        Listings Remaining:{" "}
-        {user.listingLimit === null
-          ? "Unlimited"
-          : user.listingLimit - listings.length}{" "}
-        | Gold Cards Available: {user.goldCards}
-      </p>
-    )}
-    {listings.length === 0 ? (
-      <p className="text-gray-500">You have no listings yet.</p>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {listings.map((listing) => (
-          <PropertyCard key={listing._id} property={listing} currency="MUR" />
-        ))}
+const ListingsTab = ({ userId, user, listings }) => {
+  const isIndividual = user.role === "individual";
+  const hasActiveListing = isIndividual && 
+    listings.some(l => l.status === "active");
+  const isListingExpired = (listing) => {
+    const createdAt = new Date(listing.createdAt);
+    const expiresAt = new Date(createdAt.setDate(createdAt.getDate() + 60));
+    return new Date() > expiresAt;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">My Listings</h2>
+        {user.approvalStatus === "approved" && (
+          <Link to={hasActiveListing ? "#" : "/properties/add"}>
+            <Button disabled={hasActiveListing}>
+              Add New Listing
+            </Button>
+          </Link>
+        )}
       </div>
-    )}
-  </div>
+      {user && (
+        <p className="text-gray-600">
+          Listings Remaining:{" "}
+          {user.listingLimit === null
+            ? "Unlimited"
+            : user.listingLimit - listings.length}{" "}
+          | Gold Cards Available: {user.goldCards}
+        </p>
+      )}
+      
+      {isIndividual && hasActiveListing && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <p>
+            You can only have one active listing at a time. 
+            Your listing will expire in 60 days.
+          </p>
+        </div>
+      )}
+      
+      {listings.length === 0 ? (
+        <p className="text-gray-500">You have no listings yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {listings.map((listing) => (
+            <PropertyCard 
+              key={listing._id} 
+              property={listing} 
+              currency="MUR"
+              isExpired={isIndividual && isListingExpired(listing)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const IndividualForm = ({
+  profile,
+  setProfile,
+  file,
+  setFile,
+  handleSubmit,
+  isSaving,
+}) => (
+  <form onSubmit={handleSubmit} className="space-y-6">
+    <h2 className="text-2xl font-bold">Individual Profile</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <Label htmlFor="avatar">Profile Photo</Label>
+        <div className="flex items-center gap-4 mt-2">
+          {profile.avatarUrl && (
+            <img
+              src={profile.avatarUrl}
+              alt="Profile"
+              className="h-20 w-20 rounded-full object-cover"
+            />
+          )}
+          <Input
+            type="file"
+            id="avatar"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
+        </div>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <Label htmlFor="firstName">First Name</Label>
+        <Input
+          id="firstName"
+          value={profile.firstName || ""}
+          onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="lastName">Last Name</Label>
+        <Input
+          id="lastName"
+          value={profile.lastName || ""}
+          onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <Label htmlFor="phone">Phone</Label>
+        <Input
+          id="phone"
+          value={profile.phone || ""}
+          onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={profile.email || ""}
+          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+          disabled
+        />
+      </div>
+    </div>
+    <Button type="submit" disabled={isSaving}>
+      {isSaving ? "Saving..." : "Save Profile"}
+    </Button>
+  </form>
 );
 
-// AgencyForm Component
 const AgencyForm = ({
   profile,
   setProfile,
@@ -870,7 +991,6 @@ const AgencyForm = ({
   const { toast } = useToast();
   const [pendingRequests, setPendingRequests] = useState([]);
 
-  // Fetch pending linking requests when component mounts
   useEffect(() => {
     const fetchPendingRequests = async () => {
       try {
@@ -1005,7 +1125,6 @@ const AgencyForm = ({
           </div>
         </div>
       </div>
-      {/* Existing Linked Agents Section */}
       {profile.agents && profile.agents.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-3">Linked Agents</h3>
@@ -1031,7 +1150,6 @@ const AgencyForm = ({
           </div>
         </div>
       )}
-      {/* New Pending Linking Requests Section */}
       {pendingRequests.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-3">
@@ -1094,7 +1212,6 @@ const AgencyForm = ({
   );
 };
 
-// AgentForm Component
 const AgentForm = ({
   profile,
   setProfile,
@@ -1282,7 +1399,6 @@ const AgentForm = ({
                 {profile.linkingRequests
                   .filter((req) => req.status === "pending")
                   .map((req) => {
-                    // Find agency in the agencies array
                     const agency = agencies.find(
                       (a) => a._id === (req.agency?._id || req.agency)
                     );
@@ -1320,7 +1436,6 @@ const AgentForm = ({
   </form>
 );
 
-// PromoterForm Component
 const PromoterForm = ({
   profile,
   setProfile,
@@ -1451,8 +1566,7 @@ const PromoterForm = ({
   </form>
 );
 
-// PropertyCard Component (if not already included)
-const PropertyCard = ({ property, currency = "MUR", variant = "standard" }) => {
+const PropertyCard = ({ property, currency = "MUR", variant = "standard", isExpired }) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
   const formatPrice = (price) => {
@@ -1529,6 +1643,12 @@ const PropertyCard = ({ property, currency = "MUR", variant = "standard" }) => {
           {(property.isPremium || property.isGoldCard) && (
             <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
               {property.isGoldCard ? "Gold" : "Premium"}
+            </div>
+          )}
+          
+          {isExpired && (
+            <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-semibold rounded-full py-1 px-3 z-10">
+              EXPIRED
             </div>
           )}
 

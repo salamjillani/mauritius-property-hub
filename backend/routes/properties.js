@@ -37,7 +37,7 @@ router.route('/category/:categorySlug').get(getPropertiesByCategory);
 router
   .route('/')
   .get(getProperties)
-  .post(protect, authorize('agent', 'agency', 'promoter', 'admin'), createProperty);
+  .post(protect, authorize('individual', 'agent', 'agency', 'promoter', 'admin'), createProperty);
 
 // Routes with ID parameter - MUST come after all specific routes
 router

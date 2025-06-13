@@ -2,6 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cors = require('cors');
+const cron = require('node-cron');
+const Property = require('./models/Property');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const path = require('path');
@@ -36,8 +38,7 @@ const locationsRoutes = require('./routes/locations');
 const registrationRequestsRoutes = require('./routes/registrationRoutes');
 const registration = require('./routes/registrationRoutes');
 
-
-
+// Initialize Express app
 const app = express();
 
 // Body parser
@@ -62,6 +63,9 @@ app.use(fileUpload({
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
+
+// Property expiration middleware (moved after app initialization)
+app.use(require('./middleware/propertyExpiration'));
 
 // Set static folder for uploaded files
 app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
@@ -89,7 +93,24 @@ app.use('/api/locations', locationsRoutes);
 app.use('/api/registration-requests', registration);
 app.use('/api/registration-requests', registrationRequestsRoutes);
 
-
+// Cron job for expiring listings
+cron.schedule('0 0 * * *', async () => {
+  try {
+    const expiredListings = await Property.find({
+      expiresAt: { $lte: new Date() },
+      status: 'active'
+    });
+    
+    for (const listing of expiredListings) {
+      listing.status = 'expired';
+      await listing.save();
+    }
+    
+    console.log(`Expired ${expiredListings.length} listings`);
+  } catch (error) {
+    console.error('Error expiring listings:', error);
+  }
+});
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

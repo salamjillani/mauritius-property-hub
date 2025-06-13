@@ -133,6 +133,10 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid email format', 400));
   }
 
+  if (role && !['individual', 'user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'].includes(role)) {
+  return next(new ErrorResponse('Invalid role value', 400));
+}
+
   const fieldsToUpdate = {};
   if (firstName) fieldsToUpdate.firstName = firstName;
   if (lastName) fieldsToUpdate.lastName = lastName;
@@ -854,6 +858,8 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
     termsAccepted,
   } = req.body;
 
+
+
   if (!termsAccepted) {
     return next(new ErrorResponse('You must accept the terms and conditions', 400));
   }
@@ -862,6 +868,10 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorResponse('User not found', 404));
   }
+
+    if (!['individual', 'agent', 'agency', 'promoter'].includes(user.role)) {
+  return next(new ErrorResponse('Invalid user role for registration', 400));
+}
 
    const existingRequest = await RegistrationRequest.findOne({ 
     user: req.user.id, 
@@ -955,9 +965,16 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
 
   // Update user status and limits
   user.approvalStatus = 'approved';
-  user.listingLimit = listingLimit === 'unlimited' ? null : parseInt(listingLimit);
-  user.goldCards = parseInt(goldCards);
   user.phone = request.phoneNumber;
+  
+  // Replace the user update section with:
+  if (user.role === 'individual') {
+    user.listingLimit = 1;  // Only 1 listing allowed
+    user.goldCards = 0;     // No gold cards
+  } else {
+    user.listingLimit = listingLimit === 'unlimited' ? null : parseInt(listingLimit);
+    user.goldCards = parseInt(goldCards);
+  }
   await user.save();
 
   // Update registration request status
@@ -1017,8 +1034,8 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
       user: user._id,
       type: 'registration_approved',
       message: `Your ${user.role} profile has been approved. You can now create up to ${
-        listingLimit === 'unlimited' ? 'unlimited' : listingLimit
-      } listings with ${goldCards} gold cards.`,
+        user.role === 'individual' ? '1' : (listingLimit === 'unlimited' ? 'unlimited' : listingLimit)
+      } listings with ${user.goldCards} gold cards.`,
     });
   } catch (error) {
     console.error('Error creating notification:', error);
@@ -1032,8 +1049,8 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
       resource: 'RegistrationRequest',
       resourceId: id,
       details: `Registration request for user ${user.email} (${user.role}) was approved by admin with ${
-        listingLimit === 'unlimited' ? 'unlimited' : listingLimit
-      } listings and ${goldCards} gold cards`,
+        user.role === 'individual' ? '1' : (listingLimit === 'unlimited' ? 'unlimited' : listingLimit)
+      } listings and ${user.goldCards} gold cards`,
     });
   } catch (error) {
     console.error('Error creating log:', error);

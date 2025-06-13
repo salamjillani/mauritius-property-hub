@@ -7,7 +7,7 @@ const crypto = require('crypto');
 exports.register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, accountType, phone } = req.body;
 
-  if (!['individual', 'agent', 'agency', 'promoter'].includes(accountType)) {
+ if (!['individual', 'agent', 'agency', 'promoter'].includes(accountType)) {
     return next(new ErrorResponse('Invalid account type', 400));
   }
 
