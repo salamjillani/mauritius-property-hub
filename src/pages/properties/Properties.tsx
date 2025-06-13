@@ -18,13 +18,22 @@ const Properties = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/properties`);
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/properties`
+        );
         if (!response.ok) throw new Error("Failed to fetch properties");
         const data = await response.json();
-        // Sort properties to show Gold Card listings first
-        setProperties(
-          data.data.sort((a, b) => (b.isGoldCard ? 1 : 0) - (a.isGoldCard ? 1 : 0))
-        );
+        
+        // Sort properties: Gold cards first, then by creation date
+        const sortedProperties = data.data.sort((a, b) => {
+          // Gold cards first
+          if (a.isGoldCard && !b.isGoldCard) return -1;
+          if (!a.isGoldCard && b.isGoldCard) return 1;
+          
+          // Then by creation date
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+        setProperties(sortedProperties);
       } catch (error) {
         toast({
           title: "Error",
@@ -38,9 +47,10 @@ const Properties = () => {
     fetchProperties();
   }, [toast]);
 
-  const filteredProperties = activeTab === "all"
-    ? properties
-    : properties.filter((property) => property.category === activeTab);
+  const filteredProperties =
+    activeTab === "all"
+      ? properties
+      : properties.filter((property) => property.category === activeTab);
 
   if (isLoading) {
     return (
@@ -78,17 +88,35 @@ const Properties = () => {
           </TabsList>
           <TabsContent value={activeTab}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProperties.map((property) => (
+              {filteredProperties.map((property, index) => (
                 <motion.div
                   key={property._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
-                    property.isGoldCard ? "border-4 border-yellow-400 scale-105" : ""
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  className={`group relative rounded-xl overflow-hidden transition-all duration-500 cursor-pointer ${
+                    property.isGoldCard
+                      ? "bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-4 border-amber-400 shadow-2xl transform hover:scale-[1.02] ring-4 ring-amber-200 ring-opacity-50 z-10"
+                      : "bg-white shadow-sm hover:shadow-lg"
                   }`}
-                  onClick={() => navigate(`/properties/${property.category}/${property._id}`)}
+                  onClick={() =>
+                    navigate(`/properties/${property.category}/${property._id}`)
+                  }
                 >
+                  {property.isGoldCard && (
+                    <div className="absolute -top-3 -right-3 z-20">
+                      <div className="relative">
+                        <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-xl transform rotate-12 animate-bounce">
+                          <div className="text-center">
+                            <div className="text-2xl">👑</div>
+                            <div className="text-xs font-bold text-amber-900 -mt-1">
+                              GOLD
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="absolute top-4 right-4 z-10 flex gap-2">
                     <Button
                       variant="outline"
@@ -96,23 +124,42 @@ const Properties = () => {
                       className="bg-white/80 hover:bg-white"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+                        const favorites = JSON.parse(
+                          localStorage.getItem("favorites") || "[]"
+                        );
                         if (favorites.includes(property._id)) {
                           localStorage.setItem(
                             "favorites",
-                            JSON.stringify(favorites.filter((id) => id !== property._id))
+                            JSON.stringify(
+                              favorites.filter((id) => id !== property._id)
+                            )
                           );
-                          toast({ title: "Removed from Favorites", description: `${property.title} removed` });
+                          toast({
+                            title: "Removed from Favorites",
+                            description: `${property.title} removed`,
+                          });
                         } else {
                           favorites.push(property._id);
-                          localStorage.setItem("favorites", JSON.stringify(favorites));
-                          toast({ title: "Added to Favorites", description: `${property.title} added` });
+                          localStorage.setItem(
+                            "favorites",
+                            JSON.stringify(favorites)
+                          );
+                          toast({
+                            title: "Added to Favorites",
+                            description: `${property.title} added`,
+                          });
                         }
                       }}
                     >
                       <Heart
                         size={16}
-                        className={JSON.parse(localStorage.getItem("favorites") || "[]").includes(property._id) ? "fill-red-500" : "text-slate-600"}
+                        className={
+                          JSON.parse(
+                            localStorage.getItem("favorites") || "[]"
+                          ).includes(property._id)
+                            ? "fill-red-500"
+                            : "text-slate-600"
+                        }
                       />
                     </Button>
                   </div>
@@ -148,7 +195,10 @@ const Properties = () => {
                     </div>
                     <div className="flex items-center gap-1 text-slate-500">
                       <MapPin size={16} />
-                      <p className="text-sm">{property.address?.city}, {property.address?.country || "Mauritius"}</p>
+                      <p className="text-sm">
+                        {property.address?.city},{" "}
+                        {property.address?.country || "Mauritius"}
+                      </p>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-slate-600">
                       {property.bedrooms > 0 && (
@@ -170,15 +220,22 @@ const Properties = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-slate-600 line-clamp-2">{property.description}</p>
+                    <p className="text-sm text-slate-600 line-clamp-2">
+                      {property.description}
+                    </p>
                     {property.agency && (
                       <div className="flex items-center gap-2">
                         <img
-                          src={property.agency.logoUrl || "/default-agency-logo.png"}
+                          src={
+                            property.agency.logoUrl ||
+                            "/default-agency-logo.png"
+                          }
                           alt={property.agency.name}
                           className="w-8 h-8 rounded-full"
                         />
-                        <p className="text-sm text-slate-600">{property.agency.name}</p>
+                        <p className="text-sm text-slate-600">
+                          {property.agency.name}
+                        </p>
                       </div>
                     )}
                   </div>

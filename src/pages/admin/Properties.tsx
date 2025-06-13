@@ -212,11 +212,11 @@ const AdminProperties = () => {
                   <CardTitle className="flex justify-between items-center">
                     <span>{property.title}</span>
                     <div className="flex items-center gap-2">
-                      {property.isGoldCard && (
-                        <span className="text-sm bg-yellow-200 text-yellow-800 px-2 py-1 rounded">
-                          Gold Card
-                        </span>
-                      )}
+        {property.isGoldCard && (
+  <span className="text-sm bg-amber-200 text-amber-800 px-2 py-1 rounded mr-2">
+    Gold Card
+  </span>
+)}
                       <span className={`text-sm capitalize px-2 py-1 rounded ${
                         property.status === 'approved' ? 'bg-green-100 text-green-800' :
                         property.status === 'rejected' ? 'bg-red-100 text-red-800' :

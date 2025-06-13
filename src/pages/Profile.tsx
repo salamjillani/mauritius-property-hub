@@ -133,7 +133,9 @@ const Profile = () => {
         }
 
         if (
-          ["individual", "agent", "agency", "promoter"].includes(data.data.role) &&
+          ["individual", "agent", "agency", "promoter"].includes(
+            data.data.role
+          ) &&
           data.data.approvalStatus === "pending"
         ) {
           setShowRegistrationForm(true);
@@ -160,7 +162,10 @@ const Profile = () => {
           }
         );
         const data = await response.json();
-        setListings(data.data);
+        const sortedListings = data.data.sort(
+          (a, b) => (b.isGoldCard ? 1 : 0) - (a.isGoldCard ? 1 : 0)
+        );
+        setListings(sortedListings);
       } catch (error) {
         toast({
           title: "Error",
@@ -265,7 +270,7 @@ const Profile = () => {
           firstName: profile.firstName,
           lastName: profile.lastName,
           phone: profile.phone,
-          ...(photoUrl && { avatarUrl: photoUrl })
+          ...(photoUrl && { avatarUrl: photoUrl }),
         };
       }
 
@@ -848,8 +853,8 @@ const PendingApprovalMessage = ({ user }) => (
 
 const ListingsTab = ({ userId, user, listings }) => {
   const isIndividual = user.role === "individual";
-  const hasActiveListing = isIndividual && 
-    listings.some(l => l.status === "active");
+  const hasActiveListing =
+    isIndividual && listings.some((l) => l.status === "active");
   const isListingExpired = (listing) => {
     const createdAt = new Date(listing.createdAt);
     const expiresAt = new Date(createdAt.setDate(createdAt.getDate() + 60));
@@ -862,9 +867,7 @@ const ListingsTab = ({ userId, user, listings }) => {
         <h2 className="text-2xl font-bold">My Listings</h2>
         {user.approvalStatus === "approved" && (
           <Link to={hasActiveListing ? "#" : "/properties/add"}>
-            <Button disabled={hasActiveListing}>
-              Add New Listing
-            </Button>
+            <Button disabled={hasActiveListing}>Add New Listing</Button>
           </Link>
         )}
       </div>
@@ -877,24 +880,24 @@ const ListingsTab = ({ userId, user, listings }) => {
           | Gold Cards Available: {user.goldCards}
         </p>
       )}
-      
+
       {isIndividual && hasActiveListing && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <p>
-            You can only have one active listing at a time. 
-            Your listing will expire in 60 days.
+            You can only have one active listing at a time. Your listing will
+            expire in 60 days.
           </p>
         </div>
       )}
-      
+
       {listings.length === 0 ? (
         <p className="text-gray-500">You have no listings yet.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-            <PropertyCard 
-              key={listing._id} 
-              property={listing} 
+            <PropertyCard
+              key={listing._id}
+              property={listing}
               currency="MUR"
               isExpired={isIndividual && isListingExpired(listing)}
             />
@@ -940,7 +943,9 @@ const IndividualForm = ({
         <Input
           id="firstName"
           value={profile.firstName || ""}
-          onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+          onChange={(e) =>
+            setProfile({ ...profile, firstName: e.target.value })
+          }
         />
       </div>
       <div>
@@ -1566,7 +1571,12 @@ const PromoterForm = ({
   </form>
 );
 
-const PropertyCard = ({ property, currency = "MUR", variant = "standard", isExpired }) => {
+const PropertyCard = ({
+  property,
+  currency = "MUR",
+  variant = "standard",
+  isExpired,
+}) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
   const formatPrice = (price) => {
@@ -1645,7 +1655,7 @@ const PropertyCard = ({ property, currency = "MUR", variant = "standard", isExpi
               {property.isGoldCard ? "Gold" : "Premium"}
             </div>
           )}
-          
+
           {isExpired && (
             <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-semibold rounded-full py-1 px-3 z-10">
               EXPIRED

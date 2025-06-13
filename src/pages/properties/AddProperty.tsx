@@ -876,16 +876,21 @@ const handleSubmit = async (e: FormEvent) => {
               />
               <Label htmlFor="isPremium">Premium Listing</Label>
             </div>
-            {user && user.goldCards > 0 && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="isGoldCard"
-                  checked={formData.isGoldCard}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isGoldCard: checked === true }))}
-                />
-                <Label htmlFor="isGoldCard">Gold Card Listing (Available: {user.goldCards})</Label>
-              </div>
-            )}
+           {user && user.goldCards > 0 && (
+    <>
+      <Checkbox
+        id="isGoldCard"
+        checked={formData.isGoldCard}
+        onCheckedChange={(checked) => setFormData(prev => ({ 
+          ...prev, 
+          isGoldCard: checked === true 
+        }))}
+      />
+      <Label htmlFor="isGoldCard">
+        Use Gold Card (Available: {user.goldCards})
+      </Label>
+    </>
+  )}
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
