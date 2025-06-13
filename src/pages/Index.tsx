@@ -96,10 +96,6 @@ const Index = () => {
           <PropertyCategories />
         </div>
 
-        <div className="container mx-auto px-4 py-12 bg-gray-50">
-          <FeaturedListings currency={activeCurrency} />
-        </div>
-
         <div className="container mx-auto px-4">
           <PropertySection
             category="for-sale"
@@ -127,13 +123,7 @@ const Index = () => {
           />
         </div>
 
-        <div className="container mx-auto px-4 py-12">
-          <PremiumAgents agents={agents.filter(agent => agent.isPremium)} />
-        </div>
-
-        <div className="container mx-auto px-4 py-12 bg-gray-50">
-          <PromoterProjects />
-        </div>
+ 
       </main>
 
       <Footer />

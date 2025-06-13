@@ -66,35 +66,13 @@ const PropertyCard = ({
       {/* Gold Card Badge at the top */}
       {property.isGoldCard && (
         <div className="absolute top-3 left-3 z-20">
-          <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-amber-900 font-bold px-3 py-1 rounded-full text-xs shadow-lg">
-            GOLD CARD
-          </div>
+          
         </div>
       )}
 
       {/* Gold Ribbon Badge */}
       {property.isGoldCard && (
         <>
-          {/* Gold Crown Badge */}
-          <div className="absolute -top-2 -right-2 z-30">
-            <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg transform rotate-12 animate-pulse">
-                <svg
-                  className="w-8 h-8 text-amber-900"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap shadow-md">
-                  GOLD CARD
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Gold Shimmer Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 animate-pulse opacity-50 pointer-events-none"></div>
         </>
@@ -121,11 +99,7 @@ const PropertyCard = ({
             {property.type || "Property"}
           </div>
 
-          {(property.isPremium || property.isGoldCard) && (
-            <div className="absolute top-3 left-20 bg-amber-500 text-white text-xs font-semibold rounded-full py-1 px-3 shadow-md z-10">
-              {property.isGoldCard ? "Gold" : "Premium"}
-            </div>
-          )}
+       
 
           {property.agency?.name && property.agency?.logoUrl && (
             <div className="absolute bottom-3 left-3 bg-teal-600/90 text-white text-sm font-semibold rounded-full py-1 pl-2 pr-3 shadow-md flex items-center gap-2 max-w-[150px] truncate z-10">
@@ -216,16 +190,6 @@ const PropertyCard = ({
                   <span className="text-sm text-gray-600">/{property.rentalPeriod}</span>
                 )}
               </div>
-              {property.isGoldCard && (
-                <div className="flex flex-col items-end mt-2">
-                  <div className="text-xs text-amber-700 font-semibold bg-amber-100 px-2 py-1 rounded-full">
-                    ⭐ FEATURED GOLD LISTING
-                  </div>
-                  <div className="text-xs text-amber-600 mt-1">
-                    Premium Placement • Top Priority
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </CardContent>
