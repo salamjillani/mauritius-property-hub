@@ -31,8 +31,13 @@ const Index = () => {
           throw new Error("Failed to fetch agents");
         }
         const data = await response.json();
-        // Sort agents: premium first, then by creation date (newest first)
-        setAgents(data.data.sort((a, b) => b.isPremium - a.isPremium || new Date(b.createdAt) - new Date(a.createdAt)));
+        setAgents(
+          data.data.sort(
+            (a, b) =>
+              Number(b.isPremium) - Number(a.isPremium) ||
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        );
       } catch (error) {
         toast({
           title: "Error",
@@ -92,9 +97,7 @@ const Index = () => {
 
         <AgentsCarousel agents={agents} className="w-full px-0 mt-0" />
 
-        <div className="container mx-auto px-4 py-12">
-          <PropertyCategories />
-        </div>
+        <FeaturedListings currency={activeCurrency} />
 
         <div className="container mx-auto px-4">
           <PropertySection
@@ -123,7 +126,6 @@ const Index = () => {
           />
         </div>
 
- 
       </main>
 
       <Footer />

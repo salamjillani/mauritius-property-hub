@@ -29,6 +29,7 @@ import AgencyPage from './pages/AgencyPage';
 import AllAgenciesPage from './pages/AllAgenciesPage';
 import ProjectDetails from './pages/ProjectDetails';
 import Favorites from './pages/Favorites';
+import PromoterPage from './pages/PromoterPage';
 import Notifications from './pages/Notifications';
 import Reviews from './pages/Reviews';
 import Verification from './pages/Verification';
@@ -170,6 +171,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+               <Route
+                path="/promoters"
+                element={
+                  <ProtectedRoute>
+                    <PromoterPage />
                   </ProtectedRoute>
                 }
               />

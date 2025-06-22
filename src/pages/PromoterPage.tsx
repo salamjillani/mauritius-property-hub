@@ -56,7 +56,7 @@ const PromoterPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -68,7 +68,7 @@ const PromoterPage = () => {
 
   if (!promoter) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
           <p className="text-gray-500 font-medium">Promoter not found</p>
@@ -79,7 +79,7 @@ const PromoterPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
       <div className="container mx-auto px-4 py-16">
         <BackButton

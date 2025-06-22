@@ -93,6 +93,10 @@ const PropertySchema = new Schema(
       required: [true, "Please add a category"],
       enum: ["for-sale", "for-rent", "offices", "office-rent", "land"],
     },
+     isFeatured: {
+    type: Boolean,
+    default: false
+  },
   isGoldCard: {
       type: Boolean,
       default: false

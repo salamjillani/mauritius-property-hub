@@ -924,14 +924,12 @@ exports.createRegistrationRequest = asyncHandler(async (req, res, next) => {
  */
 exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { listingLimit, goldCards } = req.body;
+  const { listingLimit, goldCards, featuredListings, userType } = req.body;
 
-  // Validate request ID format
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorResponse('Invalid request ID format', 400));
   }
 
-  // Validate listing limit
   const validListingLimits = [15, 50, 100, 200, 300, 400, 'unlimited'];
   const parsedLimit = isNaN(parseInt(listingLimit)) 
     ? listingLimit 
@@ -941,43 +939,49 @@ exports.approveRegistrationRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid listing limit', 400));
   }
 
-  // Validate gold cards
   if (isNaN(goldCards) || goldCards < 0) {
     return next(new ErrorResponse('Invalid gold cards value', 400));
   }
 
-  // Find the registration request
+  if (isNaN(featuredListings) || featuredListings < 0) {
+    return next(new ErrorResponse('Invalid featured listings value', 400));
+  }
+
+  const validUserTypes = ['basic', 'elite', 'platinum'];
+  if (!validUserTypes.includes(userType)) {
+    return next(new ErrorResponse('Invalid user type', 400));
+  }
+
   const request = await RegistrationRequest.findById(id).populate('user');
   if (!request) {
     return next(new ErrorResponse(`Request not found with id of ${id}`, 404));
   }
 
-  // Find the user
   const user = await User.findById(request.user._id);
   if (!user) {
     return next(new ErrorResponse(`User not found`, 404));
   }
 
-  // Check if request is already processed
   if (request.status === 'approved') {
     return next(new ErrorResponse('Registration request already approved', 400));
   }
 
-  // Update user status and limits
   user.approvalStatus = 'approved';
   user.phone = request.phoneNumber;
   
-  // Replace the user update section with:
   if (user.role === 'individual') {
-    user.listingLimit = 1;  // Only 1 listing allowed
-    user.goldCards = 0;     // No gold cards
+    user.listingLimit = 1;
+    user.goldCards = 0;
+    user.featuredListingsLimit = 0;
   } else {
     user.listingLimit = listingLimit === 'unlimited' ? null : parseInt(listingLimit);
     user.goldCards = parseInt(goldCards);
+    user.featuredListingsLimit = parseInt(featuredListings);
   }
+  
+  user.userType = userType;
   await user.save();
 
-  // Update registration request status
   request.status = 'approved';
   await request.save();
 

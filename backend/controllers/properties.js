@@ -497,26 +497,19 @@ exports.getPropertyByCategory = asyncHandler(async (req, res, next) => {
 });
 
 exports.getFeaturedProperties = asyncHandler(async (req, res, next) => {
-  const properties = await Property.find({
-    $or: [{ isGoldCard: true }, { isPremium: true }, { isFeatured: true }],
+  const properties = await Property.find({ 
+    status: 'approved',
+    isFeatured: true 
   })
-    .sort({
-      isGoldCard: -1,
-      isPremium: -1,
-      isFeatured: -1,
-      createdAt: -1,
-    })
-
-    .populate("owner", "firstName lastName email")
+    .sort('-createdAt')
+    .limit(8)
+    .populate('owner', 'firstName lastName email')
     .populate({
-      path: "agent",
-      select: "user title isPremium",
-      populate: {
-        path: "user",
-        select: "firstName lastName email",
-      },
+      path: 'agent',
+      select: 'user title isPremium approvalStatus',
+      populate: { path: 'user', select: 'firstName lastName email' },
     })
-    .populate("agency", "name logoUrl");
+    .populate('agency', 'name logoUrl approvalStatus');
 
   res.status(200).json({
     success: true,

@@ -35,6 +35,11 @@ role: {
   enum: ['individual', 'user', 'agent', 'agency', 'promoter', 'admin', 'sub-admin'],
   default: 'user',
 },
+  userType: {
+    type: String,
+    enum: ['basic', 'elite', 'platinum'],
+    default: 'basic'
+  },
   avatarUrl: {
     type: String,
     default: '',
@@ -46,7 +51,7 @@ role: {
   },
   listingLimit: {
     type: Number,
-    default: null, // null for unlimited
+    default: null,
   },
    agency: {
     type: mongoose.Schema.ObjectId,
@@ -56,6 +61,10 @@ role: {
   goldCards: {
     type: Number,
     default: 0,
+  },
+    featuredListingsLimit: {
+    type: Number,
+    default: 0
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,

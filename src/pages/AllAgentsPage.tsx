@@ -13,8 +13,12 @@ const AllAgentsPage = () => {
   const [agents, setAgents] = useState([]);
   const [hoveredAgent, setHoveredAgent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Add login state
 
   useEffect(() => {
+    // Check login status
+    setIsLoggedIn(!!localStorage.getItem('token'));
+    
     const fetchAgents = async () => {
       try {
         const response = await fetch(
@@ -66,12 +70,15 @@ const AllAgentsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            <p className="text-gray-500 font-medium">Loading agents...</p>
+          <div className="flex flex-col items-center gap-6 p-8 bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+              <div className="absolute inset-0 animate-pulse rounded-full h-16 w-16 bg-gradient-to-r from-blue-400 to-purple-500 opacity-20"></div>
+            </div>
+            <p className="text-slate-700 font-semibold text-lg">Loading agents...</p>
           </div>
         </div>
         <Footer />
@@ -80,135 +87,192 @@ const AllAgentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-slate-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
 
-      <main className="flex-1 container mx-auto py-16 px-4">
-        <BackButton
-          to="/"
-          label="Back to Home"
-          className="mb-10 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-        />
+      {/* Hero Section with Animated Background */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
 
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-700 to-indigo-600 text-transparent bg-clip-text">
-            Our Real Estate Experts
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Meet our dedicated team of professionals committed to helping you
-            find your perfect home
-          </p>
-        </motion.div>
+        
+        <main className="relative flex-1 container mx-auto py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+          <BackButton
+            to="/"
+            label="Back to Home"
+            className="mb-8 sm:mb-12 flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-all duration-300 hover:translate-x-1"
+          />
 
-        <div className="mb-8 flex justify-between items-center">
-          <p className="text-slate-700">
-            <span className="font-semibold">{agents.length}</span> Agents
-            Available
-          </p>
-          <div className="flex items-center gap-2 text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
-            <Filter className="w-4 h-4" />
-            <span className="font-medium">Filter</span>
-          </div>
-        </div>
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-center mb-12 sm:mb-16"
+          >
+            <div className="relative inline-block">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-b from-gray-900 to-gray-950 bg-clip-text leading-tight">
+                Our Real Estate Experts
+              </h1>
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-xl -z-10 rounded-full"></div>
+            </div>
+            <p className="text-base sm:text-lg lg:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+              Meet our dedicated team of professionals committed to helping you
+              find your perfect home with unmatched expertise and personalized service
+            </p>
+          </motion.div>
 
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {agents.map((agent) => (
-            <motion.div
-              key={agent._id}
-              className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
-              onClick={() => handleAgentClick(agent._id)}
-              variants={itemVariants}
-              onMouseEnter={() => setHoveredAgent(agent._id)}
-              onMouseLeave={() => setHoveredAgent(null)}
-              whileHover={{ y: -5 }}
-            >
-              <div className="absolute top-0 right-0 w-full h-24 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-70"></div>
+          {/* Stats and Filter Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="mb-8 sm:mb-12 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0"
+          >
+            <div className="bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg border border-white/20">
+              <p className="text-slate-700 font-medium">
+                <span className="font-bold text-2xl text-blue-600">{agents.length}</span>
+                <span className="ml-2">Expert Agents Available</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-slate-600 cursor-pointer hover:text-slate-900 transition-all duration-300 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full hover:bg-white/80 border border-white/30">
+              <Filter className="w-5 h-5" />
+              <span className="font-medium">Filter & Sort</span>
+            </div>
+          </motion.div>
 
-              <div className="relative p-6 flex flex-col items-center">
-                <div className="w-28 h-28 rounded-full overflow-hidden mb-5 border-4 border-white shadow-md group-hover:scale-105 transition-transform duration-300">
-                  <img
-                    src={agent.photoUrl || "/default-avatar.jpg"}
-                    alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+          {/* Agents Grid */}
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {agents.map((agent) => (
+              <motion.div
+                key={agent._id}
+                className="group relative bg-white/90 backdrop-blur-lg rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer border border-white/20 hover:border-blue-200/50"
+                onClick={() => handleAgentClick(agent._id)}
+                variants={itemVariants}
+                onMouseEnter={() => setHoveredAgent(agent._id)}
+                onMouseLeave={() => setHoveredAgent(null)}
+                whileHover={{ 
+                  y: -8, 
+                  scale: 1.02,
+                  transition: { duration: 0.3, ease: "easeOut" }
+                }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {/* Gradient Header */}
+                <div className="absolute top-0 right-0 w-full h-32 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-indigo-500/20 opacity-80"></div>
+                
+                {/* Floating Decorative Elements */}
+                <div className="absolute top-4 right-4 w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-60 animate-pulse"></div>
+                <div className="absolute top-8 right-8 w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full opacity-40 animate-pulse delay-300"></div>
 
-                <h3 className="font-bold text-lg text-center mb-1">
-                  {agent.user?.firstName} {agent.user?.lastName}
-                </h3>
-                <p className="text-sm text-blue-600 font-medium text-center mb-3">
-                  {agent.title}
-                </p>
-
-                <div className="flex mb-3">
-                  {Array.from({ length: agent.rating || 4 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 text-amber-400 fill-amber-400"
-                    />
-                  ))}
-                  {Array.from({ length: 5 - (agent.rating || 4) }).map(
-                    (_, i) => (
-                      <Star key={i} className="w-4 h-4 text-slate-200" />
-                    )
-                  )}
-                </div>
-
-                <div className="bg-blue-50 px-4 py-1 rounded-full mb-4">
-                  <p className="text-sm font-medium text-blue-700">
-                    {agent.listingsCount || 0} Properties
-                  </p>
-                </div>
-
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{
-                    opacity: hoveredAgent === agent._id ? 1 : 0,
-                    height: hoveredAgent === agent._id ? "auto" : 0,
-                  }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full overflow-hidden"
-                >
-                  <div className="pt-3 border-t border-slate-100 mt-2 flex flex-col gap-2">
-                   <div className="flex items-center gap-2 text-slate-600">
-  <Phone className="w-4 h-4" />
-  <span className="text-sm">
-    {agent.user?.phone || "Not provided"}
-  </span>
-</div>
-<div className="flex items-center gap-2 text-slate-600">
-  <Mail className="w-4 h-4" />
-  <span className="text-sm">
-    {agent.user?.email}
-  </span>
-</div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm">
-                        {agent.location || "Mauritius"}
-                      </span>
+                <div className="relative p-6 sm:p-8 flex flex-col items-center">
+                  {/* Profile Image */}
+                  <div className="relative mb-6">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-xl group-hover:scale-110 transition-all duration-500 bg-gradient-to-r from-blue-100 to-purple-100">
+                      <img
+                        src={agent.photoUrl || "/default-avatar.jpg"}
+                        alt={`${agent.user?.firstName} ${agent.user?.lastName}`}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500 blur-md"></div>
                   </div>
-                </motion.div>
 
-                <button className="mt-4 w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300">
-                  View Profile
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </main>
+                  {/* Agent Info */}
+                  <h3 className="font-bold text-lg sm:text-xl text-center mb-2 text-slate-800 group-hover:text-blue-700 transition-colors duration-300">
+                    {agent.user?.firstName} {agent.user?.lastName}
+                  </h3>
+                  <p className="text-sm sm:text-base text-blue-600 font-semibold text-center mb-4 px-3 py-1 bg-blue-50 rounded-full">
+                    {agent.title}
+                  </p>
+
+                  {/* Rating Stars */}
+                  <div className="flex mb-4 gap-1">
+                    {Array.from({ length: agent.rating || 4 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 fill-amber-400 transition-transform duration-200 hover:scale-110"
+                      />
+                    ))}
+                    {Array.from({ length: 5 - (agent.rating || 4) }).map((_, i) => (
+                      <Star key={i + 100} className="w-4 h-4 sm:w-5 sm:h-5 text-slate-200" />
+                    ))}
+                  </div>
+
+                  {/* Properties Badge */}
+                  <div className="bg-gradient-to-b from-gray-900 to-gray-950 text-white px-4 sm:px-6 py-2 rounded-full mb-5 shadow-lg">
+                    <p className="text-sm font-semibold">
+                      {agent.listingsCount || 0} Properties
+                    </p>
+                  </div>
+
+                  {/* Contact Details - Animated on Hover */}
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{
+                      opacity: hoveredAgent === agent._id ? 1 : 0,
+                      height: hoveredAgent === agent._id ? "auto" : 0,
+                    }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    className="w-full overflow-hidden"
+                  >
+                    <div className="pt-4 border-t border-slate-200/50 mt-3 flex flex-col gap-3">
+                      {isLoggedIn ? (
+                        <>
+                          {agent.user?.phone && (
+                            <div className="flex items-center gap-3 text-slate-600 bg-slate-50/80 rounded-lg px-3 py-2">
+                              <Phone className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm font-medium">
+                                {agent.user?.phone}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-3 text-slate-600 bg-slate-50/80 rounded-lg px-3 py-2">
+                            <Mail className="w-4 h-4 text-purple-500" />
+                            <span className="text-sm font-medium truncate">
+                              {agent.user?.email}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div 
+                          className="flex flex-col gap-2 items-center p-3 bg-slate-50/80 rounded-lg cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/login');
+                          }}
+                        >
+                          <div className="flex items-center gap-2 text-blue-500">
+                            <Phone className="w-4 h-4" />
+                            <Mail className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium text-center">
+                            Login to view contact details
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-slate-600 bg-slate-50/80 rounded-lg px-3 py-2">
+                        <MapPin className="w-4 h-4 text-green-500" />
+                        <span className="text-sm font-medium">
+                          {agent.location || "Mauritius"}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* CTA Button */}
+                  <button className="mt-6 w-full py-3 px-6 bg-gradient-to-b from-gray-900 to-gray-950 text-white font-semibold rounded-xl">
+                    View Profile
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </main>
+      </div>
 
       <Footer />
     </div>

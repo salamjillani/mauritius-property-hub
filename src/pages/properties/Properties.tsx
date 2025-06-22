@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 // Update the import path below to the correct location of PropertyCard
 import PropertyCard from "@/components/PropertyCard";
 import { useToast } from "@/hooks/use-toast";
+import { Home, Tag, Building, MapPin, Sparkles, Filter } from "lucide-react";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -52,12 +53,58 @@ const Properties = () => {
       ? properties
       : properties.filter((property) => property.category === activeTab);
 
+  const getTabIcon = (tab) => {
+    switch (tab) {
+      case "all": return <Home className="h-4 w-4" />;
+      case "for-sale": return <Tag className="h-4 w-4" />;
+      case "for-rent": return <Building className="h-4 w-4" />;
+      case "offices": return <Building className="h-4 w-4" />;
+      case "land": return <MapPin className="h-4 w-4" />;
+      default: return <Home className="h-4 w-4" />;
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <Navbar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex-grow">
+          <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
+            {/* Enhanced Loading Header */}
+            <div className="text-center mb-12 lg:mb-16">
+              <div className="inline-flex items-center justify-center p-3 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full shadow-lg animate-pulse">
+                <Home className="h-8 w-8 text-white" />
+              </div>
+              <div className="h-12 bg-gray-200 rounded-xl w-72 mx-auto mb-4 animate-pulse"></div>
+              <div className="h-6 bg-gray-150 rounded-lg w-96 mx-auto animate-pulse"></div>
+            </div>
+            
+            {/* Loading Tabs */}
+            <div className="flex justify-center mb-8">
+              <div className="bg-white/70 backdrop-blur-sm p-2 rounded-2xl shadow-lg">
+                <div className="flex space-x-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-10 w-20 bg-gray-200 rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Loading Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-6 space-y-3">
+                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-150 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-150 rounded w-2/3"></div>
+                    <div className="h-8 bg-gray-200 rounded w-full mt-4"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <Footer />
       </div>
@@ -65,47 +112,132 @@ const Properties = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
-      <div className="container mx-auto px-4 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold mb-4">Properties</h1>
-          <p className="text-gray-600">Explore our wide range of properties.</p>
-        </motion.div>
-
-        <Tabs defaultValue="all" onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex justify-center">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="for-sale">For Sale</TabsTrigger>
-            <TabsTrigger value="for-rent">For Rent</TabsTrigger>
-            <TabsTrigger value="offices">Offices</TabsTrigger>
-            <TabsTrigger value="land">Land</TabsTrigger>
-          </TabsList>
-          <TabsContent value={activeTab}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProperties.map((property, index) => (
-                <motion.div
-                  key={property._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <PropertyCard
-                    property={property}
-                    isExpired={property.isExpired}
-                    currency="USD"
-                    variant="standard"
-                  />
-                </motion.div>
-              ))}
+      <div className="flex-grow">
+        <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
+          {/* Enhanced Header Section */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12 lg:mb-16"
+          >
+            <div className="inline-flex items-center justify-center p-3 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300">
+              <Home className="h-8 w-8 text-white" />
             </div>
-          </TabsContent>
-        </Tabs>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-b from-gray-900 to-gray-950 bg-clip-text mb-4 leading-tight">
+              Properties
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
+              Explore our wide range of properties and find your perfect match
+            </p>
+            <div className="mt-6 flex items-center justify-center space-x-2">
+              <div className="h-1 w-16 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full"></div>
+              <Sparkles className="h-4 w-4 text-indigo-400" />
+              <div className="h-1 w-16 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full"></div>
+            </div>
+          </motion.div>
+
+          {/* Enhanced Tabs */}
+          <Tabs defaultValue="all" onValueChange={setActiveTab}>
+            <div className="flex justify-center mb-8 lg:mb-12">
+              <div className="bg-white/70 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-white/20">
+                <TabsList className="bg-transparent border-0 p-0 h-auto space-x-1">
+                  <TabsTrigger 
+                    value="all"   
+                    className="flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600"
+                  >
+                    {getTabIcon("all")}
+                    <span className="hidden sm:inline">All</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="for-sale"
+                   className="flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600"
+                  >
+                    {getTabIcon("for-sale")}
+                    <span className="hidden sm:inline">For Sale</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="for-rent"
+                   className="flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600"
+                  >
+                    {getTabIcon("for-rent")}
+                    <span className="hidden sm:inline">For Rent</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="offices"
+                    className="flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600"
+                  >
+                    {getTabIcon("offices")}
+                    <span className="hidden sm:inline">Offices</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="land"
+                   className="flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600"
+                  >
+                    {getTabIcon("land")}
+                    <span className="hidden sm:inline">Land</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            <TabsContent value={activeTab} className="mt-0">
+              {filteredProperties.length === 0 ? (
+                <div className="max-w-lg mx-auto mt-16">
+                  <div className="bg-white/70 backdrop-blur-sm p-12 rounded-3xl shadow-xl border border-white/20 text-center">
+                    <div className="inline-flex items-center justify-center p-4 mb-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-full shadow-inner">
+                      <Filter className="h-12 w-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Properties Found</h3>
+                    <p className="text-gray-500">No properties match your current filter. Try selecting a different category.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+                    {filteredProperties.map((property, index) => (
+                      <motion.div
+                        key={property._id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                        className="transform hover:-translate-y-2 transition-transform duration-300"
+                      >
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/20">
+                          <PropertyCard
+                            property={property}
+                            isExpired={property.isExpired}
+                            currency="USD"
+                            variant="standard"
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                  
+                  {/* Properties Count */}
+                  <div className="mt-12 text-center">
+                    <div className="inline-flex items-center justify-center space-x-8 bg-white/70 backdrop-blur-sm px-8 py-4 rounded-2xl shadow-lg border border-white/20">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{filteredProperties.length}</div>
+                        <div className="text-sm text-gray-600">
+                          {activeTab === "all" ? "Total Properties" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Properties`}
+                        </div>
+                      </div>
+                      <div className="h-8 w-px bg-gray-300"></div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-indigo-600">{properties.length}</div>
+                        <div className="text-sm text-gray-600">All Properties</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
       <Footer />
     </div>

@@ -104,6 +104,7 @@ interface Property {
   owner: string;
   agent?: Agent;
   agency?: {
+    _id: string;
     name: string;
     logoUrl: string;
   };
@@ -130,6 +131,7 @@ const PropertyDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // Get coordinates from property.location
   const coordinates = useMemo(() => {
@@ -138,7 +140,7 @@ const PropertyDetails = () => {
     return [property.location.coordinates[1], property.location.coordinates[0]] as [number, number];
   }, [property]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (property?.agency?._id) {
       const fetchAgencyAgents = async () => {
         try {
@@ -225,6 +227,8 @@ const PropertyDetails = () => {
   }, [id, category, navigate, toast]);
 
   useEffect(() => {
+    // Check login status
+    setIsLoggedIn(!!localStorage.getItem('token'));
     fetchProperty();
   }, [fetchProperty]);
 
@@ -483,141 +487,200 @@ const PropertyDetails = () => {
             <h2 className="text-xl font-bold mb-4">Contact</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Show agent if property has agent data OR agency has agents */}
-              {agentData || agencyAgents.length > 0 ? (
+              {isLoggedIn ? (
+                <>
+                  {/* Show agent if property has agent data OR agency has agents */}
+                  {agentData || agencyAgents.length > 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      {agentData ? (
+                        // Individual agent card
+                        <div className="flex items-center gap-4 mb-4">
+                          <img 
+                            src={agentData.photoUrl || '/default-avatar.jpg'}
+                            alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
+                            className="w-16 h-16 rounded-full object-cover"
+                          />
+                          <div>
+                            <h3 className="font-bold text-lg">
+                              {agentData.user.firstName} {agentData.user.lastName}
+                            </h3>
+                            <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
+                            {property.agency?.name && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Building2 className="h-4 w-4" /> {property.agency.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        // Agency agent card
+                        <div className="flex items-center gap-4 mb-4">
+                          <img 
+                            src={agencyAgents[0].photoUrl || '/default-avatar.jpg'}
+                            alt={`${agencyAgents[0].user.firstName} ${agencyAgents[0].user.lastName}`}
+                            className="w-16 h-16 rounded-full object-cover"
+                          />
+                          <div>
+                            <h3 className="font-bold text-lg">
+                              {agencyAgents[0].user.firstName} {agencyAgents[0].user.lastName}
+                            </h3>
+                            <p className="text-gray-600">{agencyAgents[0].title || 'Real Estate Agent'}</p>
+                            {property.agency?.name && (
+                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                                <Building2 className="h-4 w-4" /> {property.agency.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-3">
+                        {/* Phone and Email with icons */}
+                        {agentData ? (
+                          <>
+                            {agentData.user?.phone && (
+                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                                <Phone className="h-5 w-5 text-blue-600" />
+                                <span className="font-medium">{agentData.user.phone}</span>
+                              </div>
+                            )}
+                            {agentData.user?.email && (
+                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                                <Mail className="h-5 w-5 text-green-600" />
+                                <span className="font-medium">{agentData.user.email}</span>
+                              </div>
+                            )}
+                            {/* View More Button */}
+                            <Button 
+                              onClick={() => navigate(`/agent/${agentData._id}`)}
+                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              View More Details
+                            </Button>
+                          </>
+                        ) : agencyAgents.length > 0 ? (
+                          <>
+                            {agencyAgents[0].user?.phone && (
+                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                                <Phone className="h-5 w-5 text-blue-600" />
+                                <span className="font-medium">{agencyAgents[0].user.phone}</span>
+                              </div>
+                            )}
+                            {agencyAgents[0].user?.email && (
+                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                                <Mail className="h-5 w-5 text-green-600" />
+                                <span className="font-medium">{agencyAgents[0].user.email}</span>
+                              </div>
+                            )}
+                            {/* View More Button */}
+                            <Button 
+                              onClick={() => navigate(`/agent/${agencyAgents[0]._id}`)}
+                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              View More Details
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : 
+                  /* Show agency if property has agency */
+                  property.agency ? (
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        {property.agency.logoUrl && (
+                          <img 
+                            src={property.agency.logoUrl} 
+                            alt={property.agency.name}
+                            className="w-16 h-16 rounded-full object-cover"
+                          />
+                        )}
+                        <div>
+                          <h3 className="font-bold text-lg">{property.agency.name}</h3>
+                          <p className="text-gray-600">Real Estate Agency</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {property.contactDetails?.phone && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Phone className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium">{property.contactDetails.phone}</span>
+                          </div>
+                        )}
+                        {property.contactDetails?.email && (
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                            <Mail className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">{property.contactDetails.email}</span>
+                          </div>
+                        )}
+                        {/* View More Button for Agency */}
+                        <Button 
+                          onClick={() => navigate(`/agency/${property.agency._id}`)}
+                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          View Agency Details
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
                 <div className="bg-gray-50 rounded-lg p-6">
-                  {agentData ? (
-                    // Individual agent card
-                    <div className="flex items-center gap-4 mb-4">
-               <img 
-      src={agentData.photoUrl || '/default-avatar.jpg'} // Changed here
-      alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
-      className="w-16 h-16 rounded-full object-cover"
-    />
-                      <div>
-                        <h3 className="font-bold text-lg">
-                          {agentData.user.firstName} {agentData.user.lastName}
-                        </h3>
-                        <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
-                        {property.agency?.name && (
-                          <p className="text-sm text-gray-500 flex items-center gap-1">
-                            <Building2 className="h-4 w-4" /> {property.agency.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    // Agency agent card
-                    <div className="flex items-center gap-4 mb-4">
-             <img 
-      src={agencyAgents[0].photoUrl || '/default-avatar.jpg'} // Changed here
-      alt={`${agencyAgents[0].user.firstName} ${agencyAgents[0].user.lastName}`}
-      className="w-16 h-16 rounded-full object-cover"
-    />
-                      <div>
-                        <h3 className="font-bold text-lg">
-                          {agencyAgents[0].user.firstName} {agencyAgents[0].user.lastName}
-                        </h3>
-                        <p className="text-gray-600">{agencyAgents[0].title || 'Real Estate Agent'}</p>
-                        {property.agency?.name && (
-                          <p className="text-sm text-gray-500 flex items-center gap-1">
-                            <Building2 className="h-4 w-4" /> {property.agency.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-3">
-                    {/* Phone and Email with icons */}
-                    {agentData ? (
-                      <>
-                        {agentData.user?.phone && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Phone className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium">{agentData.user.phone}</span>
-                          </div>
-                        )}
-                        {agentData.user?.email && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Mail className="h-5 w-5 text-green-600" />
-                            <span className="font-medium">{agentData.user.email}</span>
-                          </div>
-                        )}
-                        {/* View More Button */}
-                        <Button 
-                          onClick={() => navigate(`/agent/${agentData._id}`)}
-                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          View More Details
-                        </Button>
-                      </>
-                    ) : agencyAgents.length > 0 ? (
-                      <>
-                        {agencyAgents[0].user?.phone && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Phone className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium">{agencyAgents[0].user.phone}</span>
-                          </div>
-                        )}
-                        {agencyAgents[0].user?.email && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Mail className="h-5 w-5 text-green-600" />
-                            <span className="font-medium">{agencyAgents[0].user.email}</span>
-                          </div>
-                        )}
-                        {/* View More Button */}
-                        <Button 
-                          onClick={() => navigate(`/agent/${agencyAgents[0]._id}`)}
-                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          View More Details
-                        </Button>
-                      </>
-                    ) : null}
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-medium mb-2">Contact Property</h3>
+                    <p className="text-gray-600">
+                      Login to view contact details or send a message directly
+                    </p>
                   </div>
-                </div>
-              ) : 
-              /* Show agency if property has agency */
-              property.agency ? (
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    {property.agency.logoUrl && (
-                      <img 
-                        src={property.agency.logoUrl} 
-                        alt={property.agency.name}
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                    )}
+                  
+                  <div className="space-y-4">
                     <div>
-                      <h3 className="font-bold text-lg">{property.agency.name}</h3>
-                      <p className="text-gray-600">Real Estate Agency</p>
+                      <Label htmlFor="name">Your Name</Label>
+                      <Input id="name" placeholder="John Doe" />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="you@example.com" />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="phone">Phone (optional)</Label>
+                      <Input id="phone" placeholder="+230 123 4567" />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="message">Message</Label>
+                      <Textarea 
+                        id="message" 
+                        placeholder="I'm interested in this property..." 
+                        rows={4}
+                      />
+                    </div>
+                    
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => toast({
+                        title: "Message Sent",
+                        description: "Your message has been sent to the property agent",
+                      })}
+                    >
+                      Send Message
+                    </Button>
+                    
+                    <div className="text-center mt-4">
+                      <Button 
+                        variant="link" 
+                        className="text-blue-600"
+                        onClick={() => navigate('/login')}
+                      >
+                        Already have an account? Login
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {property.contactDetails?.phone && (
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                        <Phone className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium">{property.contactDetails.phone}</span>
-                      </div>
-                    )}
-                    {property.contactDetails?.email && (
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                        <Mail className="h-5 w-5 text-green-600" />
-                        <span className="font-medium">{property.contactDetails.email}</span>
-                      </div>
-                    )}
-                    {/* View More Button for Agency */}
-                    <Button 
-                      onClick={() => navigate(`/agency/${property.agency._id}`)}
-                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      View Agency Details
-                    </Button>
-                  </div>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </motion.div>
