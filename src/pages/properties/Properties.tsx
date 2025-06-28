@@ -4,10 +4,14 @@ import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-// Update the import path below to the correct location of PropertyCard
 import PropertyCard from "@/components/PropertyCard";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Tag, Building, MapPin, Sparkles, Filter } from "lucide-react";
+import { Home, Tag, Building, MapPin, Sparkles, Filter, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { amenities } from "@/data/amenities";
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ const Properties = () => {
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -25,15 +30,20 @@ const Properties = () => {
         if (!response.ok) throw new Error("Failed to fetch properties");
         const data = await response.json();
         
-        // Sort properties: Gold cards first, then by creation date
+        // Enhanced sorting to prioritize featured properties first
         const sortedProperties = data.data.sort((a, b) => {
-          // Gold cards first
+          // First priority: Featured properties
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          
+          // Second priority: Gold card properties
           if (a.isGoldCard && !b.isGoldCard) return -1;
           if (!a.isGoldCard && b.isGoldCard) return 1;
           
-          // Then by creation date
+          // Third priority: Creation date (newest first)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
+        
         setProperties(sortedProperties);
       } catch (error) {
         toast({
@@ -48,10 +58,21 @@ const Properties = () => {
     fetchProperties();
   }, [toast]);
 
-  const filteredProperties =
-    activeTab === "all"
+  // Apply category filtering with featured-first sorting maintained
+  const filteredProperties = (() => {
+    const filtered = activeTab === "all"
       ? properties
       : properties.filter((property) => property.category === activeTab);
+    
+    // Ensure featured properties remain first even after filtering
+    return filtered.sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      if (a.isGoldCard && !b.isGoldCard) return -1;
+      if (!a.isGoldCard && b.isGoldCard) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  })();
 
   const getTabIcon = (tab) => {
     switch (tab) {
@@ -64,13 +85,44 @@ const Properties = () => {
     }
   };
 
+  const handleAmenityChange = (amenity: string) => {
+    setSelectedAmenities(prev => 
+      prev.includes(amenity) 
+        ? prev.filter(a => a !== amenity) 
+        : [...prev, amenity]
+    );
+  };
+
+  const clearAmenitiesFilter = () => {
+    setSelectedAmenities([]);
+  };
+
+  // Apply amenity filtering while maintaining featured-first order
+  const amenitiesFilteredProperties = (() => {
+    const filtered = selectedAmenities.length > 0
+      ? filteredProperties.filter(property => 
+          selectedAmenities.every(amenity => 
+            property.amenities?.includes(amenity)
+          )
+        )
+      : filteredProperties;
+    
+    // Final sort to ensure featured properties are always first
+    return filtered.sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      if (a.isGoldCard && !b.isGoldCard) return -1;
+      if (!a.isGoldCard && b.isGoldCard) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  })();
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <Navbar />
         <div className="flex-grow">
           <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
-            {/* Enhanced Loading Header */}
             <div className="text-center mb-12 lg:mb-16">
               <div className="inline-flex items-center justify-center p-3 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full shadow-lg animate-pulse">
                 <Home className="h-8 w-8 text-white" />
@@ -79,7 +131,6 @@ const Properties = () => {
               <div className="h-6 bg-gray-150 rounded-lg w-96 mx-auto animate-pulse"></div>
             </div>
             
-            {/* Loading Tabs */}
             <div className="flex justify-center mb-8">
               <div className="bg-white/70 backdrop-blur-sm p-2 rounded-2xl shadow-lg">
                 <div className="flex space-x-2">
@@ -90,7 +141,6 @@ const Properties = () => {
               </div>
             </div>
             
-            {/* Loading Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
@@ -116,7 +166,6 @@ const Properties = () => {
       <Navbar />
       <div className="flex-grow">
         <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
-          {/* Enhanced Header Section */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -139,7 +188,82 @@ const Properties = () => {
             </div>
           </motion.div>
 
-          {/* Enhanced Tabs */}
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div className="flex items-center gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filter by Amenities
+                    {selectedAmenities.length > 0 && (
+                      <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                        {selectedAmenities.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-h-96 overflow-y-auto">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none">Select Amenities</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Choose amenities to filter properties
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {amenities.map((amenity) => (
+                        <div key={amenity.name} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`amenity-${amenity.name}`}
+                            checked={selectedAmenities.includes(amenity.name)}
+                            onCheckedChange={() => handleAmenityChange(amenity.name)}
+                          />
+                          <Label htmlFor={`amenity-${amenity.name}`} className="flex items-center gap-2 font-normal">
+                            <img 
+                              src={amenity.icon} 
+                              alt={amenity.name} 
+                              className="w-6 h-6 object-contain"
+                            />
+                            {amenity.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {selectedAmenities.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  onClick={clearAmenitiesFilter}
+                  className="text-red-600 flex items-center gap-1"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Filter
+                </Button>
+              )}
+            </div>
+
+            {selectedAmenities.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedAmenities.map(amenity => (
+                  <span 
+                    key={amenity} 
+                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                  >
+                    <img 
+                      src={amenities.find(a => a.name === amenity)?.icon || ""} 
+                      alt={amenity} 
+                      className="w-4 h-4"
+                    />
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           <Tabs defaultValue="all" onValueChange={setActiveTab}>
             <div className="flex justify-center mb-8 lg:mb-12">
               <div className="bg-white/70 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-white/20">
@@ -184,20 +308,20 @@ const Properties = () => {
             </div>
 
             <TabsContent value={activeTab} className="mt-0">
-              {filteredProperties.length === 0 ? (
+              {amenitiesFilteredProperties.length === 0 ? (
                 <div className="max-w-lg mx-auto mt-16">
                   <div className="bg-white/70 backdrop-blur-sm p-12 rounded-3xl shadow-xl border border-white/20 text-center">
                     <div className="inline-flex items-center justify-center p-4 mb-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-full shadow-inner">
                       <Filter className="h-12 w-12 text-gray-400" />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-700 mb-2">No Properties Found</h3>
-                    <p className="text-gray-500">No properties match your current filter. Try selecting a different category.</p>
+                    <p className="text-gray-500">No properties match your current filter. Try selecting a different category or amenity.</p>
                   </div>
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-                    {filteredProperties.map((property, index) => (
+                    {amenitiesFilteredProperties.map((property, index) => (
                       <motion.div
                         key={property._id}
                         initial={{ opacity: 0, y: 20 }}
@@ -217,13 +341,12 @@ const Properties = () => {
                     ))}
                   </div>
                   
-                  {/* Properties Count */}
                   <div className="mt-12 text-center">
                     <div className="inline-flex items-center justify-center space-x-8 bg-white/70 backdrop-blur-sm px-8 py-4 rounded-2xl shadow-lg border border-white/20">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{filteredProperties.length}</div>
+                        <div className="text-2xl font-bold text-blue-600">{amenitiesFilteredProperties.length}</div>
                         <div className="text-sm text-gray-600">
-                          {activeTab === "all" ? "Total Properties" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Properties`}
+                          {activeTab === "all" ? "Filtered Properties" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Properties`}
                         </div>
                       </div>
                       <div className="h-8 w-px bg-gray-300"></div>

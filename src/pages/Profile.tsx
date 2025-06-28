@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import PropertyCard from "@/components/PropertyCard";
@@ -20,8 +20,9 @@ import {
   Star,
   Home,
   Award,
+  RefreshCw,
   Users as UsersIcon,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -485,15 +486,14 @@ const Profile = () => {
               <div className="relative">
                 <div className="relative group">
                   {user.role === "agency" && profile?.logoUrl && (
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white/20 shadow-xl">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white/20 shadow-xl">
                       <img
                         src={profile.logoUrl}
                         alt={profile.name}
                         className="w-full h-full rounded-full object-cover"
                       />
-                  </div>
-                    )}
-         
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left">
@@ -532,13 +532,13 @@ const Profile = () => {
 
         <Tabs defaultValue="profile">
           <TabsList className="mb-6 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-200">
-            <TabsTrigger 
+            <TabsTrigger
               value="profile"
               className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white px-6 py-3 rounded-xl font-medium"
             >
               Profile
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="listings"
               className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-gray-900 data-[state=active]:to-gray-950 data-[state=active]:text-white px-6 py-3 rounded-xl font-medium"
             >
@@ -652,6 +652,47 @@ const RegistrationForm = ({ user, onSubmit }) => {
     country: "",
     termsAccepted: false,
   });
+  const [captchaQuestion, setCaptchaQuestion] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState(0);
+  const [userCaptchaInput, setUserCaptchaInput] = useState("");
+  const [captchaError, setCaptchaError] = useState(false);
+
+  const generateCaptcha = useCallback(() => {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operators = ["+", "-", "*"];
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+
+    let question = "";
+    let answer = 0;
+
+    switch (operator) {
+      case "+":
+        question = `What is ${num1} + ${num2}?`;
+        answer = num1 + num2;
+        break;
+      case "-":
+        question = `What is ${num1} - ${num2}?`;
+        answer = num1 - num2;
+        break;
+      case "*":
+        question = `What is ${num1} × ${num2}?`;
+        answer = num1 * num2;
+        break;
+      default:
+        question = `What is ${num1} + ${num2}?`;
+        answer = num1 + num2;
+    }
+
+    setCaptchaQuestion(question);
+    setCaptchaAnswer(answer);
+    setUserCaptchaInput("");
+    setCaptchaError(false);
+  }, []);
+
+  useEffect(() => {
+    generateCaptcha();
+  }, [generateCaptcha]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -663,6 +704,13 @@ const RegistrationForm = ({ user, onSubmit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (parseInt(userCaptchaInput) !== captchaAnswer) {
+      setCaptchaError(true);
+      generateCaptcha();
+      return;
+    }
+
     onSubmit(formData);
   };
 
@@ -684,7 +732,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="gender" className="text-gray-700">Gender</Label>
+            <Label htmlFor="gender" className="text-gray-700">
+              Gender
+            </Label>
             <Select
               name="gender"
               value={formData.gender}
@@ -703,7 +753,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
           </div>
 
           <div>
-            <Label htmlFor="companyName" className="text-gray-700">Company Name</Label>
+            <Label htmlFor="companyName" className="text-gray-700">
+              Company Name
+            </Label>
             <Input
               id="companyName"
               name="companyName"
@@ -716,7 +768,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
+            <Label htmlFor="firstName" className="text-gray-700">
+              First Name
+            </Label>
             <Input
               id="firstName"
               name="firstName"
@@ -728,7 +782,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
           </div>
 
           <div>
-            <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
+            <Label htmlFor="lastName" className="text-gray-700">
+              Last Name
+            </Label>
             <Input
               id="lastName"
               name="lastName"
@@ -742,7 +798,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="phoneNumber" className="text-gray-700">Phone Number</Label>
+            <Label htmlFor="phoneNumber" className="text-gray-700">
+              Phone Number
+            </Label>
             <Input
               id="phoneNumber"
               name="phoneNumber"
@@ -754,7 +812,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
           </div>
 
           <div>
-            <Label htmlFor="email" className="text-gray-700">Email Address</Label>
+            <Label htmlFor="email" className="text-gray-700">
+              Email Address
+            </Label>
             <Input
               id="email"
               name="email"
@@ -770,7 +830,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="placeOfBirth" className="text-gray-700">Place of Birth</Label>
+            <Label htmlFor="placeOfBirth" className="text-gray-700">
+              Place of Birth
+            </Label>
             <Input
               id="placeOfBirth"
               name="placeOfBirth"
@@ -782,7 +844,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
           </div>
 
           <div>
-            <Label htmlFor="city" className="text-gray-700">City</Label>
+            <Label htmlFor="city" className="text-gray-700">
+              City
+            </Label>
             <Input
               id="city"
               name="city"
@@ -795,7 +859,9 @@ const RegistrationForm = ({ user, onSubmit }) => {
         </div>
 
         <div>
-          <Label htmlFor="country" className="text-gray-700">Country</Label>
+          <Label htmlFor="country" className="text-gray-700">
+            Country
+          </Label>
           <Input
             id="country"
             name="country"
@@ -824,15 +890,62 @@ const RegistrationForm = ({ user, onSubmit }) => {
         <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded-lg">
           <p className="font-bold mb-2">Terms and Conditions:</p>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>By submitting this form, you confirm that all information provided is accurate.</li>
-            <li>You agree to comply with all platform rules and regulations.</li>
+            <li>
+              By submitting this form, you confirm that all information provided
+              is accurate.
+            </li>
+            <li>
+              You agree to comply with all platform rules and regulations.
+            </li>
             <li>Approval is subject to verification by our admin team.</li>
-            <li>You may be required to provide additional documentation for verification.</li>
+            <li>
+              You may be required to provide additional documentation for
+              verification.
+            </li>
           </ol>
         </div>
 
-        <Button 
-          type="submit" 
+        {/* Captcha section */}
+        <div className="border-t border-gray-200 pt-4 mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="captcha" className="text-gray-700">
+              Security Check
+            </Label>
+            <button
+              type="button"
+              onClick={generateCaptcha}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <RefreshCw size={14} className="text-blue-600" />
+              Refresh
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-3 font-medium text-gray-800 flex-1">
+              {captchaQuestion}
+            </div>
+
+            <Input
+              id="captcha"
+              type="number"
+              value={userCaptchaInput}
+              onChange={(e) => setUserCaptchaInput(e.target.value)}
+              placeholder="Your answer"
+              className="w-32 bg-white"
+              required
+            />
+          </div>
+
+          {captchaError && (
+            <p className="text-red-500 text-sm mt-2">
+              Incorrect answer. Please try again.
+            </p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
           className="w-full bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white font-medium py-3 rounded-xl"
         >
           Submit Registration
@@ -898,7 +1011,7 @@ const ListingsTab = ({ userId, user, listings }) => {
         <h2 className="text-2xl font-bold text-gray-800">My Listings</h2>
         {user.approvalStatus === "approved" && (
           <Link to={hasActiveListing ? "#" : "/properties/add"}>
-            <Button 
+            <Button
               disabled={hasActiveListing}
               className="bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white"
             >
@@ -931,15 +1044,18 @@ const ListingsTab = ({ userId, user, listings }) => {
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center">
             <Home size={40} className="text-slate-400" />
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No listings yet</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            No listings yet
+          </h3>
           <p className="text-gray-600 max-w-md mx-auto">
-            You haven't created any property listings. Start by adding your first property!
+            You haven't created any property listings. Start by adding your
+            first property!
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-             <PropertyCard
+            <PropertyCard
               key={listing._id}
               property={listing}
               currency="MUR"
@@ -965,7 +1081,9 @@ const IndividualForm = ({
     <h2 className="text-2xl font-bold text-gray-800">Individual Profile</h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="avatar" className="text-gray-700">Profile Photo</Label>
+        <Label htmlFor="avatar" className="text-gray-700">
+          Profile Photo
+        </Label>
         <div className="flex items-center gap-4 mt-2">
           {profile.avatarUrl && (
             <div className="relative group">
@@ -990,7 +1108,9 @@ const IndividualForm = ({
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
+        <Label htmlFor="firstName" className="text-gray-700">
+          First Name
+        </Label>
         <Input
           id="firstName"
           value={profile.firstName || ""}
@@ -1001,7 +1121,9 @@ const IndividualForm = ({
         />
       </div>
       <div>
-        <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
+        <Label htmlFor="lastName" className="text-gray-700">
+          Last Name
+        </Label>
         <Input
           id="lastName"
           value={profile.lastName || ""}
@@ -1012,7 +1134,9 @@ const IndividualForm = ({
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="phone" className="text-gray-700">Phone</Label>
+        <Label htmlFor="phone" className="text-gray-700">
+          Phone
+        </Label>
         <Input
           id="phone"
           value={profile.phone || ""}
@@ -1021,7 +1145,9 @@ const IndividualForm = ({
         />
       </div>
       <div>
-        <Label htmlFor="email" className="text-gray-700">Email</Label>
+        <Label htmlFor="email" className="text-gray-700">
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
@@ -1032,8 +1158,8 @@ const IndividualForm = ({
         />
       </div>
     </div>
-    <Button 
-      type="submit" 
+    <Button
+      type="submit"
       disabled={isSaving}
       className="bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white font-medium py-3 rounded-xl"
     >
@@ -1092,7 +1218,9 @@ const AgencyForm = ({
       <h2 className="text-2xl font-bold text-gray-800">Agency Profile</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <Label htmlFor="logo" className="text-gray-700">Logo</Label>
+          <Label htmlFor="logo" className="text-gray-700">
+            Logo
+          </Label>
           <div className="flex items-center gap-4 mt-2">
             {profile.logoUrl && (
               <div className="relative group">
@@ -1115,7 +1243,9 @@ const AgencyForm = ({
           </div>
         </div>
         <div>
-          <Label htmlFor="name" className="text-gray-700">Agency Name</Label>
+          <Label htmlFor="name" className="text-gray-700">
+            Agency Name
+          </Label>
           <Input
             id="name"
             value={profile.name || ""}
@@ -1125,7 +1255,9 @@ const AgencyForm = ({
         </div>
       </div>
       <div>
-        <Label htmlFor="description" className="text-gray-700">Description</Label>
+        <Label htmlFor="description" className="text-gray-700">
+          Description
+        </Label>
         <Textarea
           id="description"
           value={profile.description || ""}
@@ -1138,7 +1270,9 @@ const AgencyForm = ({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <Label htmlFor="establishedYear" className="text-gray-700">Established Year</Label>
+          <Label htmlFor="establishedYear" className="text-gray-700">
+            Established Year
+          </Label>
           <Input
             id="establishedYear"
             type="number"
@@ -1153,10 +1287,12 @@ const AgencyForm = ({
           />
         </div>
       </div>
-      
+
       {profile.agents && profile.agents.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">Linked Agents</h3>
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">
+            Linked Agents
+          </h3>
           <div className="space-y-3">
             {profile.agents.map((agent) => (
               <div
@@ -1234,8 +1370,8 @@ const AgencyForm = ({
           </div>
         </div>
       )}
-      <Button 
-        type="submit" 
+      <Button
+        type="submit"
         disabled={isSaving}
         className="bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white font-medium py-3 rounded-xl"
       >
@@ -1263,7 +1399,9 @@ const AgentForm = ({
     <h2 className="text-2xl font-bold text-gray-800">Agent Profile</h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="photo" className="text-gray-700">Profile Photo</Label>
+        <Label htmlFor="photo" className="text-gray-700">
+          Profile Photo
+        </Label>
         <div className="flex items-center gap-4 mt-2">
           {profile.photoUrl && (
             <div className="relative group">
@@ -1286,7 +1424,9 @@ const AgentForm = ({
         </div>
       </div>
       <div>
-        <Label htmlFor="title" className="text-gray-700">Professional Title</Label>
+        <Label htmlFor="title" className="text-gray-700">
+          Professional Title
+        </Label>
         <Input
           id="title"
           value={profile.title || ""}
@@ -1297,7 +1437,9 @@ const AgentForm = ({
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="professionalTitle" className="text-gray-700">Job Title</Label>
+        <Label htmlFor="professionalTitle" className="text-gray-700">
+          Job Title
+        </Label>
         <Input
           id="professionalTitle"
           value={profile.professionalTitle || ""}
@@ -1308,7 +1450,9 @@ const AgentForm = ({
         />
       </div>
       <div>
-        <Label htmlFor="specialization" className="text-gray-700">Specialization</Label>
+        <Label htmlFor="specialization" className="text-gray-700">
+          Specialization
+        </Label>
         <Input
           id="specialization"
           value={profile.specialization?.join(", ") || ""}
@@ -1324,7 +1468,9 @@ const AgentForm = ({
       </div>
     </div>
     <div>
-      <Label htmlFor="biography" className="text-gray-700">Biography</Label>
+      <Label htmlFor="biography" className="text-gray-700">
+        Biography
+      </Label>
       <Textarea
         id="biography"
         value={profile.biography || ""}
@@ -1333,7 +1479,7 @@ const AgentForm = ({
         className="bg-white"
       />
     </div>
-    
+
     <div className="border-t pt-6">
       <h3 className="text-lg font-semibold mb-3 text-gray-800">Agency Link</h3>
       {profile.agency ? (
@@ -1344,7 +1490,9 @@ const AgentForm = ({
             className="h-16 w-16 rounded-full"
           />
           <div>
-            <p className="font-semibold text-gray-800">Linked with: {profile.agency.name}</p>
+            <p className="font-semibold text-gray-800">
+              Linked with: {profile.agency.name}
+            </p>
             <p className="text-sm text-gray-600">Status: Approved</p>
           </div>
         </div>
@@ -1394,7 +1542,9 @@ const AgentForm = ({
           </div>
           {profile.linkingRequests && profile.linkingRequests.length > 0 && (
             <div>
-              <h4 className="font-medium mb-2 text-gray-700">Pending Requests</h4>
+              <h4 className="font-medium mb-2 text-gray-700">
+                Pending Requests
+              </h4>
               <div className="space-y-2">
                 {profile.linkingRequests
                   .filter((req) => req.status === "pending")
@@ -1418,9 +1568,13 @@ const AgentForm = ({
                           ) : (
                             <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
                           )}
-                          <span className="text-gray-800">{agency?.name || "Unknown Agency"}</span>
+                          <span className="text-gray-800">
+                            {agency?.name || "Unknown Agency"}
+                          </span>
                         </div>
-                        <span className="text-yellow-600 font-medium">Pending</span>
+                        <span className="text-yellow-600 font-medium">
+                          Pending
+                        </span>
                       </div>
                     );
                   })}
@@ -1430,8 +1584,8 @@ const AgentForm = ({
         </div>
       )}
     </div>
-    <Button 
-      type="submit" 
+    <Button
+      type="submit"
       disabled={isSaving}
       className="bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white font-medium py-3 rounded-xl"
     >
@@ -1452,7 +1606,9 @@ const PromoterForm = ({
     <h2 className="text-2xl font-bold text-gray-800">Promoter Profile</h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="logo" className="text-gray-700">Logo</Label>
+        <Label htmlFor="logo" className="text-gray-700">
+          Logo
+        </Label>
         <div className="flex items-center gap-4 mt-2">
           {profile.logoUrl && (
             <div className="relative group">
@@ -1476,7 +1632,9 @@ const PromoterForm = ({
         </div>
       </div>
       <div>
-        <Label htmlFor="name" className="text-gray-700">Promoter Name</Label>
+        <Label htmlFor="name" className="text-gray-700">
+          Promoter Name
+        </Label>
         <Input
           id="name"
           value={profile.name || ""}
@@ -1486,7 +1644,9 @@ const PromoterForm = ({
       </div>
     </div>
     <div>
-      <Label htmlFor="description" className="text-gray-700">Description</Label>
+      <Label htmlFor="description" className="text-gray-700">
+        Description
+      </Label>
       <Textarea
         id="description"
         value={profile.description || ""}
@@ -1499,7 +1659,9 @@ const PromoterForm = ({
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <Label htmlFor="specialties" className="text-gray-700">Specialties</Label>
+        <Label htmlFor="specialties" className="text-gray-700">
+          Specialties
+        </Label>
         <Input
           id="specialties"
           value={profile.specialties?.join(", ") || ""}
@@ -1514,7 +1676,9 @@ const PromoterForm = ({
         />
       </div>
       <div>
-        <Label htmlFor="establishedYear" className="text-gray-700">Established Year</Label>
+        <Label htmlFor="establishedYear" className="text-gray-700">
+          Established Year
+        </Label>
         <Input
           id="establishedYear"
           type="number"
@@ -1529,9 +1693,9 @@ const PromoterForm = ({
         />
       </div>
     </div>
-   
-    <Button 
-      type="submit" 
+
+    <Button
+      type="submit"
       disabled={isSaving}
       className="bg-gradient-to-b from-gray-900 to-gray-950 hover:from-gray-800 hover:to-gray-900 text-white font-medium py-3 rounded-xl"
     >
@@ -1539,6 +1703,5 @@ const PromoterForm = ({
     </Button>
   </form>
 );
-
 
 export default Profile;

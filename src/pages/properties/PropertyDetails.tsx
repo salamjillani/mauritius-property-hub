@@ -1,33 +1,32 @@
-// src/pages/PropertyDetails.tsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Share2, Loader2, Check, Star, ChevronLeft, ChevronRight, Heart, Building2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Share2, Loader2, Check, Star, ChevronLeft, ChevronRight, Heart, Building2, Bed, Bath, Square, Calendar, Eye, Play, ExternalLink, MessageCircle, User, Shield, Calculator } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import BackButton from '@/components/BackButton';
 import { useToast } from '@/hooks/use-toast';
-// Leaflet imports
+import { amenities } from '@/data/amenities';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix leaflet default icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: '/marker-icon.png',
-  iconRetinaUrl: '/marker-icon-2x.png',
+  iconRetinaUrl: 'marker-icon.gif',
+  iconUrl: '/marker-icon.gif',
   shadowUrl: '/marker-shadow.png',
 });
 
-// Interfaces for type safety
 interface Address {
   street?: string;
   city: string;
@@ -89,7 +88,7 @@ interface Property {
   address: Address;
   location: {
     type: string;
-    coordinates: [number, number]; // [longitude, latitude]
+    coordinates: [number, number];
   };
   area: number;
   bedrooms: number;
@@ -132,13 +131,67 @@ const PropertyDetails = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showAllImages, setShowAllImages] = useState(false);
   
-  // Get coordinates from property.location
   const coordinates = useMemo(() => {
-    if (!property?.location?.coordinates) return null;
-    // Coordinates are stored as [longitude, latitude]
-    return [property.location.coordinates[1], property.location.coordinates[0]] as [number, number];
+    if (!property) return null;
+    
+    if (property.location?.coordinates && Array.isArray(property.location.coordinates)) {
+      const [lng, lat] = property.location.coordinates;
+      if (typeof lng === 'number' && typeof lat === 'number' && 
+          !isNaN(lng) && !isNaN(lat) && 
+          lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return [lat, lng] as [number, number];
+      }
+    }
+    
+    if (property.address?.latitude && property.address?.longitude) {
+      const lat = parseFloat(property.address.latitude);
+      const lng = parseFloat(property.address.longitude);
+      if (!isNaN(lat) && !isNaN(lng) && 
+          lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return [lat, lng] as [number, number];
+      }
+    }
+    
+    return [-20.348404, 57.552152] as [number, number];
   }, [property]);
+
+  const MapComponent = () => {
+    if (!coordinates) {
+      return (
+        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center rounded-xl">
+          <MapPin className="h-12 w-12 text-gray-400 mb-2" />
+          <p className="text-gray-500 text-sm">Location coordinates not available</p>
+        </div>
+      );
+    }
+
+    return (
+      <MapContainer 
+        center={coordinates} 
+        zoom={14} 
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={false}
+        className="z-10 rounded-xl"
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        <Marker position={coordinates}>
+          <Popup>
+            <div className="text-center">
+              <strong>{property?.title}</strong>
+              <br />
+              {property?.address.street && `${property.address.street}, `}
+              {property?.address.city}, {property?.address.country || 'Mauritius'}
+            </div>
+          </Popup>
+        </Marker>
+      </MapContainer>
+    );
+  };
 
   useEffect(() => {
     if (property?.agency?._id) {
@@ -176,7 +229,6 @@ const PropertyDetails = () => {
     }
   }, [property]);
 
-  // Load user from localStorage
   useEffect(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -211,7 +263,6 @@ const PropertyDetails = () => {
       const data = await response.json();
       setProperty(data.data);
       
-      // Check favorites
       const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
       setIsFavorite(favorites.includes(data.data._id));
     } catch (error: any) {
@@ -227,7 +278,6 @@ const PropertyDetails = () => {
   }, [id, category, navigate, toast]);
 
   useEffect(() => {
-    // Check login status
     setIsLoggedIn(!!localStorage.getItem('token'));
     fetchProperty();
   }, [fetchProperty]);
@@ -265,10 +315,13 @@ const PropertyDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <Loader2 className="animate-spin h-12 w-12 text-primary" />
+          <div className="text-center">
+            <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading property details...</p>
+          </div>
         </div>
         <Footer />
       </div>
@@ -277,11 +330,17 @@ const PropertyDetails = () => {
 
   if (!property) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
         <Navbar />
         <div className="flex-grow flex flex-col items-center justify-center p-4">
-          <h2 className="text-2xl font-bold mb-4">Property Not Found</h2>
-          <Button onClick={() => navigate('/properties')}>Browse Properties</Button>
+          <div className="text-center max-w-md">
+            <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Property Not Found</h2>
+            <p className="text-gray-600 mb-6">The property you're looking for doesn't exist or has been removed.</p>
+            <Button onClick={() => navigate('/properties')} className="bg-blue-600 hover:bg-blue-700">
+              Browse Properties
+            </Button>
+          </div>
         </div>
         <Footer />
       </div>
@@ -289,402 +348,562 @@ const PropertyDetails = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <Helmet>
         <title>{property.title} | RealEstate</title>
         <meta name="description" content={property.description.substring(0, 160)} />
       </Helmet>
 
       <Navbar />
-      <div className="flex-grow container mx-auto px-4 py-8">
-        <BackButton onClick={() => navigate(-1)} className="mb-6" />
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-xl shadow-lg overflow-hidden"
-        >
-          {/* Image Gallery */}
-          <div className="relative">
-            <div className="h-96 overflow-hidden">
-              {property.images.length > 0 ? (
-                <img
-                  src={property.images[selectedImageIndex].url}
-                  alt={property.title}
-                  className="w-full h-full object-cover"
+      
+      <div className="flex-grow">
+        {/* Hero Image Section */}
+        <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden">
+          {property.images.length > 0 ? (
+            <div className="relative h-full">
+              <img
+                src={property.images[selectedImageIndex].url}
+                alt={property.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+              
+              {/* Image Navigation */}
+              {property.images.length > 1 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg"
+                    onClick={() => setSelectedImageIndex(
+                      (selectedImageIndex - 1 + property.images.length) % property.images.length
+                    )}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg"
+                    onClick={() => setSelectedImageIndex(
+                      (selectedImageIndex + 1) % property.images.length
+                    )}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                  
+                  {/* Image Indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    {property.images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          index === selectedImageIndex ? 'bg-white w-6' : 'bg-white/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              <div className="absolute top-4 right-4 flex gap-2 z-10">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={handleFavorite}
+                  className="bg-white/90 hover:bg-white shadow-lg"
+                >
+                  <Heart className={`h-5 w-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={handleShare}
+                  className="bg-white/90 hover:bg-white shadow-lg"
+                >
+                  <Share2 className="h-5 w-5 text-gray-700" />
+                </Button>
+                {property.virtualTourUrl && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => window.open(property.virtualTourUrl, '_blank')}
+                    className="bg-white/90 hover:bg-white shadow-lg"
+                  >
+                    <Eye className="h-5 w-5 text-gray-700" />
+                  </Button>
+                )}
+                {property.videoUrl && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => window.open(property.videoUrl, '_blank')}
+                    className="bg-white/90 hover:bg-white shadow-lg"
+                  >
+                    <Play className="h-5 w-5 text-gray-700" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Back Button */}
+              <div className="absolute top-4 left-4 z-10">
+                <BackButton 
+                  onClick={() => navigate(-1)} 
+                  className="bg-white/90 hover:bg-white shadow-lg border-0"
                 />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <Building2 className="h-16 w-16 text-gray-400" />
+              </div>
+
+              {/* Image Counter */}
+              {property.images.length > 1 && (
+                <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
+                  {selectedImageIndex + 1} / {property.images.length}
                 </div>
               )}
             </div>
-
-            {property.images.length > 1 && (
-              <>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10"
-                  onClick={() => setSelectedImageIndex(
-                    (selectedImageIndex - 1 + property.images.length) % property.images.length
-                  )}
-                >
-                  <ChevronLeft />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10"
-                  onClick={() => setSelectedImageIndex(
-                    (selectedImageIndex + 1) % property.images.length
-                  )}
-                >
-                  <ChevronRight />
-                </Button>
-              </>
-            )}
-
-            <div className="absolute top-4 right-4 flex gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleFavorite}
-              >
-                <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleShare}
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+              <Building2 className="h-24 w-24 text-gray-400" />
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Property Info */}
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
+        {/* Content Section */}
+        <div className="container mx-auto px-4 py-8 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Property Header */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
+              >
+                <div className="flex flex-wrap gap-2 mb-4">
                   {property.isPremium && (
-                    <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded-full">
+                    <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                      <Shield className="h-3 w-3 mr-1" />
                       Premium
-                    </span>
+                    </Badge>
                   )}
-                  <span className="bg-teal-600 text-white text-xs px-2 py-1 rounded-full">
+                  <Badge variant="secondary" className="bg-teal-100 text-teal-700">
                     {property.type}
-                  </span>
-                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                  </Badge>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                     {property.category}
-                  </span>
+                  </Badge>
+                  {property.isFeatured && (
+                    <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                      Featured
+                    </Badge>
+                  )}
                 </div>
                 
-                <h1 className="text-3xl font-bold mb-2">{property.title}</h1>
+                <h1 className="text-2xl lg:text-4xl font-bold mb-4 text-gray-900">{property.title}</h1>
                 
-                <div className="flex items-center gap-1 text-gray-600 mb-4">
-                  <MapPin className="h-5 w-5" />
-                  <span>
+                <div className="flex items-center gap-2 text-gray-600 mb-6">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm lg:text-base">
                     {property.address.street ? `${property.address.street}, ` : ''}
                     {property.address.city}, {property.address.country || 'Mauritius'}
                   </span>
                 </div>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-3xl font-bold text-primary mb-1">
-                  {property.currency === 'USD' ? '$' : property.currency === 'EUR' ? '€' : '₨'} 
-                  {property.price.toLocaleString()}
-                  {property.rentalPeriod && (
-                    <span className="text-base font-normal">/{property.rentalPeriod}</span>
-                  )}
+
+                {/* Price and Stats */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                  <div>
+                    <div className="text-3xl lg:text-4xl font-bold text-blue-600 mb-1">
+                      {property.currency === 'USD' ? '$' : property.currency === 'EUR' ? '€' : '₨'} 
+                      {property.price.toLocaleString()}
+                      {property.rentalPeriod && (
+                        <span className="text-lg font-normal text-gray-600">/{property.rentalPeriod}</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">Competitive market price</p>
+                  </div>
+                  
+                  <div className="flex gap-4 lg:gap-6">
+                    <div className="text-center">
+                      <div className="flex items-center gap-1 text-gray-700 font-semibold">
+                        <Bed className="h-4 w-4 text-blue-600" />
+                        {property.bedrooms}
+                      </div>
+                      <p className="text-xs text-gray-500">Bedrooms</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center gap-1 text-gray-700 font-semibold">
+                        <Bath className="h-4 w-4 text-blue-600" />
+                        {property.bathrooms}
+                      </div>
+                      <p className="text-xs text-gray-500">Bathrooms</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center gap-1 text-gray-700 font-semibold">
+                        <Square className="h-4 w-4 text-blue-600" />
+                        {property.area}
+                      </div>
+                      <p className="text-xs text-gray-500">m²</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {property.area} m² • {property.bedrooms} beds • {property.bathrooms} baths
-                </div>
-              </div>
-            </div>
-            
-            <div className="border-t border-gray-200 my-6 pt-6">
-              <h2 className="text-xl font-bold mb-4">Description</h2>
-              <p className="text-gray-700 whitespace-pre-line">{property.description}</p>
-            </div>
-            
-            {/* Features */}
-            <div className="border-t border-gray-200 my-6 pt-6">
-              <h2 className="text-xl font-bold mb-4">Features</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-medium">Property Type:</span>
-                  <span>{property.type}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-medium">Bedrooms:</span>
-                  <span>{property.bedrooms}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-medium">Bathrooms:</span>
-                  <span>{property.bathrooms}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-medium">Area:</span>
-                  <span>{property.area} m²</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-medium">Year Built:</span>
-                  <span>2020</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Amenities */}
-            {property.amenities && property.amenities.length > 0 && (
-              <div className="border-t border-gray-200 my-6 pt-6">
-                <h2 className="text-xl font-bold mb-4">Amenities</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {property.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Check className="h-5 w-5 text-green-500" />
-                      <span>{amenity}</span>
+              </motion.div>
+
+              {/* Description */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
+              >
+                <h2 className="text-xl lg:text-2xl font-bold mb-4 text-gray-900">About This Property</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{property.description}</p>
+              </motion.div>
+
+              {/* Features Grid */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
+              >
+                <h2 className="text-xl lg:text-2xl font-bold mb-6 text-gray-900">Property Features</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Property Type', value: property.type, icon: Building2 },
+                    { label: 'Bedrooms', value: property.bedrooms, icon: Bed },
+                    { label: 'Bathrooms', value: property.bathrooms, icon: Bath },
+                    { label: 'Floor Area', value: `${property.area} m²`, icon: Square },
+                    { label: 'Year Built', value: '2020', icon: Calendar },
+                    { label: 'Status', value: property.status, icon: Check },
+                  ].map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <feature.icon className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">{feature.label}</p>
+                        <p className="font-semibold text-gray-900">{feature.value}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Map Section */}
-          <div className="p-6 border-t border-gray-200">
-            <h2 className="text-xl font-bold mb-4">Location</h2>
-            <div className="h-80 rounded-xl overflow-hidden">
-              {coordinates ? (
-                <MapContainer 
-                  center={coordinates} 
-                  zoom={14} 
-                  style={{ height: '100%', width: '100%' }}
+              </motion.div>
+
+              {/* Amenities */}
+              {property.amenities && property.amenities.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
                 >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  />
-                  <Marker position={coordinates}>
-                    <Popup>{property.title}</Popup>
-                  </Marker>
-                </MapContainer>
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex flex-col items-center justify-center">
-                  <MapPin className="h-12 w-12 text-gray-400 mb-2" />
-                  <p className="text-gray-500">Location coordinates not available</p>
-                </div>
+                  <h2 className="text-xl lg:text-2xl font-bold mb-6 text-gray-900">Amenities & Features</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {property.amenities.map((amenity, index) => {
+                      const amenityData = amenities.find(a => a.name === amenity);
+                      return (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          {amenityData && (
+                            <img 
+                              src={amenityData.icon} 
+                              alt={amenity} 
+                              className="w-6 h-6 object-contain"
+                            />
+                          )}
+                          <span className="text-sm font-medium text-gray-700">{amenity}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
               )}
+
+              {/* Location */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
+              >
+                <h2 className="text-xl lg:text-2xl font-bold mb-6 text-gray-900">Location & Neighborhood</h2>
+                <div className="h-80 w-full rounded-xl overflow-hidden border bg-gray-100 shadow-inner">
+                  <MapComponent />
+                </div>
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <MapPin className="h-4 w-4 inline mr-2" />
+                    Located in {property.address.city}
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Contact Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="sticky top-8"
+              >
+                <Card className="shadow-lg border-0 bg-white">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">Contact Agent</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {isLoggedIn ? (
+                      <>
+                        {agentData || agencyAgents.length > 0 ? (
+                          <div className="space-y-4">
+                            {/* Agent Info */}
+                            <div className="flex items-center gap-4">
+                              <div className="relative">
+                                <img 
+                                  src={(agentData?.photoUrl || agencyAgents[0]?.photoUrl) || '/default-avatar.jpg'}
+                                  alt="Agent"
+                                  className="w-16 h-16 rounded-full object-cover ring-2 ring-blue-100"
+                                />
+                                {(agentData?.isPremium || agencyAgents[0]?.isPremium) && (
+                                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                                    <Shield className="h-3 w-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-lg text-gray-900">
+                                  {agentData ? 
+                                    `${agentData.user.firstName} ${agentData.user.lastName}` :
+                                    `${agencyAgents[0].user.firstName} ${agencyAgents[0].user.lastName}`
+                                  }
+                                </h3>
+                                <p className="text-gray-600 text-sm">
+                                  {(agentData?.title || agencyAgents[0]?.title) || 'Real Estate Agent'}
+                                </p>
+                                {property.agency?.name && (
+                                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                    <Building2 className="h-3 w-3" /> {property.agency.name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Contact Details */}
+                            <div className="space-y-3">
+                              {(agentData?.user?.phone || agencyAgents[0]?.user?.phone) && (
+                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                  <Phone className="h-5 w-5 text-blue-600" />
+                                  <span className="font-medium text-gray-900">
+                                    {agentData?.user?.phone || agencyAgents[0]?.user?.phone}
+                                  </span>
+                                </div>
+                              )}
+                              {(agentData?.user?.email || agencyAgents[0]?.user?.email) && (
+                                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                                  <Mail className="h-5 w-5 text-green-600" />
+                                  <span className="font-medium text-gray-900 text-sm break-all">
+                                    {agentData?.user?.email || agencyAgents[0]?.user?.email}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="space-y-2">
+                              <Button 
+                                onClick={() => navigate(`/agent/${agentData?._id || agencyAgents[0]?._id}`)}
+                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                View Agent Profile
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                              >
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Send Message
+                              </Button>
+                            </div>
+                          </div>
+                        ) : 
+                        property.agency ? (
+                          <div className="space-y-4">
+                            {/* Agency Info */}
+                            <div className="flex items-center gap-4">
+                              {property.agency.logoUrl && (
+                                <img 
+                                  src={property.agency.logoUrl} 
+                                  alt={property.agency.name}
+                                  className="w-16 h-16 rounded-lg object-cover ring-2 ring-blue-100"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <h3 className="font-bold text-lg text-gray-900">{property.agency.name}</h3>
+                                <p className="text-gray-600 text-sm">Real Estate Agency</p>
+                              </div>
+                            </div>
+                            
+                            {/* Contact Details */}
+                            <div className="space-y-3">
+                              {property.contactDetails?.phone && (
+                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                  <Phone className="h-5 w-5 text-blue-600" />
+                                  <span className="font-medium text-gray-900">{property.contactDetails.phone}</span>
+                                </div>
+                              )}
+                              {property.contactDetails?.email && (
+                                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                                  <Mail className="h-5 w-5 text-green-600" />
+                                  <span className="font-medium text-gray-900 text-sm break-all">{property.contactDetails.email}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <Button 
+                              onClick={() => navigate(`/agency/${property.agency._id}`)}
+                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                            >
+                              <Building2 className="h-4 w-4 mr-2" />
+                              View Agency Profile
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <User className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600">No agent information available</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-center mb-6">
+                          <MessageCircle className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                          <h3 className="text-lg font-semibold mb-2 text-gray-900">Get In Touch</h3>
+                          <p className="text-gray-600 text-sm">
+                            Send a message to inquire about this property
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="name" className="text-sm font-medium text-gray-700">Your Name</Label>
+                            <Input 
+                              id="name" 
+                              placeholder="John Doe" 
+                              className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
+                            <Input 
+                              id="email" 
+                              type="email" 
+                              placeholder="you@example.com" 
+                              className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number (Optional)</Label>
+                            <Input 
+                              id="phone" 
+                              placeholder="+230 123 4567" 
+                              className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="message" className="text-sm font-medium text-gray-700">Message</Label>
+                            <Textarea 
+                              id="message" 
+                              placeholder="I'm interested in this property. Could you provide more information?" 
+                              rows={4}
+                              className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <Button 
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                            onClick={() => toast({
+                              title: "Message Sent Successfully",
+                              description: "Your inquiry has been sent to the property agent. They will contact you soon.",
+                            })}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Send Inquiry
+                          </Button>
+                          
+                          <Separator className="my-4" />
+                          
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600 mb-3">Already have an account?</p>
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                              onClick={() => navigate('/login')}
+                            >
+                              Login to View Contact Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+
+              </motion.div>
             </div>
           </div>
-          
-          {/* Contact Section */}
-          <div className="p-6 border-t border-gray-200">
-            <h2 className="text-xl font-bold mb-4">Contact</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {isLoggedIn ? (
-                <>
-                  {/* Show agent if property has agent data OR agency has agents */}
-                  {agentData || agencyAgents.length > 0 ? (
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      {agentData ? (
-                        // Individual agent card
-                        <div className="flex items-center gap-4 mb-4">
-                          <img 
-                            src={agentData.photoUrl || '/default-avatar.jpg'}
-                            alt={`${agentData.user.firstName} ${agentData.user.lastName}`}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
-                          <div>
-                            <h3 className="font-bold text-lg">
-                              {agentData.user.firstName} {agentData.user.lastName}
-                            </h3>
-                            <p className="text-gray-600">{agentData.title || 'Real Estate Agent'}</p>
-                            {property.agency?.name && (
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <Building2 className="h-4 w-4" /> {property.agency.name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        // Agency agent card
-                        <div className="flex items-center gap-4 mb-4">
-                          <img 
-                            src={agencyAgents[0].photoUrl || '/default-avatar.jpg'}
-                            alt={`${agencyAgents[0].user.firstName} ${agencyAgents[0].user.lastName}`}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
-                          <div>
-                            <h3 className="font-bold text-lg">
-                              {agencyAgents[0].user.firstName} {agencyAgents[0].user.lastName}
-                            </h3>
-                            <p className="text-gray-600">{agencyAgents[0].title || 'Real Estate Agent'}</p>
-                            {property.agency?.name && (
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <Building2 className="h-4 w-4" /> {property.agency.name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-3">
-                        {/* Phone and Email with icons */}
-                        {agentData ? (
-                          <>
-                            {agentData.user?.phone && (
-                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                                <Phone className="h-5 w-5 text-blue-600" />
-                                <span className="font-medium">{agentData.user.phone}</span>
-                              </div>
-                            )}
-                            {agentData.user?.email && (
-                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                                <Mail className="h-5 w-5 text-green-600" />
-                                <span className="font-medium">{agentData.user.email}</span>
-                              </div>
-                            )}
-                            {/* View More Button */}
-                            <Button 
-                              onClick={() => navigate(`/agent/${agentData._id}`)}
-                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                              View More Details
-                            </Button>
-                          </>
-                        ) : agencyAgents.length > 0 ? (
-                          <>
-                            {agencyAgents[0].user?.phone && (
-                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                                <Phone className="h-5 w-5 text-blue-600" />
-                                <span className="font-medium">{agencyAgents[0].user.phone}</span>
-                              </div>
-                            )}
-                            {agencyAgents[0].user?.email && (
-                              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                                <Mail className="h-5 w-5 text-green-600" />
-                                <span className="font-medium">{agencyAgents[0].user.email}</span>
-                              </div>
-                            )}
-                            {/* View More Button */}
-                            <Button 
-                              onClick={() => navigate(`/agent/${agencyAgents[0]._id}`)}
-                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                              View More Details
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : 
-                  /* Show agency if property has agency */
-                  property.agency ? (
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <div className="flex items-center gap-4 mb-4">
-                        {property.agency.logoUrl && (
-                          <img 
-                            src={property.agency.logoUrl} 
-                            alt={property.agency.name}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
-                        )}
-                        <div>
-                          <h3 className="font-bold text-lg">{property.agency.name}</h3>
-                          <p className="text-gray-600">Real Estate Agency</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {property.contactDetails?.phone && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Phone className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium">{property.contactDetails.phone}</span>
-                          </div>
-                        )}
-                        {property.contactDetails?.email && (
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                            <Mail className="h-5 w-5 text-green-600" />
-                            <span className="font-medium">{property.contactDetails.email}</span>
-                          </div>
-                        )}
-                        {/* View More Button for Agency */}
-                        <Button 
-                          onClick={() => navigate(`/agency/${property.agency._id}`)}
-                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          View Agency Details
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-medium mb-2">Contact Property</h3>
-                    <p className="text-gray-600">
-                      Login to view contact details or send a message directly
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Your Name</Label>
-                      <Input id="name" placeholder="John Doe" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="you@example.com" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="phone">Phone (optional)</Label>
-                      <Input id="phone" placeholder="+230 123 4567" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea 
-                        id="message" 
-                        placeholder="I'm interested in this property..." 
-                        rows={4}
-                      />
-                    </div>
-                    
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                      onClick={() => toast({
-                        title: "Message Sent",
-                        description: "Your message has been sent to the property agent",
-                      })}
-                    >
-                      Send Message
-                    </Button>
-                    
-                    <div className="text-center mt-4">
-                      <Button 
-                        variant="link" 
-                        className="text-blue-600"
-                        onClick={() => navigate('/login')}
+
+          {/* Image Gallery Modal */}
+          {property.images.length > 4 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+              className="mt-8"
+            >
+              <Card className="shadow-lg border-0 bg-white">
+                <CardHeader>
+                  <CardTitle className="text-xl lg:text-2xl">Property Gallery</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {property.images.slice(0, 8).map((image, index) => (
+                      <div 
+                        key={index}
+                        className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
+                        onClick={() => setSelectedImageIndex(index)}
                       >
-                        Already have an account? Login
-                      </Button>
-                    </div>
+                        <img 
+                          src={image.thumbnail || image.url}
+                          alt={`Property ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    ))}
+                    {property.images.length > 8 && (
+                      <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-600">+{property.images.length - 8}</p>
+                          <p className="text-sm text-gray-500">More Photos</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </div>
       </div>
+      
       <Footer />
     </div>
   );

@@ -20,6 +20,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mauritiusDistricts from "@/data/mauritiusDistricts.json";
 import { motion } from "framer-motion";
+import { amenities } from '@/data/amenities';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -135,7 +136,7 @@ const AddProperty = () => {
     address: {
       street: "",
       city: "",
-      country: "Mauritius", // Set default country
+      country: "Mauritius",
       zipCode: "",
       latitude: "",
       longitude: "",
@@ -164,11 +165,22 @@ const AddProperty = () => {
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
-      iconUrl: "/marker-icon.png",
-      iconRetinaUrl: "/marker-icon-2x.png",
+      iconRetinaUrl: "marker-icon.gif",
+      iconUrl: "/marker-icon.gif",
       shadowUrl: "/marker-shadow.png",
     });
   }, []);
+
+  useEffect(() => {
+  if (formData.isFeatured && user && user.featuredListingsLimit <= 0) {
+    setFormData(prev => ({ ...prev, isFeatured: false }));
+    toast({
+      title: "No Featured Listings Available",
+      description: "You have no featured listings remaining",
+      variant: "destructive",
+    });
+  }
+}, [formData.isFeatured, user]);
 
   useEffect(() => {
     if (formData.address.latitude && formData.address.longitude) {
@@ -262,6 +274,135 @@ const AddProperty = () => {
     }
   };
 
+  const handleAmenityChange = (amenity) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.includes(amenity)
+        ? prev.amenities.filter(a => a !== amenity)
+        : [...prev.amenities, amenity]
+    }));
+  };
+
+  const handleImageUpload = (e) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+
+    const maxSize = 5 * 1024 * 1024;
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "Error",
+        description: "Some files are too large. Maximum size is 5MB per image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "Error",
+        description: "Please select only JPEG, PNG, or WebP images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (files.length > 10) {
+      toast({
+        title: "Error",
+        description: "You can upload a maximum of 10 images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFiles(files);
+
+    const imageUrls = files.map((file, index) => ({
+      url: URL.createObjectURL(file),
+      caption: `Image ${index + 1}`,
+      isMain: index === 0,
+    }));
+    setFormData(prev => ({
+      ...prev,
+      images: imageUrls,
+    }));
+  };
+
+  const uploadImagesToCloudinary = async (files) => {
+    const uploadedImages = [];
+    const token = localStorage.getItem("token");
+
+    try {
+      const signatureResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/properties/cloudinary-signature`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!signatureResponse.ok) {
+        const errorData = await signatureResponse.json();
+        throw new Error(errorData.message || "Failed to get upload signature");
+      }
+
+      const { data: signatureData } = await signatureResponse.json();
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(Math.round(((i + 1) / files.length) * 100));
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", signatureData.apiKey);
+        formData.append("timestamp", signatureData.timestamp.toString());
+        formData.append("signature", signatureData.signature);
+        formData.append("folder", signatureData.folder);
+
+        if (signatureData.uploadPreset) {
+          formData.append("upload_preset", signatureData.uploadPreset);
+        }
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          throw new Error(`Failed to upload image ${i + 1}: ${errorText}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.error) {
+          throw new Error(
+            `Cloudinary error for image ${i + 1}: ${uploadResult.error.message}`
+          );
+        }
+
+        uploadedImages.push({
+          url: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+          caption: `Image ${i + 1}`,
+          isMain: i === 0,
+        });
+      }
+
+      return uploadedImages;
+    } finally {
+      setUploadProgress(0);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -273,7 +414,6 @@ const AddProperty = () => {
       return;
     }
 
-    // Validate required fields
     if (!formData.title || !formData.description || !formData.price) {
       toast({
         title: "Error",
@@ -283,10 +423,32 @@ const AddProperty = () => {
       return;
     }
 
-    if (!formData.address.city || !formData.address.latitude || !formData.address.longitude) {
+    if (formData.isFeatured && user.featuredListingsLimit <= 0) {
+  toast({
+    title: "Error",
+    description: "You have no featured listings remaining",
+    variant: "destructive",
+  });
+  return;
+}
+
+    if (
+      !formData.address.city ||
+      !formData.address.latitude ||
+      !formData.address.longitude
+    ) {
       toast({
         title: "Error",
         description: "Please select a location on the map",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.area || isNaN(Number(formData.area))) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid area in square meters",
         variant: "destructive",
       });
       return;
@@ -296,7 +458,6 @@ const AddProperty = () => {
     try {
       const token = localStorage.getItem("token");
       
-      // Prepare the payload with proper data types
       const payload = {
         ...formData,
         owner: user._id,
@@ -311,14 +472,20 @@ const AddProperty = () => {
         }
       };
 
-      // Remove empty fields
+      if (selectedFiles.length > 0) {
+        toast({
+          title: "Uploading Images",
+          description: "Please wait while images are being uploaded...",
+        });
+        payload.images = await uploadImagesToCloudinary(selectedFiles);
+      }
+
       Object.keys(payload).forEach(key => {
         if (payload[key] === "" || payload[key] === null || payload[key] === undefined) {
           delete payload[key];
         }
       });
 
-      // Clean up address object
       Object.keys(payload.address).forEach(key => {
         if (payload.address[key] === "" || payload.address[key] === null || payload.address[key] === undefined) {
           delete payload.address[key];
@@ -346,6 +513,12 @@ const AddProperty = () => {
         title: "Success",
         description: "Property added successfully. It is pending admin approval.",
       });
+      if (formData.isFeatured && user) {
+  setUser({
+    ...user,
+    featuredListingsLimit: user.featuredListingsLimit - 1
+  });
+}
       navigate("/profile");
     } catch (error) {
       toast({
@@ -374,6 +547,27 @@ const AddProperty = () => {
             List your property and reach thousands of potential buyers
           </p>
         </motion.div>
+
+        {uploadProgress > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-lg p-6 mb-8 sm:mb-12"
+          >
+            <div className="mb-3">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-700 font-medium">Uploading images...</span>
+                <span className="text-slate-700 font-medium">{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {user && (
           <motion.div
@@ -702,24 +896,25 @@ const AddProperty = () => {
                     </Select>
                   </div>
           
-                  <div className="h-80 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-                    <MapContainer
-                      center={[-20.2, 57.5]}
-                      zoom={10}
-                      className="h-full w-full"
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      {markerPosition && <Marker position={markerPosition} />}
-                      <MapController
-                        selectedDistrict={selectedDistrict}
-                        setMarkerPosition={setMarkerPosition}
-                        setFormData={setFormData}
-                      />
-                    </MapContainer>
-                  </div>
+        <div className="h-80 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
+  <MapContainer
+    center={[-20.2, 57.5]}
+    zoom={10}
+    className="h-full w-full relative z-0"
+    style={{ zIndex: 0 }}
+  >
+    <TileLayer
+      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    />
+    {markerPosition && <Marker position={markerPosition} />}
+    <MapController
+      selectedDistrict={selectedDistrict}
+      setMarkerPosition={setMarkerPosition}
+      setFormData={setFormData}
+    />
+  </MapContainer>
+</div>
                   <div className="mt-3">
                     <Label
                       htmlFor="address.city"
@@ -846,8 +1041,108 @@ const AddProperty = () => {
                   />
                 </div>
               </div>
+
+              <div className="mt-6">
+                <Label className="text-slate-700 font-medium mb-2 block">
+                  Amenities
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
+                  {amenities.map((amenity) => (
+                    <div key={amenity.name} className="flex items-center gap-3">
+                      <Checkbox
+                        id={`amenity-${amenity.name}`}
+                        checked={formData.amenities.includes(amenity.name)}
+                        onCheckedChange={() => handleAmenityChange(amenity.name)}
+                        className="w-5 h-5 border-2 border-slate-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                      />
+                      <Label
+                        htmlFor={`amenity-${amenity.name}`}
+                        className="text-slate-700 flex items-center gap-2"
+                      >
+                        <img 
+                          src={amenity.icon} 
+                          alt={amenity.name} 
+                          className="w-6 h-6 object-contain"
+                        />
+                        {amenity.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
+
+          <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">
+              Images
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <Label
+                  htmlFor="images"
+                  className="text-slate-700 font-medium mb-2 block"
+                >
+                  Upload Property Images
+                </Label>
+                <Input
+                  id="images"
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleImageUpload}
+                  disabled={isLoading}
+                  className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
+                />
+                <p className="text-sm text-slate-500 mt-2">
+                  Max 10 images, 5MB each. Supported formats: JPEG, PNG, WebP.
+                </p>
+              </div>
+              {formData.images.length > 0 && (
+                <div>
+                  <Label className="text-slate-700 font-medium mb-2 block">
+                    Image Previews
+                  </Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {formData.images.map((img, index) => (
+                      <div
+                        key={index}
+                        className="relative rounded-lg overflow-hidden border border-slate-200"
+                      >
+                        <img
+                          src={img.url}
+                          alt={`Property image ${index + 1}`}
+                          className="w-full h-32 object-cover"
+                        />
+                        {img.isMain && (
+                          <span className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                            Main
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+                 <div>
+                <Label
+                  htmlFor="virtualTourUrl"
+                  className="text-slate-700 font-medium mb-2 block"
+                >
+                  Virtual Tour URL
+                </Label>
+                <Input
+                  id="virtualTourUrl"
+                  name="virtualTourUrl"
+                  type="url"
+                  placeholder="https://example.com/virtual-tour"
+                  value={formData.virtualTourUrl}
+                  onChange={handleChange}
+                  className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
+                />
+              </div>
 
           <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100">
             <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">
@@ -877,27 +1172,29 @@ const AddProperty = () => {
                     </Label>
                   </div>
                 )}
-                {user && user.featuredListingsLimit > 0 && (
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      id="isFeatured"
-                      checked={formData.isFeatured}
-                      onCheckedChange={(checked) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          isFeatured: checked === true,
-                        }))
-                      }
-                      className="w-6 h-6 border-2 border-slate-300 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
-                    />
-                    <Label
-                      htmlFor="isFeatured"
-                      className="text-slate-700 font-medium"
-                    >
-                      Feature this listing (Available: {user.featuredListingsLimit})
-                    </Label>
-                  </div>
-                )}
+               
+{user && user.featuredListingsLimit > 0 && (
+  <div className="flex items-center gap-3">
+    <Checkbox
+      id="isFeatured"
+      checked={formData.isFeatured}
+      onCheckedChange={(checked) => 
+        setFormData(prev => ({
+          ...prev,
+          isFeatured: checked === true,
+        }))
+      }
+      className="w-6 h-6 border-2 border-slate-300 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+      disabled={user.featuredListingsLimit <= 0}
+    />
+    <Label
+      htmlFor="isFeatured"
+      className="text-slate-700 font-medium"
+    >
+      Feature this listing (Available: {user.featuredListingsLimit})
+    </Label>
+  </div>
+)}
               </div>
             </div>
           </div>

@@ -140,23 +140,23 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 
 exports.createProperty = asyncHandler(async (req, res, next) => {
   console.log("Request body:", JSON.stringify(req.body, null, 2));
-
+  
   // Early validation for required fields
   if (!req.body.title || !req.body.description || !req.body.price) {
     return next(new ErrorResponse("Missing required fields", 400));
   }
-
+  
   // Authentication check
   if (!req.user || !req.user.id) {
     return next(new ErrorResponse("User not authenticated", 401));
   }
-
+  
   // Find user
   const user = await User.findById(req.user.id);
   if (!user) {
     return next(new ErrorResponse("User not found", 404));
   }
-
+  
   // Check approval status for certain roles
   if (
     ["agent", "agency", "promoter"].includes(user.role) &&
@@ -166,7 +166,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       new ErrorResponse(`Your ${user.role} profile is not approved`, 403)
     );
   }
-
+  
   // Handle individual user restrictions
   if (user.role === "individual") {
     const activeListings = await Property.countDocuments({
@@ -174,7 +174,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       status: "active",
       expiresAt: { $gt: new Date() },
     });
-
+    
     if (activeListings > 0) {
       return next(
         new ErrorResponse(
@@ -183,13 +183,13 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
         )
       );
     }
-
+    
     // Set expiration date for individual listings (60 days)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 60);
     req.body.expiresAt = expiresAt;
   }
-
+  
   // Handle agency assignment
   if (user.role === "agency") {
     const agency = await Agency.findOne({ user: req.user.id });
@@ -202,7 +202,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       req.body.agency = agent.agency._id;
     }
   }
-
+  
   // Check listing limits
   if (user.listingLimit > 0) {
     const currentListings = await Property.countDocuments({ owner: user._id });
@@ -210,21 +210,34 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse("Listing limit reached", 403));
     }
   }
-
+  
+  // Validate featured listings limit
+  if (req.body.isFeatured) {
+    if (user.featuredListingsLimit <= 0) {
+      return next(new ErrorResponse("You have no featured listings remaining", 400));
+    }
+  }
+  
   // Set property data
   req.body.owner = req.user.id;
   req.body.status = user.role === "individual" ? "active" : "approved";
-
+  
   try {
     // Create property with gold card logic
     const property = await Property.create({
       ...req.body,
       isGoldCard: req.body.isGoldCard && user.goldCards > 0
     });
-
+    
     // Deduct gold card if used
     if (req.body.isGoldCard && user.goldCards > 0) {
       user.goldCards -= 1;
+      await user.save();
+    }
+    
+    // Deduct featured listing if used
+    if (req.body.isFeatured) {
+      user.featuredListingsLimit -= 1;
       await user.save();
     }
     
