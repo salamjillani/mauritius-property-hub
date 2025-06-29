@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, Home, Users, Building, Building2, MapPin, Settings, FileText, DollarSign, Menu, X } from 'lucide-react';
+import { LogOut, Home, Users, Building, Building2, MapPin, Settings, FileText, DollarSign, Menu, X, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -23,6 +23,8 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/users', icon: Users, label: t('Users') },
     { path: '/admin/agents', icon: Users, label: t('agents') },
     { path: '/admin/agencies', icon: Building, label: t('agencies') },
+    { path: '/admin/articles', icon: FileText, label: t('Articles') },
+    { path: '/admin/advertisements', icon: ImageIcon, label: t('Advertisements') },
     { path: '/admin/promoters', icon: Building2, label: t('promoters') },
     { path: '/admin/properties', icon: MapPin, label: t('properties') },
     { path: '/admin/requests', icon: FileText, label: t('Requests') },

@@ -36,6 +36,11 @@ import Verification from './pages/Verification';
 import MapView from './pages/MapView';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import Articles from './pages/Articles';
+import AdminArticles from './pages/admin/Articles';
+import AdminAdvertisements from './pages/admin/Advertisements';
+import ArticleForm from './components/ArticleForm';
+import AdvertisementForm from './components/AdvertisementForm';
 
 // Type for API errors
 interface ApiError extends Error {
@@ -164,6 +169,8 @@ const App = () => (
               <Route path="/agency/:id" element={<AgencyPage />} />
               <Route path="/projects/:id" element={<ProjectDetails />} />
               <Route path="/map" element={<MapView />} />
+              <Route path="/articles" element={<Articles />} />
+              <Route path="/article/:id" element={<Articles />} />
 
               {/* Protected User Routes */}
               <Route
@@ -290,6 +297,71 @@ const App = () => (
                 }
               />
               <Route
+  path="/admin/articles"
+  element={
+    <AdminRoute>
+      <AdminArticles />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/articles/:id/edit"
+  element={
+    <AdminRoute>
+      <ArticleForm />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/advertisements"
+  element={
+    <AdminRoute>
+      <AdminAdvertisements />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/advertisements/:id/edit"
+  element={
+    <AdminRoute>
+      <AdvertisementForm />
+    </AdminRoute>
+  }
+/>
+// Add these new routes in the admin section
+<Route
+  path="/admin/article/new"
+  element={
+    <AdminRoute>
+      <ArticleForm />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/article/edit/:id"
+  element={
+    <AdminRoute>
+      <ArticleForm />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/advertisement/new"
+  element={
+    <AdminRoute>
+      <AdvertisementForm />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/advertisement/edit/:id"
+  element={
+    <AdminRoute>
+      <AdvertisementForm />
+    </AdminRoute>
+  }
+/>
+              <Route
                 path="/admin/logs"
                 element={
                   <AdminRoute>
@@ -297,6 +369,7 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              
 
               {/* Catch-All Route */}
               <Route path="*" element={<NotFound />} />

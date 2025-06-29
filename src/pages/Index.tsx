@@ -19,6 +19,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mauritiusRegions from "@/data/mauritiusRegions.json";
 import { useNavigate } from "react-router-dom";
+import AdsCarousel from '@/components/AdsCarousel';
 
 const Index = () => {
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
@@ -150,6 +151,8 @@ const Index = () => {
         activeCurrency={activeCurrency}
         setActiveCurrency={setActiveCurrency}
       />
+
+      <AdsCarousel />
 
       <AgentToggle onClick={toggleAgentSidebar} isActive={agentSidebarOpen} />
       <AgentSidebar isOpen={agentSidebarOpen} onClose={() => setAgentSidebarOpen(false)} agents={agents} />

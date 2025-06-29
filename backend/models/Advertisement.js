@@ -5,32 +5,25 @@ const AdvertisementSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a title'],
     trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters'],
+    maxlength: [100, 'Title cannot be more than 100 characters']
   },
-  imageUrl: {
+  image: {
     type: String,
-    required: [true, 'Please add an image URL'],
-  },
-  publicId: {
-    type: String,
-    required: [true, 'Please add a public ID'],
+    required: [true, 'Please add an image URL']
   },
   link: {
     type: String,
-    required: [true, 'Please add a link'],
+    required: [true, 'Please add a link URL']
   },
-  status: {
-    type: String,
-    enum: ['active', 'inactive'],
-    default: 'active',
+  isActive: {
+    type: Boolean,
+    default: true
   },
-  createdAt: {
+  startDate: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
-}, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+  endDate: Date
+}, { timestamps: true });
 
 module.exports = mongoose.model('Advertisement', AdvertisementSchema);

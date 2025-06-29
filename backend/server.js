@@ -8,6 +8,7 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const path = require('path');
 const fileUpload = require('express-fileupload');
+const articleRoutes = require('./routes/articles');
 
 // Load env variables
 dotenv.config();
@@ -85,13 +86,15 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/verifications', verificationRoutes);
 app.use('/api/projects', projectRoutes );
 app.use('/api/promoters', promoterRoutes);
-app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/registration-requests', registration);
 app.use('/api/registration-requests', registrationRequestsRoutes);
+app.use('/api/articles', require('./routes/articles'));
+app.use('/api/advertisements', require('./routes/advertisements'));
+app.use('/api', articleRoutes);
 
 // Cron job for expiring listings
 cron.schedule('0 0 * * *', async () => {
