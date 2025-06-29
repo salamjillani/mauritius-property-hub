@@ -15,6 +15,8 @@ const AdvertisementForm = () => {
     link: '',
     isActive: true
   });
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
+  const [imagePreview, setImagePreview] = useState('');
   const [isLoading, setIsLoading] = useState(!!id);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,10 +31,12 @@ const AdvertisementForm = () => {
           const adData = response.data.data;
           setFormData({
             title: adData.title || '',
-            image: null, // Don't set existing image file
+            image: null,
             link: adData.link || '',
             isActive: adData.isActive !== undefined ? adData.isActive : true
           });
+          setCurrentImageUrl(adData.image || '');
+          setImagePreview(adData.image || '');
           setIsLoading(false);
         } catch (error) {
           console.error('Error fetching advertisement:', error);
@@ -47,6 +51,17 @@ const AdvertisementForm = () => {
       fetchAdvertisement();
     }
   }, [id, toast, t]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData({...formData, image: file});
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,17 +79,38 @@ const AdvertisementForm = () => {
         return;
       }
 
-   const formDataToSend = new FormData();
-formDataToSend.append('title', formData.title);
-formDataToSend.append('link', formData.link);
-formDataToSend.append('isActive', formData.isActive.toString());
+      // Validate required fields
+      if (!formData.title.trim() || !formData.link.trim()) {
+        toast({ 
+          title: t('error'), 
+          description: 'Title and link are required', 
+          variant: 'destructive' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-// Add this to handle both file and URL
-if (formData.image instanceof File) {
-  formDataToSend.append('image', formData.image);
-} else if (formData.image) {
-  formDataToSend.append('imageUrl', formData.image);
-}
+      // For new advertisements, image is required
+      if (!id && !formData.image) {
+        toast({ 
+          title: t('error'), 
+          description: 'Image is required for new advertisements', 
+          variant: 'destructive' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title.trim());
+      formDataToSend.append('link', formData.link.trim());
+      formDataToSend.append('isActive', formData.isActive.toString());
+
+      // Only append image if a new file is selected
+      if (formData.image instanceof File) {
+        formDataToSend.append('image', formData.image);
+      }
+
       let response;
       if (id) {
         response = await axios.put(`/api/advertisements/${id}`, formDataToSend, {
@@ -109,6 +145,15 @@ if (formData.image instanceof File) {
     }
   };
 
+  // Cleanup preview URL on component unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -122,35 +167,40 @@ if (formData.image instanceof File) {
       <h1 className="text-2xl font-bold mb-6">
         {id ? t('edit_advertisement') : t('create_advertisement')}
       </h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-lg">
         <div>
-          <label className="block mb-2 font-medium">{t('title')}</label>
+          <label className="block mb-2 font-medium">{t('title')} *</label>
           <input
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({...formData, title: e.target.value})}
-            className="w-full p-2 border rounded"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
             disabled={isSubmitting}
+            placeholder="Enter advertisement title"
           />
         </div>
+
         <div>
-          <label className="block mb-2 font-medium">{t('link')}</label>
+          <label className="block mb-2 font-medium">{t('link')} *</label>
           <input
             type="url"
             value={formData.link}
             onChange={(e) => setFormData({...formData, link: e.target.value})}
-            className="w-full p-2 border rounded"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
             disabled={isSubmitting}
+            placeholder="https://example.com"
           />
         </div>
+
         <div>
-          <label className="block mb-2 font-medium">{t('image')}</label>
+          <label className="block mb-2 font-medium">{t('image')} {!id && '*'}</label>
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setFormData({...formData, image: e.target.files[0]})}
+            onChange={handleImageChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required={!id}
             disabled={isSubmitting}
           />
@@ -159,26 +209,55 @@ if (formData.image instanceof File) {
               Leave empty to keep current image
             </p>
           )}
+          
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="mt-4">
+              <p className="text-sm font-medium mb-2">Preview:</p>
+              <img 
+                src={imagePreview} 
+                alt="Advertisement preview" 
+                className="max-w-xs h-auto border border-gray-300 rounded-lg shadow-sm"
+                onError={(e) => {
+                  e.target.src = '/placeholder-image.png'; // fallback image
+                  console.error('Image preview failed to load');
+                }}
+              />
+            </div>
+          )}
         </div>
+
         <div>
           <label className="block mb-2 font-medium">{t('status')}</label>
           <select
             value={formData.isActive}
             onChange={(e) => setFormData({...formData, isActive: e.target.value === 'true'})}
-            className="w-full p-2 border rounded"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isSubmitting}
           >
             <option value="true">{t('active')}</option>
             <option value="false">{t('inactive')}</option>
           </select>
         </div>
-        <button 
-          type="submit" 
-          className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (t('submitting') || 'Submitting...') : t('submit')}
-        </button>
+
+        <div className="flex gap-4 pt-4">
+          <button 
+            type="submit" 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (t('submitting') || 'Submitting...') : (id ? t('update') : t('create'))}
+          </button>
+          
+          <button 
+            type="button"
+            onClick={() => navigate('/admin/advertisements')}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors"
+            disabled={isSubmitting}
+          >
+            {t('cancel') || 'Cancel'}
+          </button>
+        </div>
       </form>
     </div>
   );

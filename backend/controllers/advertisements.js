@@ -3,12 +3,36 @@ const ErrorResponse = require('../utils/errorResponse');
 const Advertisement = require('../models/Advertisement');
 const mongoose = require('mongoose');
 const cloudinary = require('../utils/cloudinaryUpload');
+const fs = require('fs').promises;
+const path = require('path');
 
 // @desc    Get all advertisements
 // @route   GET /api/advertisements
 // @access  Public
 exports.getAdvertisements = asyncHandler(async (req, res, next) => {
-  const advertisements = await Advertisement.find();
+  const advertisements = await Advertisement.find().sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: advertisements.length,
+    data: advertisements,
+  });
+});
+
+// @desc    Get active advertisements
+// @route   GET /api/advertisements/active
+// @access  Public
+exports.getActiveAdvertisements = asyncHandler(async (req, res, next) => {
+  const now = new Date();
+  const advertisements = await Advertisement.find({
+    isActive: true,
+    startDate: { $lte: now },
+    $or: [
+      { endDate: { $exists: false } },
+      { endDate: null },
+      { endDate: { $gte: now } }
+    ]
+  }).sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,
@@ -37,8 +61,6 @@ exports.getAdvertisement = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Update the createAdvertisement and updateAdvertisement handlers
-
 // @desc    Create advertisement
 // @route   POST /api/advertisements
 // @access  Private/Admin
@@ -47,36 +69,69 @@ exports.createAdvertisement = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Not authorized to create advertisements', 403));
   }
 
-  const { title, link, isActive, imageUrl } = req.body;
-  let finalImageUrl = '';
+  const { title, link, isActive, startDate, endDate } = req.body;
   
-  // Handle different ways image can be provided
-  if (req.files?.image) {
-    // Image uploaded as file
+  // Validate required fields
+  if (!title || !link) {
+    return next(new ErrorResponse('Title and link are required', 400));
+  }
+
+  let imageUrl = '';
+
+  // Handle image upload
+  if (req.files && req.files.image) {
+    const imageFile = req.files.image;
+    
+    // Validate file type
+    if (!imageFile.mimetype.startsWith('image/')) {
+      return next(new ErrorResponse('Please upload an image file', 400));
+    }
+
+    // Validate file size (10MB limit)
+    if (imageFile.size > 10 * 1024 * 1024) {
+      return next(new ErrorResponse('Image size cannot exceed 10MB', 400));
+    }
+
     try {
-      const result = await cloudinary.uploadImage(req.files.image.tempFilePath, 'advertisements');
-      finalImageUrl = result.url;
+      // Upload to Cloudinary
+      const result = await cloudinary.uploadImage(imageFile.tempFilePath, 'advertisements');
+      imageUrl = result.secure_url || result.url;
+      
+      // Clean up temp file
+      try {
+        await fs.unlink(imageFile.tempFilePath);
+      } catch (unlinkError) {
+        console.warn('Failed to delete temp file:', unlinkError.message);
+      }
     } catch (error) {
       console.error('Cloudinary upload error:', error);
-      return next(new ErrorResponse('Image upload failed', 500));
+      return next(new ErrorResponse('Image upload failed. Please try again.', 500));
     }
-  } else if (imageUrl) {
-    // Image URL provided directly (from frontend Cloudinary upload)
-    finalImageUrl = imageUrl;
   } else {
     return next(new ErrorResponse('Please provide an image', 400));
   }
 
-  const ad = await Advertisement.create({
-    title,
-    image: finalImageUrl,
-    link,
-    isActive: isActive !== undefined ? isActive : true
-  });
+  // Create advertisement data
+  const adData = {
+    title: title.trim(),
+    image: imageUrl,
+    link: link.trim(),
+    isActive: isActive !== undefined ? Boolean(isActive) : true
+  };
+
+  // Add optional dates if provided
+  if (startDate) {
+    adData.startDate = new Date(startDate);
+  }
+  if (endDate) {
+    adData.endDate = new Date(endDate);
+  }
+
+  const advertisement = await Advertisement.create(adData);
 
   res.status(201).json({ 
     success: true, 
-    data: ad 
+    data: advertisement 
   });
 });
 
@@ -99,26 +154,52 @@ exports.updateAdvertisement = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Advertisement not found with id of ${id}`, 404));
   }
 
-  const { title, link, isActive, imageUrl } = req.body;
+  const { title, link, isActive, startDate, endDate } = req.body;
+  
+  // Prepare update data with existing values as fallback
   let updateData = {
-    title: title || advertisement.title,
-    link: link || advertisement.link,
-    isActive: isActive !== undefined ? isActive : advertisement.isActive
+    title: title ? title.trim() : advertisement.title,
+    link: link ? link.trim() : advertisement.link,
+    isActive: isActive !== undefined ? Boolean(isActive) : advertisement.isActive
   };
 
+  // Handle optional dates
+  if (startDate !== undefined) {
+    updateData.startDate = startDate ? new Date(startDate) : advertisement.startDate;
+  }
+  if (endDate !== undefined) {
+    updateData.endDate = endDate ? new Date(endDate) : advertisement.endDate;
+  }
+
   // Handle image update
-  if (req.files?.image) {
-    // New image uploaded as file
+  if (req.files && req.files.image) {
+    const imageFile = req.files.image;
+    
+    // Validate file type
+    if (!imageFile.mimetype.startsWith('image/')) {
+      return next(new ErrorResponse('Please upload an image file', 400));
+    }
+
+    // Validate file size (10MB limit)
+    if (imageFile.size > 10 * 1024 * 1024) {
+      return next(new ErrorResponse('Image size cannot exceed 10MB', 400));
+    }
+
     try {
-      const result = await cloudinary.uploadImage(req.files.image.tempFilePath, 'advertisements');
-      updateData.image = result.url;
+      // Upload new image to Cloudinary
+      const result = await cloudinary.uploadImage(imageFile.tempFilePath, 'advertisements');
+      updateData.image = result.secure_url || result.url;
+      
+      // Clean up temp file
+      try {
+        await fs.unlink(imageFile.tempFilePath);
+      } catch (unlinkError) {
+        console.warn('Failed to delete temp file:', unlinkError.message);
+      }
     } catch (error) {
       console.error('Cloudinary upload error:', error);
-      return next(new ErrorResponse('Image upload failed', 500));
+      return next(new ErrorResponse('Image upload failed. Please try again.', 500));
     }
-  } else if (imageUrl && imageUrl !== advertisement.image) {
-    // New image URL provided
-    updateData.image = imageUrl;
   }
   // If no new image provided, keep existing image
 
@@ -156,9 +237,14 @@ exports.deleteAdvertisement = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Advertisement not found with id of ${id}`, 404));
   }
 
+  // Delete the advertisement
   await Advertisement.deleteOne({ _id: id });
 
-  res.status(200).json({ success: true, data: {} });
+  res.status(200).json({ 
+    success: true, 
+    data: {},
+    message: 'Advertisement deleted successfully'
+  });
 });
 
 // @desc    Get Cloudinary signature for advertisement upload
