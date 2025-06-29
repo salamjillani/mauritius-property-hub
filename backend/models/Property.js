@@ -21,7 +21,7 @@ const PropertySchema = new Schema(
       },
       city: {
         type: String,
-        required: [true, "City is required"],
+        required: false,
         trim: true,
       },
       state: {

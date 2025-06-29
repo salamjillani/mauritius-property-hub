@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, GeoJSON } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mauritiusDistricts from "@/data/mauritiusDistricts.json";
@@ -96,6 +96,7 @@ const MapController = ({
 }) => {
   const map = useMap();
   const geoJsonLayerRef = useRef(null);
+  const labelLayerRef = useRef(null);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -122,6 +123,11 @@ const MapController = ({
       map.removeLayer(geoJsonLayerRef.current);
       geoJsonLayerRef.current = null;
     }
+    
+    if (labelLayerRef.current) {
+      map.removeLayer(labelLayerRef.current);
+      labelLayerRef.current = null;
+    }
 
     let geoJsonData = null;
     if (selectedDistrict) {
@@ -143,12 +149,42 @@ const MapController = ({
       geoJsonLayer.addTo(map);
       geoJsonLayerRef.current = geoJsonLayer;
       map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
+    } else {
+      const regionLabels = L.layerGroup().addTo(map);
+      labelLayerRef.current = regionLabels;
+      
+      const regionCenters = {
+        "North": [-20.05, 57.55],
+        "West": [-20.35, 57.35],
+        "East": [-20.25, 57.75],
+        "South": [-20.45, 57.55],
+        "Central": [-20.30, 57.50]
+      };
+      
+      Object.entries(regionCenters).forEach(([name, center]) => {
+        L.marker(center, {
+          icon: L.divIcon({
+            className: 'region-label',
+            html: `<div class="region-label-text">${name}</div>`,
+            iconSize: [100, 40],
+            iconAnchor: [50, 20]
+          }),
+          interactive: false
+        }).addTo(regionLabels);
+      });
+      
+      const mauritiusBounds = L.geoJSON(mauritiusRegions).getBounds();
+      map.fitBounds(mauritiusBounds, { padding: [20, 20] });
     }
 
     return () => {
       if (geoJsonLayerRef.current) {
         map.removeLayer(geoJsonLayerRef.current);
         geoJsonLayerRef.current = null;
+      }
+      if (labelLayerRef.current) {
+        map.removeLayer(labelLayerRef.current);
+        labelLayerRef.current = null;
       }
     };
   }, [selectedDistrict, selectedRegion, map]);
@@ -990,25 +1026,40 @@ const AddProperty = () => {
                   </div>
           
         <div className="h-80 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
-  <MapContainer
-    center={[-20.2, 57.5]}
-    zoom={10}
-    className="h-full w-full relative z-0"
-    style={{ zIndex: 0 }}
-  >
-    <TileLayer
-      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-    />
-    {markerPosition && <Marker position={markerPosition} />}
-    <MapController
-      selectedDistrict={selectedDistrict}
-      selectedRegion={selectedRegion}
-      setMarkerPosition={setMarkerPosition}
-      setFormData={setFormData}
-    />
-  </MapContainer>
-</div>
+          <style>
+            {`
+              .region-label-text {
+                font-weight: bold;
+                font-size: 16px;
+                color: #333;
+                text-shadow: 
+                  1px 1px 0 #fff, 
+                  -1px -1px 0 #fff, 
+                  -1px 1px 0 #fff, 
+                  1px -1px 0 #fff;
+                pointer-events: none;
+              }
+            `}
+          </style>
+          <MapContainer
+            center={[-20.2, 57.5]}
+            zoom={10}
+            className="h-full w-full relative z-0"
+            style={{ zIndex: 0 }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {markerPosition && <Marker position={markerPosition} />}
+            <MapController
+              selectedDistrict={selectedDistrict}
+              selectedRegion={selectedRegion}
+              setMarkerPosition={setMarkerPosition}
+              setFormData={setFormData}
+            />
+          </MapContainer>
+        </div>
                   <div className="mt-3">
                     {selectedRegion && (
                       <div className="mb-4">

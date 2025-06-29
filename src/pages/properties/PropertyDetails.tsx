@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { amenities } from '@/data/amenities';
 import mauritiusDistricts from '@/data/mauritiusDistricts.json';
 import mauritiusRegions from '@/data/mauritiusRegions.json';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from "react-leaflet";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -49,6 +49,165 @@ const getGeoJsonForRegion = (regionName: string) => {
     type: "FeatureCollection",
     features: [feature],
   };
+};
+
+const getRegionCenter = (regionName: string) => {
+  const feature = mauritiusRegions.features.find(
+    (f) => f.properties.name === regionName
+  );
+  if (!feature) return null;
+  const coordinates = feature.geometry.coordinates[0];
+  const lats = coordinates.map((coord) => coord[1]);
+  const lngs = coordinates.map((coord) => coord[0]);
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  return [centerLat, centerLng];
+};
+
+const MapController = ({ showRegion, property }) => {
+  const map = useMap();
+  const regionLabelsRef = useRef(null);
+  const geoJsonLayerRef = useRef(null);
+
+  useEffect(() => {
+    // Clean up existing layers
+    if (geoJsonLayerRef.current) {
+      map.removeLayer(geoJsonLayerRef.current);
+      geoJsonLayerRef.current = null;
+    }
+    
+    if (regionLabelsRef.current) {
+      map.removeLayer(regionLabelsRef.current);
+      regionLabelsRef.current = null;
+    }
+
+    if (showRegion && property?.address.region) {
+      // Show specific region with boundary
+      const geoJsonData = getGeoJsonForRegion(property.address.region);
+      if (geoJsonData) {
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: () => ({
+            color: "#4f46e5",
+            weight: 2,
+            fillOpacity: 0.1,
+            fillColor: "#4f46e5",
+          }),
+        });
+
+        geoJsonLayer.addTo(map);
+        geoJsonLayerRef.current = geoJsonLayer;
+        map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
+        
+        // Add region labels for all regions
+        const regionLabels = L.layerGroup().addTo(map);
+        regionLabelsRef.current = regionLabels;
+        
+        const regionCenters = {
+          "North": [-20.05, 57.55],
+          "West": [-20.35, 57.35],
+          "East": [-20.25, 57.75],
+          "South": [-20.45, 57.55],
+          "Central": [-20.30, 57.50]
+        };
+        
+        Object.entries(regionCenters).forEach(([name, center]) => {
+          L.marker(center, {
+            icon: L.divIcon({
+              className: 'region-label',
+              html: `<div class="region-label-text">${name}</div>`,
+              iconSize: [100, 40],
+              iconAnchor: [50, 20]
+            }),
+            interactive: false
+          }).addTo(regionLabels);
+        });
+      }
+    } else if (showRegion) {
+      // Show all regions view with labels
+      const regionLabels = L.layerGroup().addTo(map);
+      regionLabelsRef.current = regionLabels;
+      
+      const regionCenters = {
+        "North": [-20.05, 57.55],
+        "West": [-20.35, 57.35],
+        "East": [-20.25, 57.75],
+        "South": [-20.45, 57.55],
+        "Central": [-20.30, 57.50]
+      };
+      
+      Object.entries(regionCenters).forEach(([name, center]) => {
+        L.marker(center, {
+          icon: L.divIcon({
+            className: 'region-label',
+            html: `<div class="region-label-text">${name}</div>`,
+            iconSize: [100, 40],
+            iconAnchor: [50, 20]
+          }),
+          interactive: false
+        }).addTo(regionLabels);
+      });
+      
+      const mauritiusBounds = L.geoJSON(mauritiusRegions).getBounds();
+      map.fitBounds(mauritiusBounds, { padding: [20, 20] });
+    } else if (property?.address.city) {
+      // Show district view
+      const geoJsonData = getGeoJsonForDistrict(property.address.city);
+      if (geoJsonData) {
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: () => ({
+            color: "#4f46e5",
+            weight: 2,
+            fillOpacity: 0.1,
+            fillColor: "#4f46e5",
+          }),
+        });
+
+        geoJsonLayer.addTo(map);
+        geoJsonLayerRef.current = geoJsonLayer;
+        map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
+      }
+    } else {
+      // Default view with region labels
+      const regionLabels = L.layerGroup().addTo(map);
+      regionLabelsRef.current = regionLabels;
+      
+      const regionCenters = {
+        "North": [-20.05, 57.55],
+        "West": [-20.35, 57.35],
+        "East": [-20.25, 57.75],
+        "South": [-20.45, 57.55],
+        "Central": [-20.30, 57.50]
+      };
+      
+      Object.entries(regionCenters).forEach(([name, center]) => {
+        L.marker(center, {
+          icon: L.divIcon({
+            className: 'region-label',
+            html: `<div class="region-label-text">${name}</div>`,
+            iconSize: [100, 40],
+            iconAnchor: [50, 20]
+          }),
+          interactive: false
+        }).addTo(regionLabels);
+      });
+      
+      const mauritiusBounds = L.geoJSON(mauritiusRegions).getBounds();
+      map.fitBounds(mauritiusBounds, { padding: [20, 20] });
+    }
+
+    return () => {
+      if (geoJsonLayerRef.current) {
+        map.removeLayer(geoJsonLayerRef.current);
+        geoJsonLayerRef.current = null;
+      }
+      if (regionLabelsRef.current) {
+        map.removeLayer(regionLabelsRef.current);
+        regionLabelsRef.current = null;
+      }
+    };
+  }, [showRegion, property, map]);
+
+  return null;
 };
 
 interface Address {
@@ -193,13 +352,6 @@ const PropertyDetails = () => {
       );
     }
 
-    let geoJsonData = null;
-    if (showRegion && property?.address.region) {
-      geoJsonData = getGeoJsonForRegion(property.address.region);
-    } else if (property?.address.city) {
-      geoJsonData = getGeoJsonForDistrict(property.address.city);
-    }
-
     return (
       <MapContainer 
         center={coordinates} 
@@ -212,18 +364,7 @@ const PropertyDetails = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        {geoJsonData && (
-          <GeoJSON 
-            data={geoJsonData} 
-            style={{ 
-              color: "#4f46e5", 
-              weight: 2, 
-              fillOpacity: 0.1, 
-              fillColor: "#4f46e5" 
-            }} 
-          />
-        )}
-        <Marker position={coordinates}>
+        {coordinates && <Marker position={coordinates}>
           <Popup>
             <div className="text-center">
               <strong>{property?.title}</strong>
@@ -234,7 +375,8 @@ const PropertyDetails = () => {
               {property?.address.country || 'Mauritius'}
             </div>
           </Popup>
-        </Marker>
+        </Marker>}
+        <MapController showRegion={showRegion} property={property} />
       </MapContainer>
     );
   };
@@ -663,15 +805,16 @@ const PropertyDetails = () => {
               >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Location & Neighborhood</h2>
+                 
                   <div className="flex items-center gap-2">
                     <Button 
-                      variant={showRegion ? "default" : "outline"}
+                      variant={!showRegion ? "default" : "outline"}
                       onClick={() => setShowRegion(false)}
                     >
                       District
                     </Button>
                     <Button 
-                      variant={showRegion ? "outline" : "default"}
+                      variant={showRegion ? "default" : "outline"}
                       onClick={() => setShowRegion(true)}
                     >
                       Region
@@ -679,6 +822,21 @@ const PropertyDetails = () => {
                   </div>
                 </div>
                 <div className="h-80 w-full rounded-xl overflow-hidden border bg-gray-100 shadow-inner">
+                  <style>
+                    {`
+                      .region-label-text {
+                        font-weight: bold;
+                        font-size: 16px;
+                        color: #333;
+                        text-shadow: 
+                          1px 1px 0 #fff, 
+                          -1px -1px 0 #fff, 
+                          -1px 1px 0 #fff, 
+                          1px -1px 0 #fff;
+                        pointer-events: none;
+                      }
+                    `}
+                  </style>
                   <MapComponent />
                 </div>
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
