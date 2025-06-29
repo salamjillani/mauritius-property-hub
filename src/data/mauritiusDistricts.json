@@ -7,7 +7,8 @@
         "name": "Port Louis",
         "district_code": "PL",
         "capital": "Port Louis",
-        "type": "urban"
+        "type": "urban",
+        "region": "North"
       },
       "geometry": {
         "type": "Polygon",
@@ -28,7 +29,8 @@
         "name": "Pamplemousses",
         "district_code": "PA",
         "capital": "Pamplemousses",
-        "type": "rural"
+        "type": "rural",
+        "region": "North"
       },
       "geometry": {
         "type": "Polygon",
@@ -50,7 +52,8 @@
         "name": "Rivière du Rempart",
         "district_code": "RR",
         "capital": "Goodlands",
-        "type": "rural"
+        "type": "rural",
+        "region": "North"
       },
       "geometry": {
         "type": "Polygon",
@@ -71,7 +74,8 @@
         "name": "Flacq",
         "district_code": "FL",
         "capital": "Centre de Flacq",
-        "type": "rural"
+        "type": "rural",
+        "region": "East"
       },
       "geometry": {
         "type": "Polygon",
@@ -94,7 +98,8 @@
         "name": "Grand Port",
         "district_code": "GP",
         "capital": "Rose Belle",
-        "type": "rural"
+        "type": "rural",
+        "region": "South"
       },
       "geometry": {
         "type": "Polygon",
@@ -117,7 +122,8 @@
         "name": "Savanne",
         "district_code": "SA",
         "capital": "Souillac",
-        "type": "rural"
+        "type": "rural",
+        "region": "South"
       },
       "geometry": {
         "type": "Polygon",
@@ -141,7 +147,8 @@
         "district_code": "BR",
         "capital": "Bambous",
         "type": "rural",
-        "alternative_name": "Rivière Noire"
+        "alternative_name": "Rivière Noire",
+        "region": "West"
       },
       "geometry": {
         "type": "Polygon",
@@ -166,7 +173,8 @@
         "district_code": "PW",
         "capital": "Curepipe",
         "type": "urban",
-        "major_towns": ["Curepipe", "Quatre Bornes", "Vacoas-Phoenix", "Beau Bassin-Rose Hill"]
+        "major_towns": ["Curepipe", "Quatre Bornes", "Vacoas-Phoenix", "Beau Bassin-Rose Hill"],
+        "region": "Central"
       },
       "geometry": {
         "type": "Polygon",
@@ -190,7 +198,8 @@
         "name": "Moka",
         "district_code": "MO",
         "capital": "Moka",
-        "type": "rural"
+        "type": "rural",
+        "region": "Central"
       },
       "geometry": {
         "type": "Polygon",

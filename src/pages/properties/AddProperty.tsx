@@ -19,6 +19,7 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mauritiusDistricts from "@/data/mauritiusDistricts.json";
+import mauritiusRegions from "@/data/mauritiusRegions.json";
 import { motion } from "framer-motion";
 import { amenities } from '@/data/amenities';
 
@@ -33,12 +34,28 @@ const getAvailableDistricts = () => {
     .sort();
 };
 
+const getAvailableRegions = () => {
+  return mauritiusRegions.features
+    .map((feature) => feature.properties.name)
+    .sort();
+};
+
 const getGeoJsonForDistrict = (districtName: string) => {
   const feature = mauritiusDistricts.features.find(
     (f) => f.properties.name === districtName
   );
   if (!feature) return null;
+  return {
+    type: "FeatureCollection",
+    features: [feature],
+  };
+};
 
+const getGeoJsonForRegion = (regionName: string) => {
+  const feature = mauritiusRegions.features.find(
+    (f) => f.properties.name === regionName
+  );
+  if (!feature) return null;
   return {
     type: "FeatureCollection",
     features: [feature],
@@ -50,19 +67,30 @@ const getDistrictCenter = (districtName: string) => {
     (f) => f.properties.name === districtName
   );
   if (!feature) return null;
-
   const coordinates = feature.geometry.coordinates[0];
   const lats = coordinates.map((coord) => coord[1]);
   const lngs = coordinates.map((coord) => coord[0]);
-
   const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
   const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  return [centerLat, centerLng];
+};
 
+const getRegionCenter = (regionName: string) => {
+  const feature = mauritiusRegions.features.find(
+    (f) => f.properties.name === regionName
+  );
+  if (!feature) return null;
+  const coordinates = feature.geometry.coordinates[0];
+  const lats = coordinates.map((coord) => coord[1]);
+  const lngs = coordinates.map((coord) => coord[0]);
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
   return [centerLat, centerLng];
 };
 
 const MapController = ({
   selectedDistrict,
+  selectedRegion,
   setMarkerPosition,
   setFormData,
 }) => {
@@ -95,22 +123,26 @@ const MapController = ({
       geoJsonLayerRef.current = null;
     }
 
+    let geoJsonData = null;
     if (selectedDistrict) {
-      const geoJsonData = getGeoJsonForDistrict(selectedDistrict);
-      if (geoJsonData) {
-        const geoJsonLayer = L.geoJSON(geoJsonData, {
-          style: () => ({
-            color: "#4f46e5",
-            weight: 2,
-            fillOpacity: 0.1,
-            fillColor: "#4f46e5",
-          }),
-        });
+      geoJsonData = getGeoJsonForDistrict(selectedDistrict);
+    } else if (selectedRegion) {
+      geoJsonData = getGeoJsonForRegion(selectedRegion);
+    }
 
-        geoJsonLayer.addTo(map);
-        geoJsonLayerRef.current = geoJsonLayer;
-        map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
-      }
+    if (geoJsonData) {
+      const geoJsonLayer = L.geoJSON(geoJsonData, {
+        style: () => ({
+          color: "#4f46e5",
+          weight: 2,
+          fillOpacity: 0.1,
+          fillColor: "#4f46e5",
+        }),
+      });
+
+      geoJsonLayer.addTo(map);
+      geoJsonLayerRef.current = geoJsonLayer;
+      map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
     }
 
     return () => {
@@ -119,7 +151,7 @@ const MapController = ({
         geoJsonLayerRef.current = null;
       }
     };
-  }, [selectedDistrict, map]);
+  }, [selectedDistrict, selectedRegion, map]);
 
   return null;
 };
@@ -136,6 +168,7 @@ const AddProperty = () => {
     address: {
       street: "",
       city: "",
+      region: "",
       country: "Mauritius",
       zipCode: "",
       latitude: "",
@@ -157,10 +190,12 @@ const AddProperty = () => {
   const [user, setUser] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const availableDistricts = getAvailableDistricts();
+  const availableRegions = getAvailableRegions();
 
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl;
@@ -198,29 +233,56 @@ const AddProperty = () => {
   }, [formData.category]);
 
   useEffect(() => {
-    if (!selectedDistrict) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      address: {
-        ...prev.address,
-        city: selectedDistrict,
-      },
-    }));
-
-    const districtCenter = getDistrictCenter(selectedDistrict);
-    if (districtCenter) {
-      setMarkerPosition(districtCenter);
+    if (selectedDistrict) {
       setFormData((prev) => ({
         ...prev,
         address: {
           ...prev.address,
-          latitude: districtCenter[0].toString(),
-          longitude: districtCenter[1].toString(),
+          city: selectedDistrict,
+          region: "",
         },
       }));
+
+      const districtCenter = getDistrictCenter(selectedDistrict);
+      if (districtCenter) {
+        setMarkerPosition(districtCenter);
+        setFormData((prev) => ({
+          ...prev,
+          address: {
+            ...prev.address,
+            latitude: districtCenter[0].toString(),
+            longitude: districtCenter[1].toString(),
+          },
+        }));
+      }
     }
   }, [selectedDistrict]);
+
+  useEffect(() => {
+    if (selectedRegion) {
+      setFormData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          region: selectedRegion,
+          city: "",
+        },
+      }));
+
+      const regionCenter = getRegionCenter(selectedRegion);
+      if (regionCenter) {
+        setMarkerPosition(regionCenter);
+        setFormData((prev) => ({
+          ...prev,
+          address: {
+            ...prev.address,
+            latitude: regionCenter[0].toString(),
+            longitude: regionCenter[1].toString(),
+          },
+        }));
+      }
+    }
+  }, [selectedRegion]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -433,7 +495,7 @@ const AddProperty = () => {
 }
 
     if (
-      !formData.address.city ||
+      !formData.address.city && !formData.address.region ||
       !formData.address.latitude ||
       !formData.address.longitude
     ) {
@@ -878,22 +940,53 @@ const AddProperty = () => {
                   <Label className="text-slate-700 font-medium mb-2 block">
                     Location on Map *
                   </Label>
-                  <div className="mb-4">
-                    <Select
-                      value={selectedDistrict}
-                      onValueChange={setSelectedDistrict}
-                    >
-                      <SelectTrigger className="py-6 text-base border-slate-200 hover:border-slate-300">
-                        <SelectValue placeholder="Select a district/area" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableDistricts.map((district) => (
-                          <SelectItem key={district} value={district}>
-                            {district}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-700 font-medium mb-2 block">
+                        Select Region
+                      </Label>
+                      <Select
+                        value={selectedRegion}
+                        onValueChange={(value) => {
+                          setSelectedRegion(value);
+                          setSelectedDistrict("");
+                        }}
+                      >
+                        <SelectTrigger className="py-6 text-base border-slate-200 hover:border-slate-300">
+                          <SelectValue placeholder="Select a region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableRegions.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-slate-700 font-medium mb-2 block">
+                        Select District
+                      </Label>
+                      <Select
+                        value={selectedDistrict}
+                        onValueChange={(value) => {
+                          setSelectedDistrict(value);
+                          setSelectedRegion("");
+                        }}
+                      >
+                        <SelectTrigger className="py-6 text-base border-slate-200 hover:border-slate-300">
+                          <SelectValue placeholder="Select a district" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableDistricts.map((district) => (
+                            <SelectItem key={district} value={district}>
+                              {district}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
           
         <div className="h-80 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
@@ -910,27 +1003,49 @@ const AddProperty = () => {
     {markerPosition && <Marker position={markerPosition} />}
     <MapController
       selectedDistrict={selectedDistrict}
+      selectedRegion={selectedRegion}
       setMarkerPosition={setMarkerPosition}
       setFormData={setFormData}
     />
   </MapContainer>
 </div>
                   <div className="mt-3">
-                    <Label
-                      htmlFor="address.city"
-                      className="text-slate-700 font-medium mb-2 block"
-                    >
-                      City/District *
-                    </Label>
-                    <Input
-                      id="address.city"
-                      name="address.city"
-                      placeholder="Grand Baie"
-                      value={formData.address.city}
-                      onChange={handleChange}
-                      required
-                      className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
-                    />
+                    {selectedRegion && (
+                      <div className="mb-4">
+                        <Label
+                          htmlFor="address.region"
+                          className="text-slate-700 font-medium mb-2 block"
+                        >
+                          Region *
+                        </Label>
+                        <Input
+                          id="address.region"
+                          name="address.region"
+                          value={formData.address.region}
+                          onChange={handleChange}
+                          required
+                          className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
+                        />
+                      </div>
+                    )}
+                    {selectedDistrict && (
+                      <div className="mb-4">
+                        <Label
+                          htmlFor="address.city"
+                          className="text-slate-700 font-medium mb-2 block"
+                        >
+                          District *
+                        </Label>
+                        <Input
+                          id="address.city"
+                          name="address.city"
+                          value={formData.address.city}
+                          onChange={handleChange}
+                          required
+                          className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div>

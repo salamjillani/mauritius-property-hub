@@ -16,6 +16,8 @@ import Footer from '@/components/layout/Footer';
 import BackButton from '@/components/BackButton';
 import { useToast } from '@/hooks/use-toast';
 import { amenities } from '@/data/amenities';
+import mauritiusDistricts from '@/data/mauritiusDistricts.json';
+import mauritiusRegions from '@/data/mauritiusRegions.json';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -27,9 +29,32 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 });
 
+const getGeoJsonForDistrict = (districtName: string) => {
+  const feature = mauritiusDistricts.features.find(
+    (f) => f.properties.name === districtName
+  );
+  if (!feature) return null;
+  return {
+    type: "FeatureCollection",
+    features: [feature],
+  };
+};
+
+const getGeoJsonForRegion = (regionName: string) => {
+  const feature = mauritiusRegions.features.find(
+    (f) => f.properties.name === regionName
+  );
+  if (!feature) return null;
+  return {
+    type: "FeatureCollection",
+    features: [feature],
+  };
+};
+
 interface Address {
   street?: string;
   city: string;
+  region?: string;
   state?: string;
   zipCode?: string;
   country: string;
@@ -132,6 +157,7 @@ const PropertyDetails = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showAllImages, setShowAllImages] = useState(false);
+  const [showRegion, setShowRegion] = useState(false);
   
   const coordinates = useMemo(() => {
     if (!property) return null;
@@ -167,10 +193,17 @@ const PropertyDetails = () => {
       );
     }
 
+    let geoJsonData = null;
+    if (showRegion && property?.address.region) {
+      geoJsonData = getGeoJsonForRegion(property.address.region);
+    } else if (property?.address.city) {
+      geoJsonData = getGeoJsonForDistrict(property.address.city);
+    }
+
     return (
       <MapContainer 
         center={coordinates} 
-        zoom={14} 
+        zoom={showRegion ? 10 : 14} 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
         className="z-10 rounded-xl"
@@ -179,13 +212,26 @@ const PropertyDetails = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        {geoJsonData && (
+          <GeoJSON 
+            data={geoJsonData} 
+            style={{ 
+              color: "#4f46e5", 
+              weight: 2, 
+              fillOpacity: 0.1, 
+              fillColor: "#4f46e5" 
+            }} 
+          />
+        )}
         <Marker position={coordinates}>
           <Popup>
             <div className="text-center">
               <strong>{property?.title}</strong>
               <br />
               {property?.address.street && `${property.address.street}, `}
-              {property?.address.city}, {property?.address.country || 'Mauritius'}
+              {property?.address.city && `${property.address.city}, `}
+              {property?.address.region && `${property.address.region} Region, `}
+              {property?.address.country || 'Mauritius'}
             </div>
           </Popup>
         </Marker>
@@ -357,7 +403,6 @@ const PropertyDetails = () => {
       <Navbar />
       
       <div className="flex-grow">
-        {/* Hero Image Section */}
         <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden">
           {property.images.length > 0 ? (
             <div className="relative h-full">
@@ -368,7 +413,6 @@ const PropertyDetails = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
               
-              {/* Image Navigation */}
               {property.images.length > 1 && (
                 <>
                   <Button
@@ -392,7 +436,6 @@ const PropertyDetails = () => {
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                   
-                  {/* Image Indicators */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                     {property.images.map((_, index) => (
                       <button
@@ -407,7 +450,6 @@ const PropertyDetails = () => {
                 </>
               )}
 
-              {/* Action Buttons */}
               <div className="absolute top-4 right-4 flex gap-2 z-10">
                 <Button
                   variant="secondary"
@@ -447,7 +489,6 @@ const PropertyDetails = () => {
                 )}
               </div>
 
-              {/* Back Button */}
               <div className="absolute top-4 left-4 z-10">
                 <BackButton 
                   onClick={() => navigate(-1)} 
@@ -455,7 +496,6 @@ const PropertyDetails = () => {
                 />
               </div>
 
-              {/* Image Counter */}
               {property.images.length > 1 && (
                 <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
                   {selectedImageIndex + 1} / {property.images.length}
@@ -469,12 +509,9 @@ const PropertyDetails = () => {
           )}
         </div>
 
-        {/* Content Section */}
         <div className="container mx-auto px-4 py-8 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Property Header */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -507,11 +544,12 @@ const PropertyDetails = () => {
                   <MapPin className="h-5 w-5 text-blue-600" />
                   <span className="text-sm lg:text-base">
                     {property.address.street ? `${property.address.street}, ` : ''}
-                    {property.address.city}, {property.address.country || 'Mauritius'}
+                    {property.address.city ? `${property.address.city}, ` : ''}
+                    {property.address.region ? `${property.address.region} Region, ` : ''}
+                    {property.address.country || 'Mauritius'}
                   </span>
                 </div>
 
-                {/* Price and Stats */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                   <div>
                     <div className="text-3xl lg:text-4xl font-bold text-blue-600 mb-1">
@@ -550,7 +588,6 @@ const PropertyDetails = () => {
                 </div>
               </motion.div>
 
-              {/* Description */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -561,7 +598,6 @@ const PropertyDetails = () => {
                 <p className="text-gray-700 leading-relaxed whitespace-pre-line">{property.description}</p>
               </motion.div>
 
-              {/* Features Grid */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -591,7 +627,6 @@ const PropertyDetails = () => {
                 </div>
               </motion.div>
 
-              {/* Amenities */}
               {property.amenities && property.amenities.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -620,29 +655,44 @@ const PropertyDetails = () => {
                 </motion.div>
               )}
 
-              {/* Location */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
                 className="bg-white rounded-2xl shadow-lg p-6 lg:p-8"
               >
-                <h2 className="text-xl lg:text-2xl font-bold mb-6 text-gray-900">Location & Neighborhood</h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Location & Neighborhood</h2>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant={showRegion ? "default" : "outline"}
+                      onClick={() => setShowRegion(false)}
+                    >
+                      District
+                    </Button>
+                    <Button 
+                      variant={showRegion ? "outline" : "default"}
+                      onClick={() => setShowRegion(true)}
+                    >
+                      Region
+                    </Button>
+                  </div>
+                </div>
                 <div className="h-80 w-full rounded-xl overflow-hidden border bg-gray-100 shadow-inner">
                   <MapComponent />
                 </div>
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
                     <MapPin className="h-4 w-4 inline mr-2" />
-                    Located in {property.address.city}
+                    {showRegion 
+                      ? `Located in ${property.address.region || 'Mauritius'} Region` 
+                      : `Located in ${property.address.city}, ${property.address.country || 'Mauritius'}`}
                   </p>
                 </div>
               </motion.div>
             </div>
 
-            {/* Sidebar */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Contact Card */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -658,7 +708,6 @@ const PropertyDetails = () => {
                       <>
                         {agentData || agencyAgents.length > 0 ? (
                           <div className="space-y-4">
-                            {/* Agent Info */}
                             <div className="flex items-center gap-4">
                               <div className="relative">
                                 <img 
@@ -690,7 +739,6 @@ const PropertyDetails = () => {
                               </div>
                             </div>
                             
-                            {/* Contact Details */}
                             <div className="space-y-3">
                               {(agentData?.user?.phone || agencyAgents[0]?.user?.phone) && (
                                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -710,7 +758,6 @@ const PropertyDetails = () => {
                               )}
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="space-y-2">
                               <Button 
                                 onClick={() => navigate(`/agent/${agentData?._id || agencyAgents[0]?._id}`)}
@@ -731,7 +778,6 @@ const PropertyDetails = () => {
                         ) : 
                         property.agency ? (
                           <div className="space-y-4">
-                            {/* Agency Info */}
                             <div className="flex items-center gap-4">
                               {property.agency.logoUrl && (
                                 <img 
@@ -746,7 +792,6 @@ const PropertyDetails = () => {
                               </div>
                             </div>
                             
-                            {/* Contact Details */}
                             <div className="space-y-3">
                               {property.contactDetails?.phone && (
                                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -854,13 +899,10 @@ const PropertyDetails = () => {
                     )}
                   </CardContent>
                 </Card>
-
-
               </motion.div>
             </div>
           </div>
 
-          {/* Image Gallery Modal */}
           {property.images.length > 4 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
