@@ -37,6 +37,8 @@ exports.getAdvertisement = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Update the createAdvertisement and updateAdvertisement handlers
+
 // @desc    Create advertisement
 // @route   POST /api/advertisements
 // @access  Private/Admin
@@ -67,7 +69,7 @@ exports.createAdvertisement = asyncHandler(async (req, res, next) => {
 
   const ad = await Advertisement.create({
     title,
-    image: finalImageUrl, // Make sure this matches the model field name
+    image: finalImageUrl,
     link,
     isActive: isActive !== undefined ? isActive : true
   });

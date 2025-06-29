@@ -13,7 +13,7 @@ const Articles = () => {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await axios.get('/articles'); 
+        const response = await axios.get('/api/articles');
         
         // Debug: Log the response structure
         console.log('API Response:', response.data);

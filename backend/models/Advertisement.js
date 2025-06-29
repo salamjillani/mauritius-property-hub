@@ -9,7 +9,7 @@ const AdvertisementSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: [true, 'Please add an image URL']
+    required: false
   },
   link: {
     type: String,

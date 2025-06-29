@@ -64,15 +64,17 @@ const AdvertisementForm = () => {
         return;
       }
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('link', formData.link);
-      formDataToSend.append('isActive', formData.isActive);
-      
-      if (formData.image) {
-        formDataToSend.append('image', formData.image);
-      }
+   const formDataToSend = new FormData();
+formDataToSend.append('title', formData.title);
+formDataToSend.append('link', formData.link);
+formDataToSend.append('isActive', formData.isActive.toString());
 
+// Add this to handle both file and URL
+if (formData.image instanceof File) {
+  formDataToSend.append('image', formData.image);
+} else if (formData.image) {
+  formDataToSend.append('imageUrl', formData.image);
+}
       let response;
       if (id) {
         response = await axios.put(`/api/advertisements/${id}`, formDataToSend, {
