@@ -95,48 +95,50 @@ const Index = () => {
     };
 
     return (
-      <MapContainer 
-        center={[-20.2, 57.5]} 
-        zoom={9} 
-        style={{ height: "500px", width: "100%" }}
-        zoomControl={true}
-        doubleClickZoom={true}
-        scrollWheelZoom={true}
-        dragging={true}
-        touchZoom={true}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        {mauritiusRegions.features.map(region => (
-          <GeoJSON
-            key={region.properties.name}
-            data={region}
-            eventHandlers={{
-              click: () => navigate(`/properties?region=${region.properties.name}`)
-            }}
-            style={() => ({
-              fillColor: "transparent",
-              weight: 0,
-              color: "transparent",
-              fillOpacity: 0,
-            })}
+      <div className="relative z-0 w-full h-[500px] overflow-hidden rounded-lg">
+        <MapContainer 
+          center={[-20.2, 57.5]} 
+          zoom={9} 
+          style={{ height: "100%", width: "100%" }}
+          zoomControl={true}
+          doubleClickZoom={true}
+          scrollWheelZoom={true}
+          dragging={true}
+          touchZoom={true}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-        ))}
-        {Object.entries(regionCenters).map(([name, center]) => (
-          <Marker
-            key={name}
-            position={center as [number, number]}
-            icon={L.divIcon({
-              className: "region-label",
-              html: `<div class="region-label-text">${name}</div>`,
-              iconSize: [100, 40],
-              iconAnchor: [50, 20]
-            })}
-          />
-        ))}
-      </MapContainer>
+          {mauritiusRegions.features.map(region => (
+            <GeoJSON
+              key={region.properties.name}
+              data={region}
+              eventHandlers={{
+                click: () => navigate(`/properties?region=${region.properties.name}`)
+              }}
+              style={() => ({
+                fillColor: "transparent",
+                weight: 0,
+                color: "transparent",
+                fillOpacity: 0,
+              })}
+            />
+          ))}
+          {Object.entries(regionCenters).map(([name, center]) => (
+            <Marker
+              key={name}
+              position={center as [number, number]}
+              icon={L.divIcon({
+                className: "region-label",
+                html: `<div class="region-label-text">${name}</div>`,
+                iconSize: [100, 40],
+                iconAnchor: [50, 20]
+              })}
+            />
+          ))}
+        </MapContainer>
+      </div>
     );
   };
 
@@ -201,9 +203,18 @@ const Index = () => {
               Explore properties in different regions of Mauritius. Click on a region to view available properties.
             </p>
           </div>
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 relative z-0">
             <style>
               {`
+                .leaflet-container {
+                  z-index: 0 !important;
+                }
+                .leaflet-control-container {
+                  z-index: 1 !important;
+                }
+                .region-label {
+                  z-index: 2 !important;
+                }
                 .region-label-text {
                   font-weight: bold;
                   font-size: 16px;

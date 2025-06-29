@@ -70,7 +70,6 @@ const MapController = ({ showRegion, property }) => {
   const geoJsonLayerRef = useRef(null);
 
   useEffect(() => {
-    // Clean up existing layers
     if (geoJsonLayerRef.current) {
       map.removeLayer(geoJsonLayerRef.current);
       geoJsonLayerRef.current = null;
@@ -82,15 +81,13 @@ const MapController = ({ showRegion, property }) => {
     }
 
     if (showRegion && property?.address.region) {
-      // Show specific region with boundary
       const geoJsonData = getGeoJsonForRegion(property.address.region);
       if (geoJsonData) {
         const geoJsonLayer = L.geoJSON(geoJsonData, {
           style: () => ({
-            color: "#4f46e5",
-            weight: 2,
-            fillOpacity: 0.1,
-            fillColor: "#4f46e5",
+            color: "transparent",
+            weight: 0,
+            fillOpacity: 0,
           }),
         });
 
@@ -98,7 +95,6 @@ const MapController = ({ showRegion, property }) => {
         geoJsonLayerRef.current = geoJsonLayer;
         map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
         
-        // Add region labels for all regions
         const regionLabels = L.layerGroup().addTo(map);
         regionLabelsRef.current = regionLabels;
         
@@ -123,7 +119,6 @@ const MapController = ({ showRegion, property }) => {
         });
       }
     } else if (showRegion) {
-      // Show all regions view with labels
       const regionLabels = L.layerGroup().addTo(map);
       regionLabelsRef.current = regionLabels;
       
@@ -150,15 +145,13 @@ const MapController = ({ showRegion, property }) => {
       const mauritiusBounds = L.geoJSON(mauritiusRegions).getBounds();
       map.fitBounds(mauritiusBounds, { padding: [20, 20] });
     } else if (property?.address.city) {
-      // Show district view
       const geoJsonData = getGeoJsonForDistrict(property.address.city);
       if (geoJsonData) {
         const geoJsonLayer = L.geoJSON(geoJsonData, {
           style: () => ({
-            color: "#4f46e5",
-            weight: 2,
-            fillOpacity: 0.1,
-            fillColor: "#4f46e5",
+            color: "transparent",
+            weight: 0,
+            fillOpacity: 0,
           }),
         });
 
@@ -167,7 +160,6 @@ const MapController = ({ showRegion, property }) => {
         map.fitBounds(geoJsonLayer.getBounds(), { padding: [20, 20] });
       }
     } else {
-      // Default view with region labels
       const regionLabels = L.layerGroup().addTo(map);
       regionLabelsRef.current = regionLabels;
       

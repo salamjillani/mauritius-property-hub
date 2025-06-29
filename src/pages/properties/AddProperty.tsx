@@ -139,10 +139,9 @@ const MapController = ({
     if (geoJsonData) {
       const geoJsonLayer = L.geoJSON(geoJsonData, {
         style: () => ({
-          color: "#4f46e5",
-          weight: 2,
-          fillOpacity: 0.1,
-          fillColor: "#4f46e5",
+          color: "transparent",
+          weight: 0,
+          fillOpacity: 0,
         }),
       });
 
@@ -1097,46 +1096,6 @@ const AddProperty = () => {
                         />
                       </div>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <Label
-                        htmlFor="address.latitude"
-                        className="text-slate-700 font-medium mb-2 block"
-                      >
-                        Latitude *
-                      </Label>
-                      <Input
-                        id="address.latitude"
-                        name="address.latitude"
-                        type="number"
-                        step="any"
-                        placeholder="Latitude"
-                        value={formData.address.latitude}
-                        onChange={handleChange}
-                        required
-                        className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor="address.longitude"
-                        className="text-slate-700 font-medium mb-2 block"
-                      >
-                        Longitude *
-                      </Label>
-                      <Input
-                        id="address.longitude"
-                        name="address.longitude"
-                        type="number"
-                        step="any"
-                        placeholder="Longitude"
-                        value={formData.address.longitude}
-                        onChange={handleChange}
-                        required
-                        className="py-6 text-base border-slate-200 hover:border-slate-300 focus:border-blue-500"
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
