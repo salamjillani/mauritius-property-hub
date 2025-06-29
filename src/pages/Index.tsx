@@ -14,6 +14,11 @@ import AgentsCarousel from "@/components/home/AgentsCarousel";
 import PromoterProjects from "@/components/home/PromoterProjects";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { MapContainer, TileLayer, GeoJSON, Marker } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import mauritiusRegions from "@/data/mauritiusRegions.json";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
@@ -22,14 +27,13 @@ const Index = () => {
   const [agents, setAgents] = useState([]);
   const [agencies, setAgencies] = useState([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch agents");
-        }
+        if (!response.ok) throw new Error("Failed to fetch agents");
         const data = await response.json();
         setAgents(
           data.data.sort(
@@ -50,9 +54,7 @@ const Index = () => {
     const fetchAgencies = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/premium`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch premium agencies");
-        }
+        if (!response.ok) throw new Error("Failed to fetch premium agencies");
         const data = await response.json();
         setAgencies(data.data);
       } catch (error) {
@@ -68,8 +70,74 @@ const Index = () => {
     fetchAgencies();
   }, [toast]);
 
-  const toggleAgentSidebar = () => {
-    setAgentSidebarOpen(!agentSidebarOpen);
+  const toggleAgentSidebar = () => setAgentSidebarOpen(!agentSidebarOpen);
+
+  const getRegionCenter = (regionName: string) => {
+    const feature = mauritiusRegions.features.find(
+      f => f.properties.name === regionName
+    );
+    if (!feature) return null;
+    const coordinates = feature.geometry.coordinates[0];
+    const lats = coordinates.map(coord => coord[1]);
+    const lngs = coordinates.map(coord => coord[0]);
+    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+    return [centerLat, centerLng];
+  };
+
+  const RegionMap = () => {
+    const regionCenters = {
+      "North": [-20.05, 57.55],
+      "West": [-20.35, 57.35],
+      "East": [-20.25, 57.75],
+      "South": [-20.45, 57.55],
+      "Central": [-20.30, 57.50]
+    };
+
+    return (
+      <MapContainer 
+        center={[-20.2, 57.5]} 
+        zoom={9} 
+        style={{ height: "500px", width: "100%" }}
+        zoomControl={true}
+        doubleClickZoom={true}
+        scrollWheelZoom={true}
+        dragging={true}
+        touchZoom={true}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        {mauritiusRegions.features.map(region => (
+          <GeoJSON
+            key={region.properties.name}
+            data={region}
+            eventHandlers={{
+              click: () => navigate(`/properties?region=${region.properties.name}`)
+            }}
+            style={() => ({
+              fillColor: "transparent",
+              weight: 0,
+              color: "transparent",
+              fillOpacity: 0,
+            })}
+          />
+        ))}
+        {Object.entries(regionCenters).map(([name, center]) => (
+          <Marker
+            key={name}
+            position={center as [number, number]}
+            icon={L.divIcon({
+              className: "region-label",
+              html: `<div class="region-label-text">${name}</div>`,
+              iconSize: [100, 40],
+              iconAnchor: [50, 20]
+            })}
+          />
+        ))}
+      </MapContainer>
+    );
   };
 
   return (
@@ -124,6 +192,33 @@ const Index = () => {
             description="Explore available land and exciting upcoming real estate projects in prime locations"
             currency={activeCurrency}
           />
+        </div>
+
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Find Properties by Region</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Explore properties in different regions of Mauritius. Click on a region to view available properties.
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+            <style>
+              {`
+                .region-label-text {
+                  font-weight: bold;
+                  font-size: 16px;
+                  color: #333;
+                  text-shadow: 
+                    1px 1px 0 #fff, 
+                    -1px -1px 0 #fff, 
+                    -1px 1px 0 #fff, 
+                    1px -1px 0 #fff;
+                  pointer-events: none;
+                }
+              `}
+            </style>
+            <RegionMap />
+          </div>
         </div>
 
       </main>

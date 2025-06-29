@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/layout/Navbar";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { amenities } from "@/data/amenities";
+import { amenities } from '@/data/amenities';
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -20,6 +20,8 @@ const Properties = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const regionFilter = searchParams.get('region');
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -30,17 +32,11 @@ const Properties = () => {
         if (!response.ok) throw new Error("Failed to fetch properties");
         const data = await response.json();
         
-        // Enhanced sorting to prioritize featured properties first
         const sortedProperties = data.data.sort((a, b) => {
-          // First priority: Featured properties
           if (a.isFeatured && !b.isFeatured) return -1;
           if (!a.isFeatured && b.isFeatured) return 1;
-          
-          // Second priority: Gold card properties
           if (a.isGoldCard && !b.isGoldCard) return -1;
           if (!a.isGoldCard && b.isGoldCard) return 1;
-          
-          // Third priority: Creation date (newest first)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         
@@ -58,13 +54,23 @@ const Properties = () => {
     fetchProperties();
   }, [toast]);
 
-  // Apply category filtering with featured-first sorting maintained
   const filteredProperties = (() => {
-    const filtered = activeTab === "all"
+    let filtered = activeTab === "all"
       ? properties
-      : properties.filter((property) => property.category === activeTab);
+      : properties.filter(property => property.category === activeTab);
     
-    // Ensure featured properties remain first even after filtering
+    if (selectedAmenities.length > 0) {
+      filtered = filtered.filter(property => 
+        selectedAmenities.every(amenity => property.amenities?.includes(amenity))
+      );
+    }
+
+    if (regionFilter) {
+      filtered = filtered.filter(property => 
+        property.address.region?.toLowerCase() === regionFilter.toLowerCase()
+      );
+    }
+
     return filtered.sort((a, b) => {
       if (a.isFeatured && !b.isFeatured) return -1;
       if (!a.isFeatured && b.isFeatured) return 1;
@@ -93,29 +99,7 @@ const Properties = () => {
     );
   };
 
-  const clearAmenitiesFilter = () => {
-    setSelectedAmenities([]);
-  };
-
-  // Apply amenity filtering while maintaining featured-first order
-  const amenitiesFilteredProperties = (() => {
-    const filtered = selectedAmenities.length > 0
-      ? filteredProperties.filter(property => 
-          selectedAmenities.every(amenity => 
-            property.amenities?.includes(amenity)
-          )
-        )
-      : filteredProperties;
-    
-    // Final sort to ensure featured properties are always first
-    return filtered.sort((a, b) => {
-      if (a.isFeatured && !b.isFeatured) return -1;
-      if (!a.isFeatured && b.isFeatured) return 1;
-      if (a.isGoldCard && !b.isGoldCard) return -1;
-      if (!a.isGoldCard && b.isGoldCard) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  })();
+  const clearAmenitiesFilter = () => setSelectedAmenities([]);
 
   if (isLoading) {
     return (
@@ -187,6 +171,28 @@ const Properties = () => {
               <div className="h-1 w-16 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full"></div>
             </div>
           </motion.div>
+
+          {regionFilter && (
+            <div className="flex items-center gap-2 mb-6">
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Region: {regionFilter}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams);
+                  params.delete('region');
+                  setSearchParams(params);
+                }}
+                className="text-red-600 flex items-center gap-1"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            </div>
+          )}
 
           <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
             <div className="flex items-center gap-3">
@@ -308,7 +314,7 @@ const Properties = () => {
             </div>
 
             <TabsContent value={activeTab} className="mt-0">
-              {amenitiesFilteredProperties.length === 0 ? (
+              {filteredProperties.length === 0 ? (
                 <div className="max-w-lg mx-auto mt-16">
                   <div className="bg-white/70 backdrop-blur-sm p-12 rounded-3xl shadow-xl border border-white/20 text-center">
                     <div className="inline-flex items-center justify-center p-4 mb-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-full shadow-inner">
@@ -321,7 +327,7 @@ const Properties = () => {
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-                    {amenitiesFilteredProperties.map((property, index) => (
+                    {filteredProperties.map((property, index) => (
                       <motion.div
                         key={property._id}
                         initial={{ opacity: 0, y: 20 }}
@@ -344,7 +350,7 @@ const Properties = () => {
                   <div className="mt-12 text-center">
                     <div className="inline-flex items-center justify-center space-x-8 bg-white/70 backdrop-blur-sm px-8 py-4 rounded-2xl shadow-lg border border-white/20">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{amenitiesFilteredProperties.length}</div>
+                        <div className="text-2xl font-bold text-blue-600">{filteredProperties.length}</div>
                         <div className="text-sm text-gray-600">
                           {activeTab === "all" ? "Filtered Properties" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Properties`}
                         </div>
