@@ -25,10 +25,9 @@ const ArticleSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true // This adds createdAt and updatedAt automatically
+  timestamps: true
 });
 
-// Add index for better performance
 ArticleSchema.index({ createdAt: -1 });
 ArticleSchema.index({ author: 1 });
 

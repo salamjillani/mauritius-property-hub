@@ -1,23 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Card, 
-  CardContent, 
-  Typography, 
-  Grid, 
-  Container, 
-  Button,
-  Box,
-  Avatar,
-  Chip,
-  CircularProgress,
-  Alert,
-  AlertTitle,
-  Fade,
-  useTheme,
-  alpha,
-  IconButton,
-  Tooltip
+  Card, CardContent, Typography, Grid, Container, Button,
+  Box, Avatar, Chip, CircularProgress, Alert, AlertTitle,
+  Fade, useTheme, alpha, IconButton, Tooltip
 } from '@mui/material';
 import ArticleIcon from '@mui/icons-material/Article';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -38,11 +24,7 @@ const Articles = () => {
     const fetchArticles = async () => {
       try {
         const response = await axios.get('/api/articles');
-        
-        // Debug: Log the response structure
-        console.log('API Response:', response.data);
       
-        // Handle different possible response structures
         let articlesData;
         if (response.data.data && Array.isArray(response.data.data)) {
           articlesData = response.data.data;
@@ -51,15 +33,12 @@ const Articles = () => {
         } else if (response.data.articles && Array.isArray(response.data.articles)) {
           articlesData = response.data.articles;
         } else {
-          // Fallback to empty array if structure is unexpected
           articlesData = [];
-          console.warn('Unexpected API response structure:', response.data);
         }
         
         setArticles(articlesData);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching articles:', err);
         setError(err.message);
         setLoading(false);
       }
@@ -76,14 +55,7 @@ const Articles = () => {
 
   if (loading) {
     return (
-      <Box 
-        display="flex" 
-        flexDirection="column" 
-        alignItems="center" 
-        justifyContent="center" 
-        minHeight="400px"
-        gap={2}
-      >
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="400px" gap={2}>
         <CircularProgress size={60} thickness={4} />
         <Typography variant="h6" color="text.secondary">
           {t('loading') || 'Loading articles...'}
@@ -99,12 +71,7 @@ const Articles = () => {
           <AlertTitle>{t('error') || 'Error'}</AlertTitle>
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          color="primary"
-        >
+        <Button variant="contained" startIcon={<RefreshIcon />} onClick={handleRefresh} color="primary">
           {t('retry') || 'Retry'}
         </Button>
       </Container>
@@ -113,12 +80,7 @@ const Articles = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header Section */}
-      <Box 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
-        mb={4}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}
         sx={{
           background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
           borderRadius: 2,
@@ -141,8 +103,7 @@ const Articles = () => {
         </Box>
         
         <Tooltip title={t('refresh') || 'Refresh'}>
-          <IconButton 
-            onClick={handleRefresh}
+          <IconButton onClick={handleRefresh}
             sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               '&:hover': {
@@ -157,14 +118,12 @@ const Articles = () => {
         </Tooltip>
       </Box>
 
-      {/* Articles Grid */}
       <Fade in={!loading}>
         <Grid container spacing={3}>
           {articles && articles.length > 0 ? (
             articles.map((article) => (
               <Grid item key={article._id} xs={12} sm={6} md={4}>
-                <Card 
-                  elevation={3}
+                <Card elevation={3}
                   sx={{ 
                     height: '100%',
                     display: 'flex',
@@ -178,12 +137,32 @@ const Articles = () => {
                     }
                   }}
                 >
+                  {article.image ? (
+                    <Box sx={{ height: 200, overflow: 'hidden' }}>
+                      <img 
+                        src={article.image} 
+                        alt={article.title} 
+                        style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'cover' 
+                        }}
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      height: 200, 
+                      backgroundColor: 'grey.100', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center' 
+                    }}>
+                      <ArticleIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                    </Box>
+                  )}
+                  
                   <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
-                    <Typography 
-                      gutterBottom 
-                      variant="h6" 
-                      component="div"
-                      fontWeight="bold"
+                    <Typography gutterBottom variant="h6" component="div" fontWeight="bold"
                       sx={{
                         mb: 2,
                         display: '-webkit-box',
@@ -197,9 +176,7 @@ const Articles = () => {
                       {article.title}
                     </Typography>
                     
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary" 
+                    <Typography variant="body2" color="text.secondary" 
                       sx={{ 
                         mb: 3,
                         display: '-webkit-box',
@@ -213,7 +190,6 @@ const Articles = () => {
                       {article.content}
                     </Typography>
 
-                    {/* Article Meta */}
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box display="flex" alignItems="center" gap={1}>
                         <PersonIcon fontSize="small" color="action" />
@@ -272,8 +248,7 @@ const Articles = () => {
             ))
           ) : (
             <Grid item xs={12}>
-              <Card 
-                elevation={3}
+              <Card elevation={3}
                 sx={{ 
                   borderRadius: 3,
                   p: 6,
@@ -296,16 +271,8 @@ const Articles = () => {
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                   {t('check_back_later') || 'Check back later for new articles'}
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<RefreshIcon />}
-                  onClick={handleRefresh}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1.5,
-                    textTransform: 'none'
-                  }}
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleRefresh}
+                  sx={{ borderRadius: 2, px: 3, py: 1.5, textTransform: 'none' }}
                 >
                   {t('refresh') || 'Refresh'}
                 </Button>

@@ -1,28 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  IconButton,
-  Typography,
-  Box,
-  Chip,
-  Avatar,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  AlertTitle,
-  Fade,
-  Card,
-  CardContent,
-  useTheme,
-  alpha
+  Button, Table, TableBody, TableCell, TableContainer, TableHead, 
+  TableRow, Paper, IconButton, Typography, Box, Chip, Avatar, 
+  Tooltip, CircularProgress, Alert, AlertTitle, Fade, Card, 
+  CardContent, useTheme, alpha
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,6 +13,7 @@ import ArticleIcon from '@mui/icons-material/Article';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ImageIcon from '@mui/icons-material/Image';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 
@@ -46,8 +29,6 @@ const AdminArticles = () => {
       try {
         const response = await axios.get('/api/articles'); 
         
-        console.log('API Response:', response.data);
-        
         if (response.data && Array.isArray(response.data)) {
           setArticles(response.data);
         } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
@@ -55,13 +36,11 @@ const AdminArticles = () => {
         } else if (response.data && response.data.articles && Array.isArray(response.data.articles)) {
           setArticles(response.data.articles);
         } else {
-          console.warn('Unexpected API response structure:', response.data);
           setArticles([]);
         }
         
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching articles:', err);
         setError(err.message);
         setLoading(false);
         setArticles([]);
@@ -79,7 +58,6 @@ const AdminArticles = () => {
       
       setArticles(prevArticles => prevArticles.filter(article => article._id !== id));
     } catch (err) {
-      console.error('Error deleting article:', err);
       setError(err.message);
     }
   };
@@ -92,14 +70,7 @@ const AdminArticles = () => {
 
   if (loading) {
     return (
-      <Box 
-        display="flex" 
-        flexDirection="column" 
-        alignItems="center" 
-        justifyContent="center" 
-        minHeight="400px"
-        gap={2}
-      >
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="400px" gap={2}>
         <CircularProgress size={60} thickness={4} />
         <Typography variant="h6" color="text.secondary">
           {t('loading') || 'Loading articles...'}
@@ -115,12 +86,7 @@ const AdminArticles = () => {
           <AlertTitle>{t('error') || 'Error'}</AlertTitle>
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          color="primary"
-        >
+        <Button variant="contained" startIcon={<RefreshIcon />} onClick={handleRefresh} color="primary">
           {t('retry') || 'Retry'}
         </Button>
       </Box>
@@ -129,12 +95,7 @@ const AdminArticles = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header Section */}
-      <Box 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
-        mb={4}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}
         sx={{
           background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
           borderRadius: 2,
@@ -156,12 +117,7 @@ const AdminArticles = () => {
           </Box>
         </Box>
         
-        <Button 
-          variant="contained" 
-          size="large"
-          startIcon={<AddIcon />}
-          component={Link} 
-          to="/admin/article/new"
+        <Button variant="contained" size="large" startIcon={<AddIcon />} component={Link} to="/admin/article/new"
           sx={{
             borderRadius: 2,
             px: 3,
@@ -180,70 +136,45 @@ const AdminArticles = () => {
         </Button>
       </Box>
 
-      {/* Articles Table */}
       <Fade in={!loading}>
         <Card elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
           <TableContainer component={Paper} sx={{ maxHeight: '70vh' }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell 
-                    sx={{ 
-                      backgroundColor: theme.palette.primary.main,
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '1rem'
-                    }}
-                  >
+                  <TableCell sx={{ backgroundColor: theme.palette.primary.main, color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <ImageIcon fontSize="small" />
+                      {t('image') || 'Image'}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ backgroundColor: theme.palette.primary.main, color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <ArticleIcon fontSize="small" />
                       {t('title') || 'Title'}
                     </Box>
                   </TableCell>
-                  <TableCell 
-                    sx={{ 
-                      backgroundColor: theme.palette.primary.main,
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '1rem'
-                    }}
-                  >
+                  <TableCell sx={{ backgroundColor: theme.palette.primary.main, color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <PersonIcon fontSize="small" />
                       {t('author') || 'Author'}
                     </Box>
                   </TableCell>
-                  <TableCell 
-                    sx={{ 
-                      backgroundColor: theme.palette.primary.main,
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '1rem'
-                    }}
-                  >
+                  <TableCell sx={{ backgroundColor: theme.palette.primary.main, color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CalendarTodayIcon fontSize="small" />
                       {t('date') || 'Date'}
                     </Box>
                   </TableCell>
-                  <TableCell 
-                    sx={{ 
-                      backgroundColor: theme.palette.primary.main,
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '1rem'
-                    }}
-                    align="center"
-                  >
+                  <TableCell sx={{ backgroundColor: theme.palette.primary.main, color: 'white', fontWeight: 'bold', fontSize: '1rem' }} align="center">
                     {t('actions') || 'Actions'}
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {articles && articles.length > 0 ? (
-                  articles.map((article, index) => (
-                    <TableRow 
-                      key={article._id || article.id}
+                  articles.map((article) => (
+                    <TableRow key={article._id || article.id}
                       sx={{
                         '&:hover': {
                           backgroundColor: alpha(theme.palette.primary.main, 0.05),
@@ -255,6 +186,19 @@ const AdminArticles = () => {
                         }
                       }}
                     >
+                      <TableCell sx={{ py: 2 }}>
+                        {article.image ? (
+                          <Avatar 
+                            variant="rounded"
+                            src={article.image}
+                            sx={{ width: 60, height: 60, borderRadius: 2 }}
+                          />
+                        ) : (
+                          <Avatar variant="rounded" sx={{ width: 60, height: 60, bgcolor: 'grey.300', borderRadius: 2 }}>
+                            <ImageIcon />
+                          </Avatar>
+                        )}
+                      </TableCell>
                       <TableCell sx={{ py: 2 }}>
                         <Typography variant="body1" fontWeight="medium">
                           {article.title || 'Untitled'}
@@ -295,9 +239,7 @@ const AdminArticles = () => {
                       <TableCell align="center" sx={{ py: 2 }}>
                         <Box display="flex" gap={1} justifyContent="center">
                           <Tooltip title={t('edit') || 'Edit'}>
-                            <IconButton 
-                              component={Link} 
-                              to={`/admin/article/edit/${article._id || article.id}`}
+                            <IconButton component={Link} to={`/admin/article/edit/${article._id || article.id}`}
                               sx={{
                                 color: theme.palette.primary.main,
                                 '&:hover': {
@@ -311,8 +253,7 @@ const AdminArticles = () => {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title={t('delete') || 'Delete'}>
-                            <IconButton 
-                              onClick={() => handleDelete(article._id || article.id)}
+                            <IconButton onClick={() => handleDelete(article._id || article.id)}
                               sx={{
                                 color: theme.palette.error.main,
                                 '&:hover': {
@@ -331,19 +272,9 @@ const AdminArticles = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4}>
-                      <Box 
-                        display="flex" 
-                        flexDirection="column" 
-                        alignItems="center" 
-                        py={8}
-                        gap={2}
-                      >
-                        <Avatar sx={{ 
-                          width: 80, 
-                          height: 80, 
-                          bgcolor: alpha(theme.palette.grey[400], 0.2) 
-                        }}>
+                    <TableCell colSpan={5}>
+                      <Box display="flex" flexDirection="column" alignItems="center" py={8} gap={2}>
+                        <Avatar sx={{ width: 80, height: 80, bgcolor: alpha(theme.palette.grey[400], 0.2) }}>
                           <ArticleIcon sx={{ fontSize: 40, color: theme.palette.grey[400] }} />
                         </Avatar>
                         <Typography variant="h6" color="text.secondary">
@@ -352,13 +283,7 @@ const AdminArticles = () => {
                         <Typography variant="body2" color="text.secondary">
                           {t('create_first_article') || 'Create your first article to get started'}
                         </Typography>
-                        <Button 
-                          variant="outlined" 
-                          startIcon={<AddIcon />}
-                          component={Link} 
-                          to="/admin/article/new"
-                          sx={{ mt: 2 }}
-                        >
+                        <Button variant="outlined" startIcon={<AddIcon />} component={Link} to="/admin/article/new" sx={{ mt: 2 }}>
                           {t('create_article') || 'Create Article'}
                         </Button>
                       </Box>
