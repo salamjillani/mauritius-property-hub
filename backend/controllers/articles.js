@@ -1,7 +1,6 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const ErrorResponse = require('../utils/errorResponse');
 const Article = require('../models/Article');
-const cloudinary = require('../utils/cloudinaryUpload');
 const mongoose = require('mongoose');
 
 // @desc    Get all articles
@@ -60,47 +59,11 @@ exports.createArticle = asyncHandler(async (req, res, next) => {
   // Add user to req.body
   req.body.author = req.user.id;
 
-  let imageUrl = '';
-  let publicId = '';
-
-  // Handle image upload
-  if (req.files && req.files.image) {
-    const file = req.files.image;
-    
-    // Validate file
-    if (!file.mimetype.startsWith('image')) {
-      return next(new ErrorResponse('Please upload an image file', 400));
-    }
-    
-    // Check file size (default to 5MB if not set)
-    const maxFileSize = process.env.MAX_FILE_UPLOAD || 5000000;
-    if (file.size > maxFileSize) {
-      return next(
-        new ErrorResponse(
-          `Please upload an image less than ${maxFileSize / 1000000}MB`,
-          400
-        )
-      );
-    }
-
-    // Upload to Cloudinary
-    try {
-      const result = await cloudinary.uploadImage(file.tempFilePath, 'articles');
-      imageUrl = result.url;
-      publicId = result.public_id || result.publicId; // Handle both possible property names
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      return next(new ErrorResponse('Problem with image upload', 500));
-    }
-  }
-
   try {
     const article = await Article.create({
       title,
       content,
       author: req.user.id,
-      image: imageUrl,
-      imagePublicId: publicId,
     });
 
     // Populate author before sending response
@@ -112,15 +75,6 @@ exports.createArticle = asyncHandler(async (req, res, next) => {
     });
   } catch (error) {
     console.error('Article creation error:', error);
-    
-    // Clean up uploaded image if article creation fails
-    if (publicId) {
-      try {
-        await cloudinary.deleteImage(publicId);
-      } catch (deleteError) {
-        console.error('Error cleaning up uploaded image:', deleteError);
-      }
-    }
     
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -163,46 +117,6 @@ exports.updateArticle = asyncHandler(async (req, res, next) => {
 
   let updateData = { ...req.body };
   delete updateData.author; // Prevent author from being changed
-
-  // Handle image upload if new image is provided
-  if (req.files && req.files.image) {
-    const file = req.files.image;
-    
-    // Validate file
-    if (!file.mimetype.startsWith('image')) {
-      return next(new ErrorResponse('Please upload an image file', 400));
-    }
-    
-    // Check file size
-    const maxFileSize = process.env.MAX_FILE_UPLOAD || 5000000;
-    if (file.size > maxFileSize) {
-      return next(
-        new ErrorResponse(
-          `Please upload an image less than ${maxFileSize / 1000000}MB`,
-          400
-        )
-      );
-    }
-
-    // Upload to Cloudinary
-    try {
-      const result = await cloudinary.uploadImage(file.tempFilePath, 'articles');
-      updateData.image = result.url;
-      updateData.imagePublicId = result.public_id || result.publicId;
-      
-      // Delete old image if exists
-      if (article.imagePublicId) {
-        try {
-          await cloudinary.deleteImage(article.imagePublicId);
-        } catch (err) {
-          console.error(`Error deleting old image: ${article.imagePublicId}`, err);
-        }
-      }
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      return next(new ErrorResponse('Problem with image upload', 500));
-    }
-  }
 
   try {
     article = await Article.findByIdAndUpdate(req.params.id, updateData, {
@@ -254,15 +168,6 @@ exports.deleteArticle = asyncHandler(async (req, res, next) => {
         401
       )
     );
-  }
-
-  // Delete image from Cloudinary if exists
-  if (article.imagePublicId) {
-    try {
-      await cloudinary.deleteImage(article.imagePublicId);
-    } catch (err) {
-      console.error(`Error deleting image: ${article.imagePublicId}`, err);
-    }
   }
 
   await article.deleteOne();

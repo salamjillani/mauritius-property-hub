@@ -3,16 +3,39 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Avatar,
+  CircularProgress,
+  Alert,
+  AlertTitle,
+  Fade,
+  useTheme,
+  alpha,
+  InputAdornment,
+  Chip
+} from '@mui/material';
+import {
+  Article as ArticleIcon,
+  Title as TitleIcon,
+  Description as ContentIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon
+} from '@mui/icons-material';
 
 const ArticleForm = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme();
+  
   const [formData, setFormData] = useState({ title: '', content: '' });
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,10 +64,6 @@ const ArticleForm = () => {
             content: articleData.content || ''
           });
           
-          if (articleData.image) {
-            setImagePreview(articleData.image);
-          }
-          
           setIsLoading(false);
         } catch (error) {
           console.error('Error fetching article:', error);
@@ -61,41 +80,6 @@ const ArticleForm = () => {
     }
   }, [id, toast, t, navigate]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: t('error'),
-          description: 'Please select an image file',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast({
-          title: t('error'),
-          description: 'Image size should be less than 5MB',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      setImage(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const validateForm = () => {
     if (!formData.title.trim()) {
       toast({
@@ -110,15 +94,6 @@ const ArticleForm = () => {
       toast({
         title: t('error'),
         description: 'Content is required',
-        variant: 'destructive'
-      });
-      return false;
-    }
-
-    if (!id && !image) {
-      toast({
-        title: t('error'),
-        description: 'Image is required for new articles',
         variant: 'destructive'
       });
       return false;
@@ -148,31 +123,28 @@ const ArticleForm = () => {
         return;
       }
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title.trim());
-      formDataToSend.append('content', formData.content.trim());
-      
-      if (image) {
-        formDataToSend.append('image', image);
-      }
+      const dataToSend = {
+        title: formData.title.trim(),
+        content: formData.content.trim()
+      };
 
       const config = {
         headers: { 
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         },
         timeout: 30000 // 30 second timeout
       };
 
       let response;
       if (id) {
-        response = await axios.put(`/api/articles/${id}`, formDataToSend, config);
+        response = await axios.put(`/api/articles/${id}`, dataToSend, config);
         toast({ 
           title: t('success'), 
           description: t('article_updated') || 'Article updated successfully' 
         });
       } else {
-        response = await axios.post('/api/articles', formDataToSend, config);
+        response = await axios.post('/api/articles', dataToSend, config);
         toast({ 
           title: t('success'), 
           description: t('article_created') || 'Article created successfully' 
@@ -209,108 +181,178 @@ const ArticleForm = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4">Loading...</p>
-        </div>
-      </div>
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        minHeight="400px"
+        gap={2}
+      >
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" color="text.secondary">
+          {t('loading') || 'Loading...'}
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">
-        {id ? t('edit_article') : t('create_article')}
-      </h1>
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">
-            {t('title')} <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({...formData, title: e.target.value})}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter article title"
-            required
-            disabled={isSubmitting}
-            maxLength={200}
-          />
-          <div className="text-sm text-gray-500 mt-1">
-            {formData.title.length}/200 characters
-          </div>
-        </div>
+    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
+      {/* Header Section */}
+      <Box 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems="center" 
+        mb={4}
+        sx={{
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+          borderRadius: 2,
+          p: 3,
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 56, height: 56 }}>
+            <ArticleIcon fontSize="large" />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" color="primary">
+              {id ? t('edit_article') || 'Edit Article' : t('create_article') || 'Create Article'}
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              {id ? t('update_article_details') || 'Update article details' : t('create_new_article') || 'Create a new article'}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">
-            {t('content')} <span className="text-red-500">*</span>
-          </label>
-          <Textarea
-            value={formData.content}
-            onChange={(e) => setFormData({...formData, content: e.target.value})}
-            rows={12}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Write your article content here..."
-            required
-            disabled={isSubmitting}
-          />
-        </div>
+      {/* Form Section */}
+      <Fade in={!isLoading}>
+        <Card elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <CardContent sx={{ p: 4 }}>
+            <form onSubmit={handleSubmit}>
+              <Box display="flex" flexDirection="column" gap={4}>
+                
+                {/* Title Field */}
+                <Box>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TitleIcon color="primary" />
+                    {t('title') || 'Title'}
+                    <Chip label="Required" size="small" color="error" variant="outlined" />
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    placeholder="Enter article title"
+                    required
+                    disabled={isSubmitting}
+                    inputProps={{ maxLength: 200 }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover': {
+                          boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
+                        },
+                        '&.Mui-focused': {
+                          boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Typography variant="caption" color="text.secondary">
+                            {formData.title.length}/200
+                          </Typography>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
 
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">
-            {t('image')} {!id && <span className="text-red-500">*</span>}
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isSubmitting}
-          />
-          <div className="text-sm text-gray-500 mt-1">
-            Supported formats: JPG, PNG, GIF. Max size: 5MB
-          </div>
-          
-          {imagePreview && (
-            <div className="mt-4">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="max-w-md h-48 object-cover rounded-lg border"
-              />
-            </div>
-          )}
-        </div>
+                {/* Content Field */}
+                <Box>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ContentIcon color="primary" />
+                    {t('content') || 'Content'}
+                    <Chip label="Required" size="small" color="error" variant="outlined" />
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={12}
+                    value={formData.content}
+                    onChange={(e) => setFormData({...formData, content: e.target.value})}
+                    placeholder="Write your article content here..."
+                    required
+                    disabled={isSubmitting}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover': {
+                          boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
+                        },
+                        '&.Mui-focused': {
+                          boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
 
-        <div className="flex gap-4">
-          <button 
-            type="submit" 
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                {t('submitting') || 'Submitting...'}
-              </div>
-            ) : (
-              t('submit')
-            )}
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => navigate('/admin/articles')}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
+                {/* Submit Buttons */}
+                <Box display="flex" gap={2} justifyContent="flex-end" pt={2}>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => navigate('/admin/articles')}
+                    disabled={isSubmitting}
+                    startIcon={<CancelIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    {t('cancel') || 'Cancel'}
+                  </Button>
+                  
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    disabled={isSubmitting}
+                    startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: theme.shadows[4],
+                      '&:hover': {
+                        boxShadow: theme.shadows[8],
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {isSubmitting ? (
+                      t('submitting') || 'Submitting...'
+                    ) : (
+                      id ? t('update') || 'Update' : t('create') || 'Create'
+                    )}
+                  </Button>
+                </Box>
+              </Box>
+            </form>
+          </CardContent>
+        </Card>
+      </Fade>
+    </Box>
   );
 };
 

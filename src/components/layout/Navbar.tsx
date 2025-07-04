@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, LogOut, User, Home, MapPin, Building2, Briefcase } from "lucide-react";
+import { Menu, X, LogOut, User, Home, MapPin, Building2, Briefcase, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,9 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-// Add this import
-import AdBanner from '@/components/AdBanner';
-
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
@@ -55,8 +52,6 @@ const Navbar = () => {
 
   return (
     <header>
-      {/* Add this right after the opening <header> tag */}
-      <AdBanner />
       <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-2xl sticky top-0 z-50 backdrop-blur-sm border-b border-gray-700">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3 group">
@@ -72,7 +67,6 @@ const Navbar = () => {
               />
               <div className="absolute inset-0 bg-teal-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
-        
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -111,9 +105,10 @@ const Navbar = () => {
               {t("promoters")}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-teal-400 to-cyan-300 group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link to="/articles" className="text-gray-700 hover:text-blue-600">
-  {t('articles')}
-</Link>
+            <Link to="/articles" className="text-gray-300 hover:text-teal-400 font-medium transition-all duration-300 relative group px-3 py-2">
+              {t('Articles')}
+            </Link>
+
 
             <div className="flex items-center gap-3">
               <DropdownMenu>
@@ -296,6 +291,21 @@ const Navbar = () => {
                 onClick={toggleMenu}
               >
                 {t("promoters")}
+              </Link>
+              <Link 
+                to="/articles" 
+                className="text-gray-300 hover:text-teal-400 transition-all duration-300 py-2 px-4 rounded-lg hover:bg-gray-700/50" 
+                onClick={toggleMenu}
+              >
+                {t("articles")}
+              </Link>
+              <Link 
+                to="/advertise" 
+                className="text-gray-300 hover:text-teal-400 transition-all duration-300 py-2 px-4 rounded-lg hover:bg-gray-700/50 flex items-center gap-2" 
+                onClick={toggleMenu}
+              >
+                <Megaphone size={16} />
+                {t("advertise")}
               </Link>
 
               <div className="flex flex-col gap-3 pt-4 border-t border-gray-700">

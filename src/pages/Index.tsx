@@ -9,6 +9,7 @@ import AgentToggle from "@/components/AgentToggle";
 import SearchBar from "@/components/common/SearchBar";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
+import AdBanner from '@/components/AdBanner';
 import AgencyLogosSection from "@/components/home/AgencyLogosSection";
 import AgentsCarousel from "@/components/home/AgentsCarousel";
 import PromoterProjects from "@/components/home/PromoterProjects";
@@ -19,7 +20,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mauritiusRegions from "@/data/mauritiusRegions.json";
 import { useNavigate } from "react-router-dom";
-import AdsCarousel from '@/components/AdsCarousel';
 
 const Index = () => {
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
@@ -145,14 +145,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <AdBanner />
       <Navbar
         activeLanguage={activeLanguage}
         setActiveLanguage={setActiveLanguage}
         activeCurrency={activeCurrency}
         setActiveCurrency={setActiveCurrency}
       />
-
-      <AdsCarousel />
 
       <AgentToggle onClick={toggleAgentSidebar} isActive={agentSidebarOpen} />
       <AgentSidebar isOpen={agentSidebarOpen} onClose={() => setAgentSidebarOpen(false)} agents={agents} />

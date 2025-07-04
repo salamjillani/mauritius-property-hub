@@ -38,9 +38,8 @@ import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import Articles from './pages/Articles';
 import AdminArticles from './pages/admin/Articles';
-import AdminAdvertisements from './pages/admin/Advertisements';
 import ArticleForm from './components/ArticleForm';
-import AdvertisementForm from './components/AdvertisementForm';
+import AdminAdsPage from '@/pages/admin/AdminAdsPage';
 
 // Type for API errors
 interface ApiError extends Error {
@@ -78,34 +77,9 @@ const queryClient = new QueryClient({
 // Protected Route with token validation
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
-
   if (!token) {
     return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
   }
-
-  // Optional: Validate token with API (uncomment to enable)
-  /*
-  useEffect(() => {
-    const validateToken = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-token`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
-      } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
-    };
-    validateToken();
-  }, [token]);
-  */
-
   return <>{children}</>;
 };
 
@@ -113,7 +87,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
   let user: User | null = null;
-
   try {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -122,11 +95,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   } catch {
     user = null;
   }
-
   if (!token || !user?.role || !['admin', 'sub-admin'].includes(user.role)) {
     return <Navigate to="/admin/login" replace />;
   }
-
   return <>{children}</>;
 };
 
@@ -171,6 +142,7 @@ const App = () => (
               <Route path="/map" element={<MapView />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/article/:id" element={<Articles />} />
+        
 
               {/* Protected User Routes */}
               <Route
@@ -181,7 +153,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-               <Route
+              <Route
                 path="/promoters"
                 element={
                   <ProtectedRoute>
@@ -256,6 +228,7 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              <Route path="/admin/advertisements" element={<AdminAdsPage />} />
               <Route
                 path="/admin/agents"
                 element={
@@ -296,71 +269,33 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              
+              {/* Admin Articles Routes - ADD THIS MISSING ROUTE */}
               <Route
-  path="/admin/articles"
-  element={
-    <AdminRoute>
-      <AdminArticles />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/articles/:id/edit"
-  element={
-    <AdminRoute>
-      <ArticleForm />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/advertisements"
-  element={
-    <AdminRoute>
-      <AdminAdvertisements />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/advertisements/:id/edit"
-  element={
-    <AdminRoute>
-      <AdvertisementForm />
-    </AdminRoute>
-  }
-/>
-// Add these new routes in the admin section
-<Route
-  path="/admin/article/new"
-  element={
-    <AdminRoute>
-      <ArticleForm />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/article/edit/:id"
-  element={
-    <AdminRoute>
-      <ArticleForm />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/advertisement/new"
-  element={
-    <AdminRoute>
-      <AdvertisementForm />
-    </AdminRoute>
-  }
-/>
-<Route
-  path="/admin/advertisement/edit/:id"
-  element={
-    <AdminRoute>
-      <AdvertisementForm />
-    </AdminRoute>
-  }
-/>
+                path="/admin/articles"
+                element={
+                  <AdminRoute>
+                    <AdminArticles />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/article/new"
+                element={
+                  <AdminRoute>
+                    <ArticleForm />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/article/edit/:id"
+                element={
+                  <AdminRoute>
+                    <ArticleForm />
+                  </AdminRoute>
+                }
+              />
+              
               <Route
                 path="/admin/logs"
                 element={
@@ -370,7 +305,6 @@ const App = () => (
                 }
               />
               
-
               {/* Catch-All Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>

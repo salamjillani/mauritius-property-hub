@@ -7,23 +7,27 @@ const AdvertisementSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Title cannot be more than 100 characters']
   },
-  image: {
+  url: {
     type: String,
-    required: false
+    required: [true, 'Please add a URL'],
+    trim: true
   },
-  link: {
+  imageUrl: {
     type: String,
-    required: [true, 'Please add a link URL']
+    required: [true, 'Please add an image URL']
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true
   },
-  startDate: {
+  status: {
+    type: String,
+  },
+  createdAt: {
     type: Date,
     default: Date.now
-  },
-  endDate: Date
-}, { timestamps: true });
+  }
+});
 
 module.exports = mongoose.model('Advertisement', AdvertisementSchema);

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, Home, Users, Building, Building2, MapPin, Settings, FileText, DollarSign, Menu, X, ImageIcon } from 'lucide-react';
+import { LogOut, Home, Users, Building, Building2, MapPin, Settings, FileText, DollarSign, Menu, X, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -24,13 +24,14 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/agents', icon: Users, label: t('agents') },
     { path: '/admin/agencies', icon: Building, label: t('agencies') },
     { path: '/admin/articles', icon: FileText, label: t('Articles') },
-    { path: '/admin/advertisements', icon: ImageIcon, label: t('Advertisements') },
+    { path: '/admin/advertisements', icon: Megaphone, label: t('Advertisements') },
     { path: '/admin/promoters', icon: Building2, label: t('promoters') },
     { path: '/admin/properties', icon: MapPin, label: t('properties') },
     { path: '/admin/requests', icon: FileText, label: t('Requests') },
     { path: '/admin/subscriptions', icon: DollarSign, label: t('Subscriptions') },
     { path: '/admin/logs', icon: FileText, label: t('Logs') },
     { path: '/admin/settings', icon: Settings, label: t('Settings') },
+ 
   ];
 
   const handleNavigation = (path) => {
@@ -40,7 +41,6 @@ const AdminLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -48,7 +48,6 @@ const AdminLayout = ({ children }) => {
         />
       )}
 
-      {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
           variant="outline"
@@ -60,7 +59,6 @@ const AdminLayout = ({ children }) => {
         </Button>
       </div>
 
-      {/* Sidebar */}
       <aside className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-80 xl:w-72
@@ -70,7 +68,6 @@ const AdminLayout = ({ children }) => {
         shadow-2xl lg:shadow-xl
       `}>
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="p-6 border-b border-slate-700/50">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
@@ -79,7 +76,6 @@ const AdminLayout = ({ children }) => {
             </div>
           </div>
           
-          {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
             {navigationItems.map(({ path, icon: Icon, label }) => (
               <Button
@@ -103,7 +99,6 @@ const AdminLayout = ({ children }) => {
             ))}
           </nav>
           
-          {/* Logout button */}
           <div className="p-4 border-t border-slate-700/50">
             <Button
               variant="ghost"
@@ -121,16 +116,13 @@ const AdminLayout = ({ children }) => {
         </div>
       </aside>
       
-      {/* Main content */}
       <main className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar for mobile */}
         <div className="lg:hidden h-16 flex items-center justify-center border-b border-slate-200 bg-white/80 backdrop-blur-sm">
           <h2 className="text-lg font-semibold text-slate-800">
             {navigationItems.find(item => isActive(item.path))?.label || t('Admin Panel')}
           </h2>
         </div>
         
-        {/* Content area */}
         <div className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 overflow-x-hidden">
           <div className="max-w-7xl mx-auto">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-6rem)]">

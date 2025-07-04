@@ -1,66 +1,50 @@
-// AdBanner.jsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Carousel } from 'react-responsive-carousel';
-import 'react-responsive-carousel/lib/styles/carousel.min.css';
+import { useState, useEffect } from 'react';
 
 const AdBanner = () => {
-  const [ads, setAds] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [ad, setAd] = useState(null);
 
   useEffect(() => {
-    const fetchActiveAds = async () => {
+    const fetchActiveAd = async () => {
       try {
-        const response = await axios.get('/api/advertisements/active');
-        setAds(response.data?.data || []);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ads/active`);
+        if (response.ok) {
+          const data = await response.json();
+          setAd(data.data);
+        }
       } catch (error) {
-        console.error('Error fetching ads:', error);
-        setAds([]);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching ad:', error);
       }
     };
+
+    fetchActiveAd();
     
-    fetchActiveAds();
-    
-    // Refresh ads every 5 minutes
-    const interval = setInterval(fetchActiveAds, 300000);
+    // Refresh ad every 5 minutes
+    const interval = setInterval(fetchActiveAd, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return null;
-  if (!ads || ads.length === 0) return null;
+  if (!ad) return null;
 
   return (
-    <div className="w-full bg-gray-100 border-b">
-      <Carousel 
-        showArrows={true}
-        showStatus={false}
-        showThumbs={false}
-        infiniteLoop={true}
-        autoPlay={true}
-        interval={5000}
-        stopOnHover={false}
-        swipeable={true}
-        dynamicHeight={false}
-        emulateTouch={true}
+    <div className="w-full border-b border-blue-200">
+      <a
+        href={ad.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full relative"
       >
-        {ads.map((ad) => (
-          <a 
-            key={ad._id}
-            href={ad.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-          >
-            <img 
-              src={ad.image}
-              alt={ad.title}
-              className="w-full h-32 object-contain"
-            />
-          </a>
-        ))}
-      </Carousel>
+        <img
+          src={ad.imageUrl}
+          alt={ad.title}
+          className="w-full h-20 object-cover"
+        />
+        {/* Optional: Add overlay text if needed */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+          <span className="text-white font-medium text-lg drop-shadow-lg">
+            {ad.title}
+          </span>
+        </div>
+      </a>
     </div>
   );
 };
