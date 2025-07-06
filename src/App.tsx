@@ -19,7 +19,6 @@ import AdminUsers from './pages/admin/Users';
 import AdminProperties from './pages/admin/Properties';
 import AdminAgents from './pages/admin/Agents';
 import AdminAgencies from './pages/admin/Agencies';
-import AdminPromoters from './pages/admin/AdminPromoters';
 import AdminSettings from './pages/admin/Settings';
 import AdminLogs from './pages/admin/Logs';
 import AdminRequests from './pages/admin/AdminRequests';
@@ -247,14 +246,7 @@ const App = () => (
                   </AdminRoute>
                 }
               />
-              <Route
-                path="/admin/promoters"
-                element={
-                  <AdminRoute>
-                    <AdminPromoters />
-                  </AdminRoute>
-                }
-              />
+             
               <Route
                 path="/admin/requests"
                 element={

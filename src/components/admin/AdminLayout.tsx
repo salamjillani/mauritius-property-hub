@@ -25,7 +25,6 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/agencies', icon: Building, label: t('agencies') },
     { path: '/admin/articles', icon: FileText, label: t('Articles') },
     { path: '/admin/advertisements', icon: Megaphone, label: t('Advertisements') },
-    { path: '/admin/promoters', icon: Building2, label: t('promoters') },
     { path: '/admin/properties', icon: MapPin, label: t('properties') },
     { path: '/admin/requests', icon: FileText, label: t('Requests') },
     { path: '/admin/subscriptions', icon: DollarSign, label: t('Subscriptions') },

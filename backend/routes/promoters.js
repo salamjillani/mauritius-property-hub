@@ -18,12 +18,9 @@ router.put('/my-profile', protect, authorize('promoter'), updateMyPromoterProfil
 router.get('/cloudinary-signature', protect, authorize('promoter'), getPromoterCloudinarySignature);
 
 // PUBLIC ROUTES (no authentication required)
-router.get('/', getPromoters); // Allow public access to get approved promoters
-router.get('/:id', getPromoter); // Allow public access to get single promoter
-router.get('/:id/projects', getPromoterProjects); // Allow public access to promoter projects
-
-// PROMOTER-SPECIFIC ROUTES (promoter authentication required)
-
+router.get('/', getPromoters); 
+router.get('/:id', getPromoter); 
+router.get('/:id/projects', getPromoterProjects);
 
 
 // Allow promoters to create their own profile
