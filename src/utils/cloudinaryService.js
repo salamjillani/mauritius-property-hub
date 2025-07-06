@@ -1,5 +1,3 @@
-// Enhanced cloudinaryService.js with better error handling and debugging
-
 export const getCloudinarySignature = async () => {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -23,6 +21,87 @@ export const getCloudinarySignature = async () => {
     return await response.json();
   } catch (error) {
     console.error("Error getting Cloudinary signature:", error);
+    throw error;
+  }
+};
+
+export const getAgentCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting agent Cloudinary signature:", error);
+    throw error;
+  }
+};
+
+export const getAgencyCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agencies/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting agency Cloudinary signature:", error);
+    throw error;
+  }
+};
+
+export const getPromoterCloudinarySignature = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required: No token found");
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/promoters/cloudinary-signature`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to get upload signature: ${errorData.message || response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting promoter Cloudinary signature:", error);
     throw error;
   }
 };
@@ -56,13 +135,8 @@ export const getAdvertisementCloudinarySignature = async () => {
 
 const uploadToCloudinaryWithSignature = async (file, getSignatureFn, folder = "property-images") => {
   try {
-    console.log("Starting Cloudinary upload for file:", file.name, "to folder:", folder);
-    
-    // Get signature data
     const signatureData = await getSignatureFn();
-    console.log("Signature data received:", signatureData);
-    
-    const { timestamp, signature, cloudName, apiKey, upload_preset } = signatureData.data;
+    const { timestamp, signature, cloudName, apiKey } = signatureData.data;
 
     // Validate signature data
     if (!timestamp || !signature || !cloudName || !apiKey) {
@@ -75,47 +149,20 @@ const uploadToCloudinaryWithSignature = async (file, getSignatureFn, folder = "p
     formData.append("signature", signature);
     formData.append("api_key", apiKey);
     formData.append("folder", folder);
+    formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
     
-    // Always add upload_preset if it exists in the signature data
-    if (upload_preset) {
-      formData.append("upload_preset", upload_preset);
-    }
 
-    console.log("Uploading to Cloudinary with cloud name:", cloudName);
-    console.log("Upload URL:", `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
-    console.log("Upload parameters:", {
-      timestamp,
-      folder,
-      upload_preset,
-      api_key: apiKey
-    });
-
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+   const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: "POST",
       body: formData,
     });
 
-    console.log("Cloudinary response status:", response.status);
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Cloudinary error response:", errorText);
-      
-      let errorMessage = "Image upload failed";
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.error?.message || errorData.message || errorMessage;
-      } catch (parseError) {
-        console.error("Could not parse error response:", parseError);
-        errorMessage = `Image upload failed: ${response.status} ${response.statusText}`;
-      }
-      
-      throw new Error(errorMessage);
+      throw new Error("Image upload failed");
     }
 
+
     const data = await response.json();
-    console.log("Cloudinary upload successful:", data);
-    
     return {
       url: data.secure_url,
       publicId: data.public_id,
@@ -134,7 +181,6 @@ export const uploadAdvertisementToCloudinary = async (file, folder = "advertisem
   return uploadToCloudinaryWithSignature(file, getAdvertisementCloudinarySignature, folder);
 };
 
-// Other existing functions remain the same...
 export const uploadAgentPhotoToCloudinary = async (file, folder = "agent-photos") => {
   return uploadToCloudinaryWithSignature(file, getAgentCloudinarySignature, folder);
 };

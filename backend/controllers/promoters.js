@@ -84,19 +84,28 @@ exports.updateMyPromoterProfile = asyncHandler(async (req, res, next) => {
 });
 
 // Get all promoters
+// controllers/promoters.js
 exports.getPromoters = asyncHandler(async (req, res, next) => {
-  const { name, status } = req.query;
+  const { name, approvalStatus } = req.query;
   const query = {};
   if (name) query.name = { $regex: name, $options: 'i' };
-  if (status) query.status = status;
+  if (approvalStatus) query.approvalStatus = approvalStatus; // Fixed field name
 
-  const promoters = await Promoter.find(query);
+   const promoters = await Promoter.find(query)
+    .populate({
+      path: 'user',
+      select: 'email phone'
+    });
   res.status(200).json({ success: true, count: promoters.length, data: promoters });
 });
 
 // Get single promoter
 exports.getPromoter = asyncHandler(async (req, res, next) => {
-  const promoter = await Promoter.findById(req.params.id);
+  const promoter = await Promoter.findById(req.params.id)
+    .populate({
+      path: 'user',
+      select: 'email phone'
+    });
   if (!promoter) {
     return next(new ErrorResponse(`Promoter not found with id ${req.params.id}`, 404));
   }

@@ -188,6 +188,10 @@ const PropertySchema = new Schema(
       ref: "Agent",
       index: true,
     },
+      promoter: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Promoter'
+  },
 
     agency: {
       type: Schema.Types.ObjectId,

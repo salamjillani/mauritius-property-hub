@@ -40,6 +40,7 @@ import Articles from './pages/Articles';
 import AdminArticles from './pages/admin/Articles';
 import ArticleForm from './components/ArticleForm';
 import AdminAdsPage from '@/pages/admin/AdminAdsPage';
+import Promoter from "./pages/Promoter";
 
 // Type for API errors
 interface ApiError extends Error {
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="/properties/:id/reviews" element={<Reviews />} />
               <Route path="/agents" element={<AllAgentsPage />} />
               <Route path="/agencies" element={<AllAgenciesPage />} />
+              <Route path="/promoter/:id" element={<Promoter />} />
               <Route path="/agent/:id" element={<AgentPage />} />
               <Route path="/agency/:id" element={<AgencyPage />} />
               <Route path="/projects/:id" element={<ProjectDetails />} />
