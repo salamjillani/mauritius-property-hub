@@ -6,10 +6,10 @@ import PropertySection from "@/components/home/PropertySection";
 import PremiumAgents from "@/components/home/PremiumAgents";
 import AgentSidebar from "@/components/AgentSidebar";
 import AgentToggle from "@/components/AgentToggle";
-import SearchBar from "@/components/common/SearchBar";
+import SearchBar from "@/components/SearchBar";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
-import AdBanner from '@/components/AdBanner';
+// import AdBanner from '@/components/AdBanner';
 import AgencyLogosSection from "@/components/home/AgencyLogosSection";
 import AgentsCarousel from "@/components/home/AgentsCarousel";
 import PromoterProjects from "@/components/home/PromoterProjects";
@@ -145,7 +145,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AdBanner />
+      {/* <AdBanner /> */}
       <Navbar
         activeLanguage={activeLanguage}
         setActiveLanguage={setActiveLanguage}

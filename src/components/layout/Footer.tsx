@@ -141,7 +141,7 @@ const Footer = () => {
             <Link to="/contact" className="text-gray-300 hover:text-teal-400 transition-colors">Contact</Link>
           </div>
           <p className="text-gray-400">
-            © {currentYear} Property Mauritius. All rights reserved.
+            © {currentYear} PropertyVue Mauritius. All rights reserved.
           </p>
         </div>
       </div>

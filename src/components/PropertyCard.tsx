@@ -51,143 +51,122 @@ const PropertyCard = ({
 
   return (
     <Card
-      className={`group overflow-hidden transition-all duration-500 ease-in-out hover:shadow-2xl rounded-2xl cursor-pointer relative ${
+      className={`group overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg rounded-2xl cursor-pointer relative border border-gray-200 hover:-translate-y-1 ${
         property.isGoldCard
-          ? "bg-gradient-to-br from-amber-50/90 via-yellow-50/80 to-orange-50/70 border-2 border-gradient-to-r from-amber-300 via-yellow-400 to-orange-300 shadow-xl transform hover:scale-[1.03] hover:shadow-amber-200/50 ring-1 ring-amber-200/30 backdrop-blur-sm"
-          : variant === "featured"
-          ? "bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-700/50 shadow-lg transform hover:-translate-y-3 hover:shadow-teal-500/20 ring-1 ring-gray-700/30"
-          : "bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-700/60 transform hover:-translate-y-2 hover:shadow-xl shadow-md"
+          ? "bg-gradient-to-br from-amber-100 via-yellow-100/95 to-orange-100/80 border-amber-400/70 shadow-lg shadow-amber-200/30"
+          : "bg-white"
       } ${isExpired ? "opacity-75 grayscale-[0.3]" : ""}`}
     >
-      {property.isGoldCard && (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/15 to-transparent transform -skew-x-12 animate-pulse opacity-60 pointer-events-none"></div>
-          <div className="absolute -inset-1 bg-gradient-to-r from-amber-400/20 via-yellow-400/30 to-orange-400/20 rounded-2xl blur-sm opacity-60 animate-pulse"></div>
-        </>
-      )}
-
       <Link
         to={`/properties/${property.category || ""}/${property._id}`}
-        className="block relative z-10"
+        className="block relative"
       >
-        <div
-          className={`relative ${
-            variant === "simple" ? "h-48 sm:h-52" : "h-56 sm:h-64 lg:h-72"
-          } overflow-hidden ${property.isGoldCard ? "ring-2 ring-amber-300/50 ring-inset" : ""}`}
-        >
+        <div className="relative h-48 overflow-hidden rounded-t-2xl">
           <img
             src={getImageUrl()}
             alt={property.title}
-            className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:brightness-105"
+            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
           />
 
           <div className="absolute top-3 left-3 flex flex-col items-start gap-1 z-20">
             {property.isFeatured && (
-              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full py-1.5 px-3 shadow-lg">
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full py-1.5 px-3 shadow-md">
                 Featured
               </div>
             )}
             {property.isGoldCard && !property.isFeatured && (
-              <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full py-1.5 px-3 shadow-lg">
-                Gold Card
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full py-1.5 px-3 shadow-md">
+                PREMIUM
               </div>
             )}
-            <div className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-bold rounded-full py-1.5 px-3 shadow-lg">
+            <div className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-medium rounded-full py-1 px-3 shadow-md">
               {property.type || "Property"}
             </div>
           </div>
 
           {property.agency?.name && property.agency?.logoUrl && (
-            <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 bg-white/95 backdrop-blur-md text-gray-800 text-xs sm:text-sm font-semibold rounded-full py-1.5 sm:py-2 pl-2 sm:pl-3 pr-3 sm:pr-4 shadow-lg flex items-center gap-1.5 sm:gap-2 max-w-[120px] sm:max-w-[160px] truncate z-20 border border-white/40">
+            <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-gray-700 text-xs font-medium rounded-full py-1.5 pl-3 pr-2 shadow-md flex items-center gap-1.5 max-w-[140px] truncate z-20">
+              <span className="truncate">{property.agency.name}</span>
               <img
                 src={property.agency.logoUrl}
                 alt={property.agency.name}
-                className="h-4 w-4 sm:h-6 sm:w-6 rounded-full object-cover ring-2 ring-white/50"
+                className="h-4 w-4 rounded-full object-cover"
                 onError={(e) => (e.currentTarget.src = "/default-agency-logo.png")}
               />
-              <span className="truncate">{property.agency.name}</span>
             </div>
           )}
 
-          <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20">
+          <div className="absolute top-3 right-3 z-20">
             <button
               onClick={toggleFavorite}
-              className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-lg transition-all duration-300 ${
+              className={`w-8 h-8 flex items-center justify-center rounded-full shadow-md transition-all duration-200 ${
                 isFavorite
-                  ? "bg-gradient-to-r from-red-500 to-pink-500 text-white scale-110"
-                  : "bg-white/90 backdrop-blur-md text-gray-700 hover:bg-white hover:scale-105"
-              } border border-white/30`}
+                  ? "bg-red-500 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
             >
               <Heart
-                className="h-4 w-4 sm:h-5 sm:w-5"
+                className="h-4 w-4"
                 fill={isFavorite ? "currentColor" : "none"}
               />
             </button>
           </div>
 
-          <div className={`absolute inset-0 ${
-            property.isGoldCard 
-              ? "bg-gradient-to-t from-amber-50 via-amber-50/20 to-transparent" 
-              : "bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"
-          } transition-opacity duration-300`}></div>
-
           {isExpired && (
-            <div className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full py-1.5 sm:py-2 px-3 sm:px-4 z-30 shadow-lg animate-pulse">
+            <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold rounded-full py-1.5 px-3 z-30 shadow-md">
               EXPIRED
             </div>
           )}
         </div>
 
-        <CardContent
-          className={`p-4 sm:p-6 -mt-1 ${
-            property.isGoldCard
-              ? "bg-gradient-to-b from-amber-50 to-yellow-50/70 backdrop-blur-sm"
-              : "bg-gradient-to-b from-gray-900 to-gray-950"
-          }`}
-        >
-          <h3 className={`text-lg sm:text-xl font-bold ${property.isGoldCard ? 'text-amber-900' : 'text-white'} line-clamp-2 mb-2 sm:mb-3 group-hover:text-opacity-80 transition-colors duration-300`}>
-            {property.title}
-          </h3>
+        {/* Clean separator line */}
+        <div className="h-px bg-gray-100"></div>
 
-          <div className="mb-3 sm:mb-4">
-            <div className={`text-xl sm:text-2xl font-bold ${property.isGoldCard ? 'text-amber-700 drop-shadow-sm' : 'text-teal-400'} transition-colors duration-300`}>
-              {formatPrice(property.price)}
-              {property.category === "for-rent" && (
-                <span className={`text-sm ${property.isGoldCard ? 'text-amber-600' : 'text-gray-300'} font-medium`}>/{property.rentalPeriod}</span>
-              )}
+        <CardContent className={`p-4 ${property.isGoldCard ? "bg-gradient-to-b from-amber-100/90 to-yellow-100/70" : "bg-white"}`}>
+          <div className="mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 leading-tight group-hover:text-blue-600 transition-colors duration-200">
+              {property.title}
+            </h3>
+            <div className="flex justify-end">
+              <div className="text-xl font-bold text-blue-600 whitespace-nowrap">
+                {formatPrice(property.price)}
+                {property.category === "for-rent" && (
+                  <span className="text-sm text-gray-500 font-medium">/{property.rentalPeriod}</span>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className={`flex items-center text-sm ${property.isGoldCard ? 'text-gray-600' : 'text-gray-300'} mb-3 sm:mb-4`}>
-            <MapPin className={`h-4 w-4 mr-2 flex-shrink-0 ${property.isGoldCard ? 'text-amber-600' : 'text-teal-400'}`} />
-            <span className="font-medium truncate">
+          <div className="flex items-center text-sm text-orange-500 mb-3">
+            <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span className="truncate">
               {property.address?.street}, {property.address?.city}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 text-gray-600">
               <div className="flex items-center gap-1">
-                <Bed className={`h-4 w-4 ${property.isGoldCard ? 'text-amber-600' : 'text-gray-400'}`} />
-                <span className={`text-sm ${property.isGoldCard ? 'text-gray-700' : 'text-gray-300'}`}>
-                  {property.bedrooms || "N/A"}
+                <Bed className="h-4 w-4" />
+                <span className="text-sm">
+                  {property.bedrooms || "N/A"} beds
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <Bath className={`h-4 w-4 ${property.isGoldCard ? 'text-amber-600' : 'text-gray-400'}`} />
-                <span className={`text-sm ${property.isGoldCard ? 'text-gray-700' : 'text-gray-300'}`}>
-                  {property.bathrooms || "N/A"}
+                <Bath className="h-4 w-4" />
+                <span className="text-sm">
+                  {property.bathrooms || "N/A"} baths
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <Square className={`h-4 w-4 ${property.isGoldCard ? 'text-amber-600' : 'text-gray-400'}`} />
-                <span className={`text-sm ${property.isGoldCard ? 'text-gray-700' : 'text-gray-300'}`}>
-                  {property.size} m²
+                <Square className="h-4 w-4" />
+                <span className="text-sm">
+                  {property.size} sq ft
                 </span>
               </div>
             </div>
             {property.isPremium && (
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold rounded-full py-1 px-2 flex items-center">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-medium rounded-full py-1 px-2 flex items-center">
                 <Check className="h-3 w-3 mr-1" />
                 Premium
               </div>

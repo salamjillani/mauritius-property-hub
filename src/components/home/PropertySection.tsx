@@ -331,16 +331,6 @@ const PropertySection: React.FC<PropertySectionProps> = ({ category, title, desc
           </div>
         )}
 
-        {/* View More Button */}
-        <div className="flex justify-center mt-12">
-          <Link to={`/properties/${category}`}>
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              Discover More {title} 
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-
         {/* Decorative bottom element */}
         <div className="flex justify-center mt-8">
           <div className="flex space-x-2">
